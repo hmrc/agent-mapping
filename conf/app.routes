@@ -1,3 +1,3 @@
 # microservice specific routes
 
-GET        /hello-world             uk.gov.hmrc.agentmapping.controllers.MicroserviceHelloWorld.hello
+PUT         /mappings/:arn/:saAgentReference         @uk.gov.hmrc.agentmapping.controller.MappingController.createMapping(arn: uk.gov.hmrc.agentmapping.model.Arn, saAgentReference: uk.gov.hmrc.domain.SaAgentReference)
