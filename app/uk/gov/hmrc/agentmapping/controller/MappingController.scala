@@ -16,18 +16,24 @@
 
 package uk.gov.hmrc.agentmapping.controller
 
-import javax.inject.Singleton
+import javax.inject.{Inject, Singleton}
 
+import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.Action
+import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.model.Arn
+import uk.gov.hmrc.agentmapping.repository.MappingRepository
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 @Singleton
-class MappingController extends BaseController {
+class MappingController @Inject()(mappingRepository: MappingRepository)  extends BaseController {
 
-  def createMapping(arn: Arn, saAgentReference: SaAgentReference) = Action {
-    Created
+  def createMapping(arn: Arn, saAgentReference: SaAgentReference) = Action.async {
+    mappingRepository.createMapping(arn, saAgentReference).map(_ => Created)
+      .recover({
+        case e: DatabaseException if e.getMessage().contains("E11000") => Conflict
+      })
   }
 
 }
