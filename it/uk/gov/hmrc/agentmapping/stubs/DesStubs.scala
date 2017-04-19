@@ -2,34 +2,37 @@ package uk.gov.hmrc.agentmapping.stubs
 
 import com.github.tomakehurst.wiremock.client.MappingBuilder
 import com.github.tomakehurst.wiremock.client.WireMock._
+import uk.gov.hmrc.agentmapping.model.{Arn, Utr}
 
 trait DesStubs {
   protected def expectedEnvironment: Option[String] = None
   protected def expectedBearerToken: Option[String] = None
 
-  def individualRegistrationExists(utr: String, isAnASAgent: Boolean = true): Unit = {
+  val registeredArn : Arn = Arn("AARN0000002")
+
+  def individualRegistrationExists(utr: Utr, isAnASAgent: Boolean = true): Unit = {
     stubFor(maybeWithDesHeaderCheck(registrationRequest(utr, isAnAgent = false))
       .willReturn(aResponse()
         .withStatus(200)
-        .withBody(s"""{ "agentReferenceNumber": "AARN0000002" }""".stripMargin)))
+        .withBody(s"""{ "agentReferenceNumber": "${registeredArn.value}" }""".stripMargin)))
   }
 
-  def individualRegistrationExistsWithoutArn(utr: String, isAnASAgent: Boolean = true): Unit = {
+  def individualRegistrationExistsWithoutArn(utr: Utr, isAnASAgent: Boolean = true): Unit = {
     stubFor(maybeWithDesHeaderCheck(registrationRequest(utr, isAnAgent = false))
       .willReturn(aResponse()
         .withStatus(200)
         .withBody(s"""{}""".stripMargin)))
   }
 
-  def registrationDoesNotExist(utr: String): Unit = {
+  def registrationDoesNotExist(utr: Utr): Unit = {
     stubFor(maybeWithDesHeaderCheck(registrationRequest(utr, isAnAgent = false))
       .willReturn(aResponse()
         .withStatus(404)
         .withBody(notFoundResponse)))
   }
 
-  private def registrationRequest(utr: String, isAnAgent: Boolean) =
-    post(urlEqualTo(s"/registration/individual/utr/$utr"))
+  private def registrationRequest(utr: Utr, isAnAgent: Boolean) =
+    post(urlEqualTo(s"/registration/individual/utr/${utr.value}"))
       .withRequestBody(equalToJson(
         s"""
            |{

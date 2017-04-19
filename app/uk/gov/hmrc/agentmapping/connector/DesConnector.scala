@@ -21,40 +21,31 @@ import javax.inject.{Inject, Named, Singleton}
 
 import play.api.libs.json.Json.format
 import play.api.libs.json.{Format, JsValue, Writes}
-import uk.gov.hmrc.domain.{SimpleObjectReads, SimpleObjectWrites}
+import uk.gov.hmrc.agentmapping.model.{Arn, Utr}
 import uk.gov.hmrc.play.encoding.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.play.http.logging.Authorization
 import uk.gov.hmrc.play.http.{BadRequestException, HeaderCarrier, HttpPost, HttpReads}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-
-object Arn {
-  implicit val arnReads = new SimpleObjectReads[Arn]("arn", Arn.apply)
-  implicit val arnWrites = new SimpleObjectWrites[Arn](_.arn)
-}
-
 object DesRegistrationRequest {
   implicit val formats: Format[DesRegistrationRequest] = format[DesRegistrationRequest]
 }
 
-case class Arn(arn: String)
-case class DesRegistrationResponse( agentReferenceNumber: Option[Arn])
 case class DesRegistrationRequest(requiresNameMatch: Boolean = false, regime: String = "ITSA", isAnAgent: Boolean)
-
 
 @Singleton
 class DesConnector @Inject() (@Named("des.environment") environment: String,
                               @Named("des.authorization-token") authorizationToken: String,
                               @Named("des-baseUrl") baseUrl: URL,
                               httpPost: HttpPost){
-  def getRegistration(utr: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[DesRegistrationResponse]] =
+  def getArn(utr: Utr)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Arn]] =
     getRegistrationJson(utr) map {
-      case Some(r) => Some(DesRegistrationResponse((r \ "agentReferenceNumber").asOpt[Arn]))
+      case Some(r) => (r \ "agentReferenceNumber").asOpt[Arn]
       case _ => None
     }
 
-  private def getRegistrationJson(utr: String)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[JsValue]] = {
+  private def getRegistrationJson(utr: Utr)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[JsValue]] = {
     (httpPost.POST[DesRegistrationRequest, Option[JsValue]](desRegistrationUrl(utr).toString, DesRegistrationRequest(isAnAgent = false))
       (implicitly[Writes[DesRegistrationRequest]], implicitly[HttpReads[Option[JsValue]]], desHeaders))
   } recover {
@@ -62,8 +53,8 @@ class DesConnector @Inject() (@Named("des.environment") environment: String,
       throw new RuntimeException(s"400 Bad Request response from DES for utr $utr", badRequest)
   }
 
-  private def desRegistrationUrl(utr: String): URL =
-    new URL(baseUrl, s"/registration/individual/utr/${encodePathSegment(utr)}")
+  private def desRegistrationUrl(utr: Utr): URL =
+    new URL(baseUrl, s"/registration/individual/utr/${encodePathSegment(utr.value)}")
 
   private def desHeaders(implicit hc: HeaderCarrier): HeaderCarrier = {
     hc.copy(

@@ -18,19 +18,15 @@ package uk.gov.hmrc.agentmapping.support
 
 import org.scalatest.{BeforeAndAfterEach, Suite}
 import org.scalatestplus.play.OneServerPerSuite
-import play.api.test.FakeApplication
 import uk.gov.hmrc.mongo.{MongoSpecSupport, Awaiting => MongoAwaiting}
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContext.global
 
 trait MongoApp extends MongoSpecSupport with ResetMongoBeforeTest with OneServerPerSuite {
   me: Suite =>
 
-  override implicit lazy val app: FakeApplication = FakeApplication(
-    additionalConfiguration = additionalConfiguration
-  )
-
-  protected def additionalConfiguration = Map("mongodb.uri" -> mongoUri)
+  protected def mongoConfiguration = Map("mongodb.uri" -> mongoUri)
 }
 
 trait ResetMongoBeforeTest extends BeforeAndAfterEach {
@@ -41,7 +37,7 @@ trait ResetMongoBeforeTest extends BeforeAndAfterEach {
     dropMongoDb()
   }
 
-  def dropMongoDb()(implicit ec: ExecutionContext = scala.concurrent.ExecutionContext.global): Unit = {
+  def dropMongoDb()(implicit ec: ExecutionContext = global): Unit = {
     Awaiting.await(mongo().drop())
   }
 }
