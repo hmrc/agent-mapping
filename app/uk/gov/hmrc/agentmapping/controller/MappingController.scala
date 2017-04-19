@@ -21,19 +21,27 @@ import javax.inject.{Inject, Singleton}
 import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.Action
 import reactivemongo.core.errors.DatabaseException
-import uk.gov.hmrc.agentmapping.model.Arn
+import uk.gov.hmrc.agentmapping.connector.DesConnector
+import uk.gov.hmrc.agentmapping.model.{Arn, Utr}
 import uk.gov.hmrc.agentmapping.repository.MappingRepository
 import uk.gov.hmrc.domain.SaAgentReference
+import uk.gov.hmrc.play.http.HeaderCarrier.fromHeadersAndSession
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
+import scala.concurrent.Future
+
 @Singleton
-class MappingController @Inject()(mappingRepository: MappingRepository)  extends BaseController {
+class MappingController @Inject()(mappingRepository: MappingRepository, desConnector: DesConnector) extends BaseController {
+  def createMapping(utr: Utr, arn: Arn, saAgentReference: SaAgentReference) = Action.async { implicit request =>
+    implicit val hc = fromHeadersAndSession(request.headers, None)
 
-  def createMapping(arn: Arn, saAgentReference: SaAgentReference) = Action.async {
-    mappingRepository.createMapping(arn, saAgentReference).map(_ => Created)
-      .recover({
-        case e: DatabaseException if e.getMessage().contains("E11000") => Conflict
-      })
+    desConnector.getArn(utr) flatMap {
+      case Some(Arn(arn.value)) =>
+            mappingRepository.createMapping(arn, saAgentReference).map(_ => Created)
+              .recover({
+                case e: DatabaseException if e.getMessage().contains("E11000") => Conflict
+              })
+      case _ => Future successful Forbidden
+    }
   }
-
 }

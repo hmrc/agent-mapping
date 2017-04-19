@@ -1,5 +1,6 @@
 package uk.gov.hmrc.agentmapping.repository
 
+import play.api.test.FakeApplication
 import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.agentmapping.support.MongoApp
@@ -9,6 +10,9 @@ import uk.gov.hmrc.play.test.UnitSpec
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class MappingRepositoryISpec extends UnitSpec with MongoApp {
+  override implicit lazy val app: FakeApplication = FakeApplication(
+    additionalConfiguration = mongoConfiguration
+  )
 
   val arn = Arn("ARN00001")
   val saAgentReference = SaAgentReference("Ref0001")

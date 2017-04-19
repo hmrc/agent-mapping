@@ -29,7 +29,8 @@ object MicroServiceBuild extends Build with MicroService {
     "org.scalatest" %% "scalatest" % "2.2.6" % scope,
     "org.scalatestplus.play" %% "scalatestplus-play" % "1.5.1" % scope,
     "org.pegdown" % "pegdown" % "1.6.0" % scope,
-    "com.typesafe.play" %% "play-test" % PlayVersion.current % scope
+    "com.typesafe.play" %% "play-test" % PlayVersion.current % scope,
+    "com.github.tomakehurst" % "wiremock" % "2.3.1" % scope
   )
 
 }

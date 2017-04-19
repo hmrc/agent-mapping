@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentmapping.model
+package uk.gov.hmrc.play.encoding
 
-import uk.gov.hmrc.domain.{SimpleObjectReads, SimpleObjectWrites, TaxIdentifier}
+import java.nio.charset.StandardCharsets.UTF_8
 
-object Arn {
-  implicit val arnReads = new SimpleObjectReads[Arn]("value", Arn.apply)
-  implicit val arnWrites = new SimpleObjectWrites[Arn](_.value)
+import play.utils.UriEncoding
+
+object UriPathEncoding {
+  def encodePathSegments(pathSegments: String*): String =
+    pathSegments.map(encodePathSegment).mkString("/", "/", "")
+
+  def encodePathSegment(pathSegment: String): String =
+    UriEncoding.encodePathSegment(pathSegment, UTF_8.name)
 }
-
-case class Arn(value: String) extends TaxIdentifier
-

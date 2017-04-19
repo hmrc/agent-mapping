@@ -16,11 +16,12 @@
 
 package uk.gov.hmrc.agentmapping.controller
 
-import uk.gov.hmrc.agentmapping.model.Arn
+import uk.gov.hmrc.agentmapping.model.{Arn, Utr}
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.play.binders.SimpleObjectBinder
 
 object UrlBinders {
+  implicit val utrBinder = new SimpleObjectBinder[Utr](Utr.apply, _.value)
   implicit val arnBinder = new SimpleObjectBinder[Arn](Arn.apply, _.value)
   implicit val saAgentReferenceBinder = new SimpleObjectBinder[SaAgentReference](SaAgentReference.apply, _.value)
 }
