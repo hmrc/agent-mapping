@@ -47,8 +47,8 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     await(repo.ensureIndexes)
   }
 
-  "/agent-mapping/mappings/:arn/:saAgentRef" should {
-    "return created" in {
+  "mapping creation requests" should {
+    "return created upon success" in {
       individualRegistrationExists(utr)
       request.putEmpty().status shouldBe 201
     }
