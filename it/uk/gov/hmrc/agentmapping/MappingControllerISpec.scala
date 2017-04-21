@@ -84,5 +84,11 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
       response.status shouldBe 400
       (response.json \ "message").as[String] shouldBe """"A_BAD_UTR" is not a valid UTR"""
     }
+
+    "return bad request when the ARN is invalid" in {
+      val response = createRequest(requestArn = Arn("A_BAD_ARN")).putEmpty()
+      response.status shouldBe 400
+      (response.json \ "message").as[String] shouldBe """"A_BAD_ARN" is not a valid ARN"""
+    }
   }
 }

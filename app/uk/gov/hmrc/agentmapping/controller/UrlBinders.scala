@@ -30,6 +30,14 @@ object UrlBinders {
 
     override def unbind(key: String, utr: Utr): String = utr.value
   }
-  implicit val arnBinder = new SimpleObjectBinder[Arn](Arn.apply, _.value)
+
+  implicit val arnBinder = new PathBindable[Arn] {
+    override def bind(key: String, arnValue: String): Either[String, Arn] = Arn.isValid(arnValue) match {
+      case true => Right(Arn(arnValue))
+      case _ => Left(raw""""$arnValue" is not a valid ARN""")
+    }
+
+    override def unbind(key: String, arn: Arn): String = arn.value
+  }
   implicit val saAgentReferenceBinder = new SimpleObjectBinder[SaAgentReference](SaAgentReference.apply, _.value)
 }
