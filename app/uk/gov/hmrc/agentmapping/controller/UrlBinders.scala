@@ -16,12 +16,28 @@
 
 package uk.gov.hmrc.agentmapping.controller
 
+import play.api.mvc.PathBindable
 import uk.gov.hmrc.agentmapping.model.{Arn, Utr}
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.play.binders.SimpleObjectBinder
 
 object UrlBinders {
-  implicit val utrBinder = new SimpleObjectBinder[Utr](Utr.apply, _.value)
-  implicit val arnBinder = new SimpleObjectBinder[Arn](Arn.apply, _.value)
+  implicit val utrBinder = new PathBindable[Utr] {
+    override def bind(key: String, utrValue: String): Either[String, Utr] = Utr.isValid(utrValue) match {
+      case true => Right(Utr(utrValue))
+      case _ => Left(raw""""$utrValue" is not a valid UTR""")
+    }
+
+    override def unbind(key: String, utr: Utr): String = utr.value
+  }
+
+  implicit val arnBinder = new PathBindable[Arn] {
+    override def bind(key: String, arnValue: String): Either[String, Arn] = Arn.isValid(arnValue) match {
+      case true => Right(Arn(arnValue))
+      case _ => Left(raw""""$arnValue" is not a valid ARN""")
+    }
+
+    override def unbind(key: String, arn: Arn): String = arn.value
+  }
   implicit val saAgentReferenceBinder = new SimpleObjectBinder[SaAgentReference](SaAgentReference.apply, _.value)
 }
