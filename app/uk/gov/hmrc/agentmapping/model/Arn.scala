@@ -16,15 +16,12 @@
 
 package uk.gov.hmrc.agentmapping.model
 
+import uk.gov.hmrc.agentmtdidentifiers
 import uk.gov.hmrc.domain.{SimpleObjectReads, SimpleObjectWrites, TaxIdentifier}
 
 object Arn {
-  private[model] val arnPattern = "^[A-Z]ARN[0-9]{7}$".r
 
-  def isValid(utr: String): Boolean = utr match {
-    case Arn.arnPattern(_*) => true
-    case _ => false
-  }
+  def isValid(arn: String): Boolean = agentmtdidentifiers.model.Arn.isValid(arn)
 
   implicit val arnReads = new SimpleObjectReads[Arn]("value", Arn.apply)
   implicit val arnWrites = new SimpleObjectWrites[Arn](_.value)
