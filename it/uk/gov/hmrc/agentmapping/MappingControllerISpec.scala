@@ -66,7 +66,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
     "return forbidden when the supplied arn does not match the DES business partner record arn" in {
       individualRegistrationExists(utr)
-      new Resource(s"/agent-mapping/mappings/${utr.value}/AARN1234567/${saAgentReference}", port).putEmpty().status shouldBe 403
+      new Resource(s"/agent-mapping/mappings/${utr.value}/TARN0000001/${saAgentReference}", port).putEmpty().status shouldBe 403
     }
 
     "return forbidden when there is no arn on the DES business partner record" in {
