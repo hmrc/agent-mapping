@@ -2,7 +2,7 @@ package uk.gov.hmrc.agentmapping.stubs
 
 import com.github.tomakehurst.wiremock.client.MappingBuilder
 import com.github.tomakehurst.wiremock.client.WireMock._
-import uk.gov.hmrc.agentmapping.model.{Arn, Utr}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 
 trait DesStubs {
   protected def expectedEnvironment: Option[String] = None

@@ -21,7 +21,7 @@ import javax.inject.{Inject, Named, Singleton}
 
 import play.api.libs.json.Json.format
 import play.api.libs.json.{Format, JsValue, Writes}
-import uk.gov.hmrc.agentmapping.model.{Arn, Utr}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.play.encoding.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.play.http.logging.Authorization
 import uk.gov.hmrc.play.http.{BadRequestException, HeaderCarrier, HttpPost, HttpReads}

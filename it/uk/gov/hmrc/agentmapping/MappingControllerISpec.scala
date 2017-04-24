@@ -7,10 +7,10 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.api.libs.ws.ahc.AhcWSClient
-import uk.gov.hmrc.agentmapping.model.{Arn, Utr}
 import uk.gov.hmrc.agentmapping.repository.MappingRepository
 import uk.gov.hmrc.agentmapping.stubs.DesStubs
 import uk.gov.hmrc.agentmapping.support.{MongoApp, Resource, WireMockSupport}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
