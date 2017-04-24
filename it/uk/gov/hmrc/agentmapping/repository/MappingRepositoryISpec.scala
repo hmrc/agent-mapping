@@ -2,8 +2,8 @@ package uk.gov.hmrc.agentmapping.repository
 
 import play.api.test.FakeApplication
 import reactivemongo.core.errors.DatabaseException
-import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.agentmapping.support.MongoApp
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.play.test.UnitSpec
 
