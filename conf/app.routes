@@ -1,4 +1,4 @@
 # microservice specific routes
 
 PUT  /mappings/:utr/:arn/:saAgentReference @uk.gov.hmrc.agentmapping.controller.MappingController.createMapping(utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, saAgentReference: uk.gov.hmrc.domain.SaAgentReference)
-GET  /mappings/:arn                        @uk.gov.hmrc.agentmapping.controller.MappingController.findMapping(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+GET  /mappings/:arn                        @uk.gov.hmrc.agentmapping.controller.MappingController.findMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
