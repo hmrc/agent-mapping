@@ -18,27 +18,34 @@ package uk.gov.hmrc.agentmapping.repository
 
 import javax.inject.{Inject, Singleton}
 
-import play.api.libs.json.{Format, Json}
+import play.api.libs.json.Format
+import play.api.libs.json.Json.{format, toJsFieldJsValueWrapper}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.bson.BSONObjectID
+import uk.gov.hmrc.agentmapping.repository.Mapping.formats
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
+
 
 case class Mapping(arn: String, saAgentReference: String)
 
 object Mapping extends ReactiveMongoFormats {
-  implicit val formats: Format[Mapping] = Json.format[Mapping]
+  implicit val formats: Format[Mapping] = format[Mapping]
 }
 
 @Singleton
 class MappingRepository @Inject()(mongoComponent: ReactiveMongoComponent) extends
-    ReactiveRepository[Mapping, BSONObjectID]("agent-mapping", mongoComponent.mongoConnector.db, Mapping.formats, ReactiveMongoFormats.objectIdFormats) {
+    ReactiveRepository[Mapping, BSONObjectID]("agent-mapping", mongoComponent.mongoConnector.db, formats, ReactiveMongoFormats.objectIdFormats) {
+  def findBy(arn: Arn) :Future[List[Mapping]] = {
+    find(Seq("arn" -> Some(arn)).map(option => option._1 -> toJsFieldJsValueWrapper(option._2.get)): _*)
+  }
 
   override def indexes = Seq(
     Index(Seq("arn" -> Ascending, "saAgentReference" -> Ascending), Some("arnAndAgentReference"), unique = true)

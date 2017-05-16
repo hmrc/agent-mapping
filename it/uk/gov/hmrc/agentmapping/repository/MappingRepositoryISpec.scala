@@ -14,8 +14,11 @@ class MappingRepositoryISpec extends UnitSpec with MongoApp {
     additionalConfiguration = mongoConfiguration
   )
 
-  val arn = Arn("ARN00001")
-  val saAgentReference = SaAgentReference("Ref0001")
+  val arn1 = Arn("ARN00001")
+  val arn2 = Arn("ARN00002")
+
+  val saAgentReference1 = SaAgentReference("Ref0001")
+  val saAgentReference2 = SaAgentReference("Ref0002")
 
   def repo: MappingRepository = app.injector.instanceOf[MappingRepository]
 
@@ -26,38 +29,55 @@ class MappingRepositoryISpec extends UnitSpec with MongoApp {
 
   "createMapping" should {
     "create a mapping" in {
-      await(repo.createMapping(arn, saAgentReference))
+      await(repo.createMapping(arn1, saAgentReference1))
 
       val result = await(repo.find())
 
       result.size shouldBe 1
-      result.head.arn shouldBe arn.value
-      result.head.saAgentReference shouldBe saAgentReference.value
+      result.head.arn shouldBe arn1.value
+      result.head.saAgentReference shouldBe saAgentReference1.value
 
     }
 
     "not allow duplicate mappings to be created for the same ARN and SA Agent Reference" in {
-      await(repo.createMapping(arn, saAgentReference))
+      await(repo.createMapping(arn1, saAgentReference1))
 
       val e = intercept[DatabaseException] {
-        await(repo.createMapping(arn, saAgentReference))
+        await(repo.createMapping(arn1, saAgentReference1))
       }
 
       e.getMessage() should include ("E11000")
     }
 
     "allow more than one SA Agent Reference to be mapped to the same ARN" in {
-      val saAgentReference1 = SaAgentReference("REF0002")
-      await(repo.createMapping(arn, saAgentReference))
-      await(repo.createMapping(arn, saAgentReference1))
+      await(repo.createMapping(arn1, saAgentReference1))
+      await(repo.createMapping(arn1, saAgentReference2))
 
       val result = await(repo.find())
 
       result.size shouldBe 2
-      result.head.arn shouldBe arn.value
-      result.head.saAgentReference shouldBe saAgentReference.value
-      result(1).arn shouldBe arn.value
-      result(1).saAgentReference shouldBe saAgentReference1.value
+      result.head.arn shouldBe arn1.value
+      result.head.saAgentReference shouldBe saAgentReference1.value
+      result(1).arn shouldBe arn1.value
+      result(1).saAgentReference shouldBe saAgentReference2.value
+    }
+  }
+
+  "findBy arn" should {
+    "find all mpppings fpr an arn" in {
+      await(repo.createMapping(arn1, saAgentReference1))
+      await(repo.createMapping(arn1, saAgentReference2))
+      await(repo.createMapping(arn2, saAgentReference2))
+
+      val result =await(repo.findBy(arn1))
+
+      result.size shouldBe 2
+    }
+
+    "return an empty list when no match is found" in {
+      await(repo.createMapping(arn1, saAgentReference1))
+      val result =await(repo.findBy(arn2))
+      result.size shouldBe 0
     }
   }
 }

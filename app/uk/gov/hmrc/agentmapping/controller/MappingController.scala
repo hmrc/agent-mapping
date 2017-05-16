@@ -22,7 +22,7 @@ import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.mvc.Action
 import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.connector.DesConnector
-import uk.gov.hmrc.agentmapping.repository.MappingRepository
+import uk.gov.hmrc.agentmapping.repository.{Mapping, MappingRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.play.http.HeaderCarrier.fromHeadersAndSession
@@ -42,6 +42,13 @@ class MappingController @Inject()(mappingRepository: MappingRepository, desConne
                 case e: DatabaseException if e.getMessage().contains("E11000") => Conflict
               })
       case _ => Future successful Forbidden
+    }
+  }
+
+
+  def findMapping(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
+    mappingRepository.findBy(arn) map{ matches =>
+      if ( matches.nonEmpty ) Ok(matches) else NotFound
     }
   }
 }
