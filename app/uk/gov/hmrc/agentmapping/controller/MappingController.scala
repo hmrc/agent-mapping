@@ -46,7 +46,7 @@ class MappingController @Inject()(mappingRepository: MappingRepository, desConne
     }
   }
 
-  def findMapping(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
+  def findMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
     mappingRepository.findBy(arn) map{ matches =>
       if (matches.nonEmpty) Ok(toJson(matches)) else NotFound
     }

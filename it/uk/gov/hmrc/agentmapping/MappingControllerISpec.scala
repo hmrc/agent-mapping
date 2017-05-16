@@ -29,11 +29,11 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     new Resource(s"/agent-mapping/mappings/${requestUtr.value}/${requestArn.value}/$saAgentReference", port)
   }
 
-  def findMappingRequest(requestArn: Arn = registeredArn): Resource = {
+  def findMappingsRequest(requestArn: Arn = registeredArn): Resource = {
     new Resource(s"/agent-mapping/mappings/${requestArn.value}", port)
   }
 
-  private val findMappingRequest: Resource = findMappingRequest()
+  private val findMappingsRequest: Resource = findMappingsRequest()
 
   private val repo: MappingRepository = app.injector.instanceOf[MappingRepository]
 
@@ -105,7 +105,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
       await(repo.createMapping(registeredArn, SaAgentReference(saAgentReference)))
       await(repo.createMapping(registeredArn, SaAgentReference("A1111B")))
 
-      val response = findMappingRequest.get()
+      val response = findMappingsRequest.get()
 
       response.status shouldBe 200
       val body = response.body
@@ -113,7 +113,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     }
 
     "return 404 when there are no mappings that match the supplied arn" in {
-      findMappingRequest.get().status shouldBe 404
+      findMappingsRequest.get().status shouldBe 404
     }
   }
 }
