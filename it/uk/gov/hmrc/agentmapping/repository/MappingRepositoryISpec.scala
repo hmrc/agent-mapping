@@ -69,7 +69,7 @@ class MappingRepositoryISpec extends UnitSpec with MongoApp {
       await(repo.createMapping(arn1, saAgentReference2))
       await(repo.createMapping(arn2, saAgentReference2))
 
-      val result =await(repo.findBy(arn1))
+      val result:List[Mapping] = await(repo.findBy(arn1))
 
       result.size shouldBe 2
     }

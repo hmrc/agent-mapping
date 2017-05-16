@@ -23,7 +23,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
   private val utr = Utr("2000000000")
   private val saAgentReference = "A1111A"
-  val createMappingRequest : Resource = createMappingRequest()
+  val createMappingRequest: Resource = createMappingRequest()
 
   def createMappingRequest(requestUtr: Utr = utr, requestArn: Arn = registeredArn): Resource = {
     new Resource(s"/agent-mapping/mappings/${requestUtr.value}/${requestArn.value}/$saAgentReference", port)
@@ -33,7 +33,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     new Resource(s"/agent-mapping/mappings/${requestArn.value}", port)
   }
 
-  private val findMappingRequest : Resource = findMappingRequest()
+  private val findMappingRequest: Resource = findMappingRequest()
 
   private val repo: MappingRepository = app.injector.instanceOf[MappingRepository]
 
@@ -42,10 +42,10 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
   protected def appBuilder: GuiceApplicationBuilder = {
     new GuiceApplicationBuilder().configure(
       mongoConfiguration ++
-      Map(
-        "microservice.services.auth.port" -> wireMockPort,
-        "microservice.services.des.port" -> wireMockPort
-      )
+        Map(
+          "microservice.services.auth.port" -> wireMockPort,
+          "microservice.services.des.port" -> wireMockPort
+        )
     ).overrides(new TestGuiceModule)
   }
 
@@ -102,10 +102,14 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
   "find mapping requests" should {
     "return 200 status with a json body representing the mappings that match the supplied arn" in {
-      await(repo.createMapping(registeredArn,SaAgentReference(saAgentReference)))
+      await(repo.createMapping(registeredArn, SaAgentReference(saAgentReference)))
+      await(repo.createMapping(registeredArn, SaAgentReference("A1111B")))
+
       val response = findMappingRequest.get()
+
       response.status shouldBe 200
-      response.body shouldBe "some json"
+      val body = response.body
+      body shouldBe """[{"arn":"AARN0000002","saAgentReference":"A1111A"},{"arn":"AARN0000002","saAgentReference":"A1111B"}]"""
     }
 
     "return 404 when there are no mappings that match the supplied arn" in {
