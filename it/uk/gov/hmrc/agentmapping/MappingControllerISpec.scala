@@ -109,7 +109,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
       response.status shouldBe 200
       val body = response.body
-      body shouldBe """[{"arn":"AARN0000002","saAgentReference":"A1111A"},{"arn":"AARN0000002","saAgentReference":"A1111B"}]"""
+      body shouldBe """{"mappings":[{"arn":"AARN0000002","saAgentReference":"A1111A"},{"arn":"AARN0000002","saAgentReference":"A1111B"}]}"""
     }
 
     "return 404 when there are no mappings that match the supplied arn" in {
