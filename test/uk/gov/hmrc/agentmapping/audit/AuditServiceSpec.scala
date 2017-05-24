@@ -16,27 +16,20 @@
 
 package uk.gov.hmrc.agentmapping.audit
 
-import java.net.URL
-
 import org.mockito.ArgumentCaptor
-import org.mockito.Mockito._
-import org.mockito.Mockito.verify
 import org.mockito.Matchers._
-import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.{verify, _}
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mock.MockitoSugar
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentmapping.WSHttp
+import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.KnownFactsCheck
+import uk.gov.hmrc.agentmapping.connector.{AuthConnector, AuthDetails}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
-import uk.gov.hmrc.domain.{AgentCode, SaUtr}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.{AuditEvent, DataEvent}
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.{Authorization, RequestId, SessionId}
 import uk.gov.hmrc.play.test.UnitSpec
-import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.KnownFactsCheck
-import uk.gov.hmrc.agentmapping.connector.{AuthConnector, AuthDetails}
-import uk.gov.hmrc.agentmapping.support.WireMockSupport
 
 import scala.concurrent.{ExecutionContext, Future}
 

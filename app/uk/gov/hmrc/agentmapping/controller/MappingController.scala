@@ -36,6 +36,7 @@ import scala.concurrent.Future
 
 @Singleton
 class MappingController @Inject()(mappingRepository: MappingRepository, desConnector: DesConnector, auditService: AuditService) extends BaseController {
+
   def createMapping(utr: Utr, arn: Arn, saAgentReference: SaAgentReference) = Action.async { implicit request =>
     implicit val hc = fromHeadersAndSession(request.headers, None)
 
@@ -43,7 +44,8 @@ class MappingController @Inject()(mappingRepository: MappingRepository, desConne
       case Some(Arn(arn.value)) => {
         mappingRepository.createMapping(arn, saAgentReference)
           .map(_ => Created)
-          .andThen { case _ => auditService.auditEvent(KnownFactsCheck, "known-facts-check", utr, arn, Seq("knownFactsMatched" -> true))}
+          .andThen { case _ =>
+            auditService.auditEvent(KnownFactsCheck, "known-facts-check", utr, arn, Seq("knownFactsMatched" -> true))}
           .recoverWith({
             case e: DatabaseException if e.getMessage().contains("E11000") => {
               Future.successful(Conflict)

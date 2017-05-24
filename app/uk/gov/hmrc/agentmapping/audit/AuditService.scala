@@ -1,3 +1,19 @@
+/*
+ * Copyright 2017 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package uk.gov.hmrc.agentmapping.audit
 
 import javax.inject.Inject
@@ -29,9 +45,8 @@ class AuditService @Inject()(val auditConnector: AuditConnector, val authConnect
   def auditEvent(event: AgentMappingEvent, transactionName: String, utr: Utr, arn: Arn, details: Seq[(String, Any)] = Seq.empty)
                 (implicit hc: HeaderCarrier, request: Request[Any]): Future[Unit] = {
      authConnector.currentAuthDetails() flatMap {
-
-       case Some(AuthDetails(authCredId)) =>
-         send(createEvent(event, transactionName, utr, arn, authCredId, details: _*))
+       case authDetailsOpt =>
+         send(createEvent(event, transactionName, utr, arn, authDetailsOpt.flatMap(_.ggCredentialId), details: _*))
      }
   }
 
@@ -40,8 +55,12 @@ class AuditService @Inject()(val auditConnector: AuditConnector, val authConnect
     DataEvent(auditSource = "agent-mapping",
       auditType = event.toString,
       tags = hc.toAuditTags(transactionName, request.path),
-      detail = hc.toAuditDetails("Authorization" -> hc.authorization.get.value, "utr" -> utr.value, "agentReferenceNumber" -> arn.value, "authProviderId" -> authCredId.getOrElse(""))
-        ++ Map(details.map(pair => pair._1 -> pair._2.toString): _*)
+      detail = hc.toAuditDetails(
+        "Authorization" -> hc.authorization.map(_.value).getOrElse(""),
+        "utr" -> utr.value,
+        "agentReferenceNumber" -> arn.value,
+        "authProviderId" -> authCredId.getOrElse("")
+      ) ++ Map(details.map(pair => pair._1 -> pair._2.toString): _*)
     )
   }
 
