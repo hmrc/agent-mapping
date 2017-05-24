@@ -39,12 +39,17 @@ class MappingController @Inject()(mappingRepository: MappingRepository, desConne
     implicit val hc = fromHeadersAndSession(request.headers, None)
 
     desConnector.getArn(utr) flatMap {
-      case Some(Arn(arn.value)) =>
-            mappingRepository.createMapping(arn, saAgentReference).map(_ => Created)
-              .recover({
-                case e: DatabaseException if e.getMessage().contains("E11000") => Conflict
-              })
-      case _ => Future successful Forbidden
+      case Some(Arn(arn.value)) => {
+        mappingRepository.createMapping(arn, saAgentReference).map(_ => Created)
+          .recover({
+            case e: DatabaseException if e.getMessage().contains("E11000") => Conflict
+          })
+        // create audit event and set known facts to true
+        // make a call to auth to get credId to use as authProviderId
+      }
+        case _ => {
+          Future successful Forbidden // create audit event and set known facts to false
+          }
     }
   }
 
