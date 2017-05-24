@@ -23,6 +23,7 @@ import play.api.libs.json.Format
 import play.api.libs.json.Json.{format, toJson}
 import play.api.mvc.Action
 import reactivemongo.core.errors.DatabaseException
+import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.connector.DesConnector
 import uk.gov.hmrc.agentmapping.repository.{Mapping, MappingRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
@@ -30,35 +31,40 @@ import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.play.http.HeaderCarrier.fromHeadersAndSession
 import uk.gov.hmrc.play.microservice.controller.BaseController
-
+import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.KnownFactsCheck
 import scala.concurrent.Future
 
 @Singleton
-class MappingController @Inject()(mappingRepository: MappingRepository, desConnector: DesConnector) extends BaseController {
+class MappingController @Inject()(mappingRepository: MappingRepository, desConnector: DesConnector, auditService: AuditService) extends BaseController {
   def createMapping(utr: Utr, arn: Arn, saAgentReference: SaAgentReference) = Action.async { implicit request =>
     implicit val hc = fromHeadersAndSession(request.headers, None)
 
     desConnector.getArn(utr) flatMap {
       case Some(Arn(arn.value)) => {
-        mappingRepository.createMapping(arn, saAgentReference).map(_ => Created)
-          .recover({
-            case e: DatabaseException if e.getMessage().contains("E11000") => Conflict
+        mappingRepository.createMapping(arn, saAgentReference)
+          .map(_ => Created)
+          .andThen { case _ => auditService.auditEvent(KnownFactsCheck, "known-facts-check", utr, arn, Seq("knownFactsMatched" -> true))}
+          .recoverWith({
+            case e: DatabaseException if e.getMessage().contains("E11000") => {
+              Future.successful(Conflict)
+                .andThen { case _ => auditService.auditEvent(KnownFactsCheck, "known-facts-check", utr, arn, Seq("knownFactsMatched" -> true, "duplicate" -> true)) }
+            }
           })
-        // create audit event and set known facts to true
-        // make a call to auth to get credId to use as authProviderId
       }
-        case _ => {
-          Future successful Forbidden // create audit event and set known facts to false
-          }
+      case _ => {
+        Future.successful(Forbidden)
+          .andThen { case _ => auditService.auditEvent(KnownFactsCheck, "known-facts-check", utr, arn, Seq("knownFactsMatched" -> false)) }
+      }
     }
   }
 
   def findMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
-    mappingRepository.findBy(arn) map{ matches =>
+    mappingRepository.findBy(arn) map { matches =>
       if (matches.nonEmpty) Ok(toJson(Mappings(matches))) else NotFound
     }
   }
 }
+
 
 case class Mappings(mappings: List[Mapping])
 

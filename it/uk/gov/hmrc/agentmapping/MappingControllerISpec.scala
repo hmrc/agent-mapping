@@ -7,16 +7,21 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.api.libs.ws.ahc.AhcWSClient
+import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.repository.MappingRepository
-import uk.gov.hmrc.agentmapping.stubs.DesStubs
-import uk.gov.hmrc.agentmapping.support.{MongoApp, Resource, WireMockSupport}
+import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DesStubs}
+import uk.gov.hmrc.agentmapping.support.{MongoApp, ResettingMockitoSugar, Resource, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.KnownFactsCheck
+import org.mockito.Mockito._
+import play.api.test.FakeRequest
+import uk.gov.hmrc.play.http.HeaderCarrier
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport with DesStubs {
+class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport with DesStubs with AuthStubs with ResettingMockitoSugar {
   implicit val actorSystem = ActorSystem()
   implicit val materializer = ActorMaterializer()
   implicit val client: WSClient = AhcWSClient()
@@ -32,6 +37,10 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
   def findMappingsRequest(requestArn: Arn = registeredArn): Resource = {
     new Resource(s"/agent-mapping/mappings/${requestArn.value}", port)
   }
+
+  val auditService = resettingMock[AuditService]
+  implicit val hc = HeaderCarrier()
+  implicit val fakeRequest = FakeRequest("GET", "/agent-mapping/add-code")
 
   private val findMappingsRequest: Resource = findMappingsRequest()
 
@@ -64,6 +73,16 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
       individualRegistrationExists(utr)
       createMappingRequest.putEmpty().status shouldBe 201
     }
+
+   "return a successful audit event with known facts set to true" in {
+      individualRegistrationExists(utr)
+      givenAuthority("testCredId")
+     await(createMappingRequest.putEmpty())
+
+     verify(auditService)
+       .auditEvent(KnownFactsCheck, "known-facts-check", Utr("2000000000"), Arn("AARN0000002"), Seq("knownFactsMatched" -> "true", "authProviderId" -> "testCredId"))(hc, fakeRequest)
+
+   }
 
     "return conflict when the mapping already exists" in {
       individualRegistrationExists(utr)

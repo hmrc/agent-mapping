@@ -2,17 +2,17 @@ package uk.gov.hmrc.agentmapping.audit
 
 import javax.inject.Inject
 
+import com.google.inject.Singleton
 import play.api.mvc.Request
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
-import uk.gov.hmrc.domain.{AgentCode, SaAgentReference}
-import uk.gov.hmrc.play.audit.http.connector.AuditConnector
-import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
-import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.AgentMappingEvent
+import uk.gov.hmrc.agentmapping.connector.{AuthConnector, AuthDetails}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
+import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
+import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
+import uk.gov.hmrc.play.http.HeaderCarrier
+
 import scala.concurrent.ExecutionContext.Implicits.global
-
-
 import scala.concurrent.Future
 import scala.util.Try
 
@@ -23,12 +23,16 @@ object AgentMappingEvent extends Enumeration {
   type AgentMappingEvent = AgentMappingEvent.Value
 }
 
+@Singleton
+class AuditService @Inject()(val auditConnector: AuditConnector, val authConnector: AuthConnector) {
 
-class AuditService @Inject()(val auditConnector: AuditConnector) {
-
-  def auditEvent(event: AgentMappingEvent, transactionName: String, utr: Utr, arn: Arn, authCredId: Option[String], details: Seq[(String, Any)] = Seq.empty)
+  def auditEvent(event: AgentMappingEvent, transactionName: String, utr: Utr, arn: Arn, details: Seq[(String, Any)] = Seq.empty)
                 (implicit hc: HeaderCarrier, request: Request[Any]): Future[Unit] = {
-    send(createEvent(event, transactionName, utr, arn, authCredId, details:_* ))
+     authConnector.currentAuthDetails() flatMap {
+
+       case Some(AuthDetails(authCredId)) =>
+         send(createEvent(event, transactionName, utr, arn, authCredId, details: _*))
+     }
   }
 
   private def createEvent(event: AgentMappingEvent, transactionName: String, utr: Utr, arn: Arn, authCredId: Option[String], details: (String, Any)*)
@@ -48,5 +52,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
       }
     }
   }
+
+
 
 }
