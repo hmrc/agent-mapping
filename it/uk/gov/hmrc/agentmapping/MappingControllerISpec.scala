@@ -90,6 +90,19 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/A1111A"
         )
       )
+
+      verifyAuditRequestSent(1,
+        event = AgentMappingEvent.CreateMapping,
+        detail = Map(
+          "saAgentRef" -> "A1111A",
+          "agentReferenceNumber" -> "AARN0000002",
+          "authProviderId" -> "testCredId"),
+        tags = Map(
+          "transactionName"->"create-mapping",
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/A1111A"
+        )
+      )
+
     }
 
     "return conflict when the mapping already exists" in {

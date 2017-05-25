@@ -23,6 +23,7 @@ import play.api.mvc.{Request, Result}
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.AgentMappingEvent
 import uk.gov.hmrc.agentmapping.connector.AuthConnector
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
+import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
@@ -34,7 +35,7 @@ import scala.util.Try
 
 object AgentMappingEvent extends Enumeration {
 
-  val KnownFactsCheck = Value
+  val KnownFactsCheck, CreateMapping = Value
 
   type AgentMappingEvent = AgentMappingEvent.Value
 }
@@ -44,24 +45,28 @@ class AuditService @Inject()(val auditConnector: AuditConnector, val authConnect
 
   def sendKnownFactsCheckAuditEvent(utr: Utr, arn: Arn, matched: Boolean)
                                    (implicit hc: HeaderCarrier, request: Request[Any]): Unit = {
-    auditEvent(AgentMappingEvent.KnownFactsCheck, "known-facts-check", utr, arn, Seq("knownFactsMatched" -> matched))
+    auditEvent(AgentMappingEvent.KnownFactsCheck, "known-facts-check", Seq("knownFactsMatched" -> matched, "utr" -> utr.value, "agentReferenceNumber" -> arn.value))
   }
 
-  def auditEvent(event: AgentMappingEvent, transactionName: String, utr: Utr, arn: Arn, details: Seq[(String, Any)] = Seq.empty)
+  def sendCreateMappingAuditEvent(arn: Arn, saAgentRef: SaAgentReference)
+                                   (implicit hc: HeaderCarrier, request: Request[Any]): Unit = {
+    auditEvent(AgentMappingEvent.CreateMapping, "create-mapping", Seq("saAgentRef" -> saAgentRef, "agentReferenceNumber" -> arn.value))
+  }
+
+  private[audit] def auditEvent(event: AgentMappingEvent, transactionName: String, details: Seq[(String, Any)] = Seq.empty)
                 (implicit hc: HeaderCarrier, request: Request[Any]): Future[Unit] = {
      authConnector.currentAuthDetails() flatMap {
        case authDetailsOpt =>
-         send(createEvent(event, transactionName, utr, arn, authDetailsOpt.flatMap(_.ggCredentialId), details: _*))
+         send(createEvent(event, transactionName, authDetailsOpt.flatMap(_.ggCredentialId), details: _*))
      }
   }
 
-  private def createEvent(event: AgentMappingEvent, transactionName: String, utr: Utr, arn: Arn, authCredId: Option[String], details: (String, Any)*)
+  private def createEvent(event: AgentMappingEvent, transactionName: String, authCredId: Option[String], details: (String, Any)*)
                          (implicit hc: HeaderCarrier, request: Request[Any]): DataEvent = {
     DataEvent(auditSource = "agent-mapping",
       auditType = event.toString,
       tags = hc.toAuditTags(transactionName, request.path),
       detail = hc.toAuditDetails(details.map(pair => pair._1 -> pair._2.toString): _*)
-        ++ Map("utr" -> utr.value, "agentReferenceNumber" -> arn.value)
         ++ authCredId.map(id => Map("authProviderId" -> id)).getOrElse(Seq.empty)
     )
   }
