@@ -23,14 +23,15 @@ import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.AgentMappingEvent
 trait DataStreamStub {
 
   def verifyAuditRequestSent(event: AgentMappingEvent, tags: Map[String, String] = Map.empty, detail: Map[String, String] = Map.empty) = {
+    Thread.sleep(1000)
     verify(1, postRequestedFor(urlPathEqualTo(auditUrl))
       .withRequestBody(similarToJson(
-      s"""{
-         |  "auditSource": "agent-access-control",
-         |  "auditType": "$event",
-         |  "tags": ${Json.toJson(tags)},
-         |  "detail": ${Json.toJson(detail)}
-         |}"""
+        s"""{
+            |  "auditSource": "agent-mapping",
+            |  "auditType": "$event",
+            |  "tags": ${Json.toJson(tags)},
+            |  "detail": ${Json.toJson(detail)}
+            |}"""
       ))
     )
   }

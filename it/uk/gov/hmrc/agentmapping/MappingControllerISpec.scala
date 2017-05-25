@@ -51,6 +51,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
         Map(
           "microservice.services.auth.port" -> wireMockPort,
           "microservice.services.des.port" -> wireMockPort,
+          "auditing.consumer.baseUri.host" -> wireMockHost,
           "auditing.consumer.baseUri.port" -> wireMockPort
         )
     ).overrides(new TestGuiceModule)
@@ -71,16 +72,25 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
       createMappingRequest.putEmpty().status shouldBe 201
     }
 
-   "return a successful audit event with known facts set to true" in {
-     individualRegistrationExists(utr)
-     givenAuthority("testCredId")
-     givenAuditConnector()
-     await(createMappingRequest.putEmpty())
+    "return a successful audit event with known facts set to true" in {
+      individualRegistrationExists(utr)
+      givenAuthority("testCredId")
+      givenAuditConnector()
+      createMappingRequest.putEmpty().status shouldBe 201
 
-     verifyAuditRequestSent(
-       AgentMappingEvent.KnownFactsCheck,
-       Map("knownFactsMatched" -> "true"))
-   }
+      verifyAuditRequestSent(
+        event = AgentMappingEvent.KnownFactsCheck,
+        detail = Map(
+          "knownFactsMatched" -> "true",
+          "utr" -> "2000000000",
+          "agentReferenceNumber" -> "AARN0000002",
+          "authProviderId" -> "testCredId"),
+        tags = Map(
+          "transactionName"->"known-facts-check",
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/A1111A"
+        )
+      )
+    }
 
     "return conflict when the mapping already exists" in {
       individualRegistrationExists(utr)
