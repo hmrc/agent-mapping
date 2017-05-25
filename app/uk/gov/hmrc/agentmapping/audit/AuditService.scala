@@ -42,6 +42,11 @@ object AgentMappingEvent extends Enumeration {
 @Singleton
 class AuditService @Inject()(val auditConnector: AuditConnector, val authConnector: AuthConnector) {
 
+  def sendKnownFactsCheckAuditEvent(utr: Utr, arn: Arn, matched: Boolean)
+                                   (implicit hc: HeaderCarrier, request: Request[Any]): Unit = {
+    auditEvent(AgentMappingEvent.KnownFactsCheck, "known-facts-check", utr, arn, Seq("knownFactsMatched" -> matched))
+  }
+
   def auditEvent(event: AgentMappingEvent, transactionName: String, utr: Utr, arn: Arn, details: Seq[(String, Any)] = Seq.empty)
                 (implicit hc: HeaderCarrier, request: Request[Any]): Future[Unit] = {
      authConnector.currentAuthDetails() flatMap {
@@ -67,15 +72,6 @@ class AuditService @Inject()(val auditConnector: AuditConnector, val authConnect
         Try(auditConnector.sendEvent(event))
       }
     }
-  }
-
-  implicit class AuditOp(result: Result) {
-    def withKnownFactsCheckAuditEvent(utr: Utr, arn: Arn, matched: Boolean, duplicate: Boolean = false)
-                                     (implicit hc: HeaderCarrier, request: Request[Any]): Future[Result] =
-      Future.successful(result).andThen {
-        case _ => auditEvent(AgentMappingEvent.KnownFactsCheck, "known-facts-check", utr, arn,
-          Seq("knownFactsMatched" -> matched) ++ (if (duplicate) Seq("duplicate" -> "true") else Seq.empty))
-      }
   }
 
 }

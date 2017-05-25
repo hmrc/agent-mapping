@@ -112,13 +112,6 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
         )
       )
 
-      verifyAuditRequestSent(1,
-        event = AgentMappingEvent.KnownFactsCheck,
-        detail = Map(
-          "knownFactsMatched" -> "true",
-          "duplicate" -> "true")
-      )
-
     }
 
     "return forbidden when the supplied arn does not match the DES business partner record arn" in {

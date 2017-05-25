@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentmapping.controller
 
 import javax.inject.{Inject, Singleton}
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Format
 import play.api.libs.json.Json.{format, toJson}
 import play.api.mvc.Action
@@ -32,23 +31,28 @@ import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.play.http.HeaderCarrier.fromHeadersAndSession
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
+import scala.concurrent.Future
+
 @Singleton
 class MappingController @Inject()(mappingRepository: MappingRepository, desConnector: DesConnector, auditService: AuditService) extends BaseController {
 
-  import auditService.AuditOp
+  import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
   def createMapping(utr: Utr, arn: Arn, saAgentReference: SaAgentReference) = Action.async { implicit request =>
     implicit val hc = fromHeadersAndSession(request.headers, None)
 
     desConnector.getArn(utr) flatMap {
-      case Some(Arn(arn.value)) => {
-        mappingRepository.createMapping(arn, saAgentReference)
-          .flatMap(_ => Created withKnownFactsCheckAuditEvent(utr, arn, matched = true))
-          .recoverWith({
-            case e: DatabaseException if e.getMessage().contains("E11000") => Conflict withKnownFactsCheckAuditEvent(utr, arn, matched = true, duplicate = true)
+      case Some(Arn(arn.value)) =>
+        auditService.sendKnownFactsCheckAuditEvent(utr, arn, matched = true)
+        mappingRepository.createMapping(arn, saAgentReference).map(_ => Created)
+          .recover({
+            case e: DatabaseException if e.getMessage().contains("E11000") =>
+              Conflict
           })
-      }
-      case _ => Forbidden withKnownFactsCheckAuditEvent(utr, arn, matched = false)
+
+      case _ =>
+        auditService.sendKnownFactsCheckAuditEvent(utr, arn, matched = false)
+        Future.successful(Forbidden)
     }
   }
 
