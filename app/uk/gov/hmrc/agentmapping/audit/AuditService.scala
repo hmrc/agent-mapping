@@ -55,12 +55,9 @@ class AuditService @Inject()(val auditConnector: AuditConnector, val authConnect
     DataEvent(auditSource = "agent-mapping",
       auditType = event.toString,
       tags = hc.toAuditTags(transactionName, request.path),
-      detail = Map(
-        "Authorization" -> hc.authorization.map(_.value).getOrElse(""),
-        "utr" -> utr.value,
-        "agentReferenceNumber" -> arn.value,
-        "authProviderId" -> authCredId.getOrElse("")
-      ) ++ Map(details.map(pair => pair._1 -> pair._2.toString): _*)
+      detail = hc.toAuditDetails(details.map(pair => pair._1 -> pair._2.toString): _*)
+        ++ Map("utr" -> utr.value, "agentReferenceNumber" -> arn.value)
+        ++ authCredId.map(id => Map("authProviderId" -> id)).getOrElse(Seq.empty)
     )
   }
 
