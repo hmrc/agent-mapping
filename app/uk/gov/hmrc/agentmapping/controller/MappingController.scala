@@ -31,11 +31,11 @@ import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.play.http.HeaderCarrier.fromHeadersAndSession
 import uk.gov.hmrc.play.microservice.controller.BaseController
-import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.KnownFactsCheck
-import scala.concurrent.Future
 
 @Singleton
 class MappingController @Inject()(mappingRepository: MappingRepository, desConnector: DesConnector, auditService: AuditService) extends BaseController {
+
+  import auditService.AuditOp
 
   def createMapping(utr: Utr, arn: Arn, saAgentReference: SaAgentReference) = Action.async { implicit request =>
     implicit val hc = fromHeadersAndSession(request.headers, None)
@@ -43,19 +43,12 @@ class MappingController @Inject()(mappingRepository: MappingRepository, desConne
     desConnector.getArn(utr) flatMap {
       case Some(Arn(arn.value)) => {
         mappingRepository.createMapping(arn, saAgentReference)
-          .flatMap(_ => Future.successful(Created)
-            .andThen { case _ => auditService.auditEvent(KnownFactsCheck, "known-facts-check", utr, arn, Seq("knownFactsMatched" -> true))})
+          .flatMap(_ => Created withKnownFactsCheckAuditEvent(utr, arn, true))
           .recoverWith({
-            case e: DatabaseException if e.getMessage().contains("E11000") => {
-              Future.successful(Conflict)
-                .andThen { case _ => auditService.auditEvent(KnownFactsCheck, "known-facts-check", utr, arn, Seq("knownFactsMatched" -> true, "duplicate" -> true))}
-            }
+            case e: DatabaseException if e.getMessage().contains("E11000") => Conflict withKnownFactsCheckAuditEvent(utr, arn, true)
           })
       }
-      case _ => {
-        Future.successful(Forbidden)
-          .andThen { case _ => auditService.auditEvent(KnownFactsCheck, "known-facts-check", utr, arn, Seq("knownFactsMatched" -> false)) }
-      }
+      case _ => Forbidden withKnownFactsCheckAuditEvent(utr, arn, false)
     }
   }
 
@@ -64,8 +57,8 @@ class MappingController @Inject()(mappingRepository: MappingRepository, desConne
       if (matches.nonEmpty) Ok(toJson(Mappings(matches))) else NotFound
     }
   }
-}
 
+}
 
 case class Mappings(mappings: List[Mapping])
 

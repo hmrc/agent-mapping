@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentmapping.audit
 import javax.inject.Inject
 
 import com.google.inject.Singleton
-import play.api.mvc.Request
+import play.api.mvc.{Request, Result}
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.AgentMappingEvent
 import uk.gov.hmrc.agentmapping.connector.{AuthConnector, AuthDetails}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
@@ -72,6 +72,13 @@ class AuditService @Inject()(val auditConnector: AuditConnector, val authConnect
     }
   }
 
-
+  implicit class AuditOp(result: Result) {
+    def withKnownFactsCheckAuditEvent(utr: Utr, arn: Arn, matched: Boolean, duplicated: Boolean = false)
+                                     (implicit hc: HeaderCarrier, request: Request[Any]): Future[Result] =
+      Future.successful(result)
+      .andThen { case _ => auditEvent(AgentMappingEvent.KnownFactsCheck, "known-facts-check", utr, arn,
+        Seq("knownFactsMatched" -> matched) ++ (if(duplicated) Seq("duplicated"->"true") else Seq.empty)
+      )}
+  }
 
 }

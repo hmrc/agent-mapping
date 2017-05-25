@@ -115,17 +115,62 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
     "return forbidden when the supplied arn does not match the DES business partner record arn" in {
       individualRegistrationExists(utr)
+      givenAuthority("testCredId")
+      givenAuditConnector()
       new Resource(s"/agent-mapping/mappings/${utr.value}/TARN0000001/${saAgentReference}", port).putEmpty().status shouldBe 403
+
+      verifyAuditRequestSent(1,
+        event = AgentMappingEvent.KnownFactsCheck,
+        detail = Map(
+          "knownFactsMatched" -> "false",
+          "utr" -> "2000000000",
+          "agentReferenceNumber" -> "TARN0000001",
+          "authProviderId" -> "testCredId"),
+        tags = Map(
+          "transactionName"->"known-facts-check",
+          "path" -> "/agent-mapping/mappings/2000000000/TARN0000001/A1111A"
+        )
+      )
     }
 
     "return forbidden when there is no arn on the DES business partner record" in {
       individualRegistrationExistsWithoutArn(utr)
+      givenAuthority("testCredId")
+      givenAuditConnector()
       createMappingRequest.putEmpty().status shouldBe 403
+
+      verifyAuditRequestSent(1,
+        event = AgentMappingEvent.KnownFactsCheck,
+        detail = Map(
+          "knownFactsMatched" -> "false",
+          "utr" -> "2000000000",
+          "agentReferenceNumber" -> "AARN0000002",
+          "authProviderId" -> "testCredId"),
+        tags = Map(
+          "transactionName"->"known-facts-check",
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/A1111A"
+        )
+      )
     }
 
     "return forbidden when the DES business partner record does not exist" in {
       registrationDoesNotExist(utr)
+      givenAuthority("testCredId")
+      givenAuditConnector()
       createMappingRequest.putEmpty().status shouldBe 403
+
+      verifyAuditRequestSent(1,
+        event = AgentMappingEvent.KnownFactsCheck,
+        detail = Map(
+          "knownFactsMatched" -> "false",
+          "utr" -> "2000000000",
+          "agentReferenceNumber" -> "AARN0000002",
+          "authProviderId" -> "testCredId"),
+        tags = Map(
+          "transactionName"->"known-facts-check",
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/A1111A"
+        )
+      )
     }
 
     "return bad request when the UTR is invalid" in {
