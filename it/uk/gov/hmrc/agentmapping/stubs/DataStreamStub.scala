@@ -22,9 +22,9 @@ import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.AgentMappingEvent
 
 trait DataStreamStub {
 
-  def verifyAuditRequestSent(event: AgentMappingEvent, tags: Map[String, String] = Map.empty, detail: Map[String, String] = Map.empty) = {
+  def verifyAuditRequestSent(count: Int, event: AgentMappingEvent, tags: Map[String, String] = Map.empty, detail: Map[String, String] = Map.empty) = {
     Thread.sleep(1000)
-    verify(1, postRequestedFor(urlPathEqualTo(auditUrl))
+    verify(count, postRequestedFor(urlPathEqualTo(auditUrl))
       .withRequestBody(similarToJson(
         s"""{
             |  "auditSource": "agent-mapping",

@@ -43,13 +43,12 @@ class MappingController @Inject()(mappingRepository: MappingRepository, desConne
     desConnector.getArn(utr) flatMap {
       case Some(Arn(arn.value)) => {
         mappingRepository.createMapping(arn, saAgentReference)
-          .map(_ => Created)
-          .andThen { case _ =>
-            auditService.auditEvent(KnownFactsCheck, "known-facts-check", utr, arn, Seq("knownFactsMatched" -> true))}
+          .flatMap(_ => Future.successful(Created)
+            .andThen { case _ => auditService.auditEvent(KnownFactsCheck, "known-facts-check", utr, arn, Seq("knownFactsMatched" -> true))})
           .recoverWith({
             case e: DatabaseException if e.getMessage().contains("E11000") => {
               Future.successful(Conflict)
-                .andThen { case _ => auditService.auditEvent(KnownFactsCheck, "known-facts-check", utr, arn, Seq("knownFactsMatched" -> true, "duplicate" -> true)) }
+                .andThen { case _ => auditService.auditEvent(KnownFactsCheck, "known-facts-check", utr, arn, Seq("knownFactsMatched" -> true, "duplicate" -> true))}
             }
           })
       }

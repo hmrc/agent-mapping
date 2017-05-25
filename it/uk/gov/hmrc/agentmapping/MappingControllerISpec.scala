@@ -78,7 +78,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
       givenAuditConnector()
       createMappingRequest.putEmpty().status shouldBe 201
 
-      verifyAuditRequestSent(
+      verifyAuditRequestSent(1,
         event = AgentMappingEvent.KnownFactsCheck,
         detail = Map(
           "knownFactsMatched" -> "true",
@@ -94,8 +94,23 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
     "return conflict when the mapping already exists" in {
       individualRegistrationExists(utr)
+      givenAuthority("testCredId")
+      givenAuditConnector()
       createMappingRequest.putEmpty().status shouldBe 201
       createMappingRequest.putEmpty().status shouldBe 409
+
+      verifyAuditRequestSent(2,
+        event = AgentMappingEvent.KnownFactsCheck,
+        detail = Map(
+          "knownFactsMatched" -> "true",
+          "utr" -> "2000000000",
+          "agentReferenceNumber" -> "AARN0000002",
+          "authProviderId" -> "testCredId"),
+        tags = Map(
+          "transactionName"->"known-facts-check",
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/A1111A"
+        )
+      )
     }
 
     "return forbidden when the supplied arn does not match the DES business partner record arn" in {
