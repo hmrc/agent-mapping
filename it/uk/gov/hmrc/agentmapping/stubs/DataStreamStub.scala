@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentmapping.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest.concurrent.Eventually
+import org.scalatest.time.{Span,Millis,Seconds}
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.AgentMappingEvent
 
@@ -35,7 +36,7 @@ trait DataStreamStub extends Eventually {
              |}"""
         ))
       )
-    }
+    } (PatienceConfig(scaled(Span(2,Seconds)), scaled(Span(500,Millis))))
   }
 
   def givenAuditConnector() = {
