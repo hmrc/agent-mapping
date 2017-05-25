@@ -7,16 +7,19 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.api.libs.ws.ahc.AhcWSClient
+import play.api.test.FakeRequest
+import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent
 import uk.gov.hmrc.agentmapping.repository.MappingRepository
-import uk.gov.hmrc.agentmapping.stubs.DesStubs
+import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DataStreamStub, DesStubs}
 import uk.gov.hmrc.agentmapping.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.domain.SaAgentReference
+import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport with DesStubs {
+class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport with DesStubs with AuthStubs with DataStreamStub {
   implicit val actorSystem = ActorSystem()
   implicit val materializer = ActorMaterializer()
   implicit val client: WSClient = AhcWSClient()
@@ -33,6 +36,9 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     new Resource(s"/agent-mapping/mappings/${requestArn.value}", port)
   }
 
+  implicit val hc = HeaderCarrier()
+  implicit val fakeRequest = FakeRequest("GET", "/agent-mapping/add-code")
+
   private val findMappingsRequest: Resource = findMappingsRequest()
 
   private val repo: MappingRepository = app.injector.instanceOf[MappingRepository]
@@ -44,14 +50,15 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
       mongoConfiguration ++
         Map(
           "microservice.services.auth.port" -> wireMockPort,
-          "microservice.services.des.port" -> wireMockPort
+          "microservice.services.des.port" -> wireMockPort,
+          "auditing.consumer.baseUri.host" -> wireMockHost,
+          "auditing.consumer.baseUri.port" -> wireMockPort
         )
     ).overrides(new TestGuiceModule)
   }
 
   private class TestGuiceModule extends AbstractModule {
-    override def configure(): Unit = {
-    }
+    override def configure(): Unit = {}
   }
 
   override def beforeEach() {
@@ -65,25 +72,106 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
       createMappingRequest.putEmpty().status shouldBe 201
     }
 
+    "return a successful audit event with known facts set to true" in {
+      individualRegistrationExists(utr)
+      givenAuthority("testCredId")
+      givenAuditConnector()
+      createMappingRequest.putEmpty().status shouldBe 201
+
+      verifyAuditRequestSent(1,
+        event = AgentMappingEvent.KnownFactsCheck,
+        detail = Map(
+          "knownFactsMatched" -> "true",
+          "utr" -> "2000000000",
+          "agentReferenceNumber" -> "AARN0000002",
+          "authProviderId" -> "testCredId"),
+        tags = Map(
+          "transactionName"->"known-facts-check",
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/A1111A"
+        )
+      )
+    }
+
     "return conflict when the mapping already exists" in {
       individualRegistrationExists(utr)
+      givenAuthority("testCredId")
+      givenAuditConnector()
       createMappingRequest.putEmpty().status shouldBe 201
       createMappingRequest.putEmpty().status shouldBe 409
+
+      verifyAuditRequestSent(2,
+        event = AgentMappingEvent.KnownFactsCheck,
+        detail = Map(
+          "knownFactsMatched" -> "true",
+          "utr" -> "2000000000",
+          "agentReferenceNumber" -> "AARN0000002",
+          "authProviderId" -> "testCredId"),
+        tags = Map(
+          "transactionName"->"known-facts-check",
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/A1111A"
+        )
+      )
+
     }
 
     "return forbidden when the supplied arn does not match the DES business partner record arn" in {
       individualRegistrationExists(utr)
+      givenAuthority("testCredId")
+      givenAuditConnector()
       new Resource(s"/agent-mapping/mappings/${utr.value}/TARN0000001/${saAgentReference}", port).putEmpty().status shouldBe 403
+
+      verifyAuditRequestSent(1,
+        event = AgentMappingEvent.KnownFactsCheck,
+        detail = Map(
+          "knownFactsMatched" -> "false",
+          "utr" -> "2000000000",
+          "agentReferenceNumber" -> "TARN0000001",
+          "authProviderId" -> "testCredId"),
+        tags = Map(
+          "transactionName"->"known-facts-check",
+          "path" -> "/agent-mapping/mappings/2000000000/TARN0000001/A1111A"
+        )
+      )
     }
 
     "return forbidden when there is no arn on the DES business partner record" in {
       individualRegistrationExistsWithoutArn(utr)
+      givenAuthority("testCredId")
+      givenAuditConnector()
       createMappingRequest.putEmpty().status shouldBe 403
+
+      verifyAuditRequestSent(1,
+        event = AgentMappingEvent.KnownFactsCheck,
+        detail = Map(
+          "knownFactsMatched" -> "false",
+          "utr" -> "2000000000",
+          "agentReferenceNumber" -> "AARN0000002",
+          "authProviderId" -> "testCredId"),
+        tags = Map(
+          "transactionName"->"known-facts-check",
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/A1111A"
+        )
+      )
     }
 
     "return forbidden when the DES business partner record does not exist" in {
       registrationDoesNotExist(utr)
+      givenAuthority("testCredId")
+      givenAuditConnector()
       createMappingRequest.putEmpty().status shouldBe 403
+
+      verifyAuditRequestSent(1,
+        event = AgentMappingEvent.KnownFactsCheck,
+        detail = Map(
+          "knownFactsMatched" -> "false",
+          "utr" -> "2000000000",
+          "agentReferenceNumber" -> "AARN0000002",
+          "authProviderId" -> "testCredId"),
+        tags = Map(
+          "transactionName"->"known-facts-check",
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/A1111A"
+        )
+      )
     }
 
     "return bad request when the UTR is invalid" in {

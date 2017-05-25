@@ -18,11 +18,11 @@ package uk.gov.hmrc.agentmapping.controller
 
 import javax.inject.{Inject, Singleton}
 
-import play.api.libs.concurrent.Execution.Implicits.defaultContext
 import play.api.libs.json.Format
 import play.api.libs.json.Json.{format, toJson}
 import play.api.mvc.Action
 import reactivemongo.core.errors.DatabaseException
+import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.connector.DesConnector
 import uk.gov.hmrc.agentmapping.repository.{Mapping, MappingRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
@@ -34,25 +34,34 @@ import uk.gov.hmrc.play.microservice.controller.BaseController
 import scala.concurrent.Future
 
 @Singleton
-class MappingController @Inject()(mappingRepository: MappingRepository, desConnector: DesConnector) extends BaseController {
+class MappingController @Inject()(mappingRepository: MappingRepository, desConnector: DesConnector, auditService: AuditService) extends BaseController {
+
+  import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
+
   def createMapping(utr: Utr, arn: Arn, saAgentReference: SaAgentReference) = Action.async { implicit request =>
     implicit val hc = fromHeadersAndSession(request.headers, None)
 
     desConnector.getArn(utr) flatMap {
       case Some(Arn(arn.value)) =>
-            mappingRepository.createMapping(arn, saAgentReference).map(_ => Created)
-              .recover({
-                case e: DatabaseException if e.getMessage().contains("E11000") => Conflict
-              })
-      case _ => Future successful Forbidden
+        auditService.sendKnownFactsCheckAuditEvent(utr, arn, matched = true)
+        mappingRepository.createMapping(arn, saAgentReference).map(_ => Created)
+          .recover({
+            case e: DatabaseException if e.getMessage().contains("E11000") =>
+              Conflict
+          })
+
+      case _ =>
+        auditService.sendKnownFactsCheckAuditEvent(utr, arn, matched = false)
+        Future.successful(Forbidden)
     }
   }
 
   def findMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
-    mappingRepository.findBy(arn) map{ matches =>
+    mappingRepository.findBy(arn) map { matches =>
       if (matches.nonEmpty) Ok(toJson(Mappings(matches))) else NotFound
     }
   }
+
 }
 
 case class Mappings(mappings: List[Mapping])
