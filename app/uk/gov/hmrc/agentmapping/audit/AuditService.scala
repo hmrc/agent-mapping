@@ -21,7 +21,7 @@ import javax.inject.Inject
 import com.google.inject.Singleton
 import play.api.mvc.{Request, Result}
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.AgentMappingEvent
-import uk.gov.hmrc.agentmapping.connector.{AuthConnector, AuthDetails}
+import uk.gov.hmrc.agentmapping.connector.AuthConnector
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
@@ -73,12 +73,12 @@ class AuditService @Inject()(val auditConnector: AuditConnector, val authConnect
   }
 
   implicit class AuditOp(result: Result) {
-    def withKnownFactsCheckAuditEvent(utr: Utr, arn: Arn, matched: Boolean, duplicated: Boolean = false)
+    def withKnownFactsCheckAuditEvent(utr: Utr, arn: Arn, matched: Boolean, duplicate: Boolean = false)
                                      (implicit hc: HeaderCarrier, request: Request[Any]): Future[Result] =
-      Future.successful(result)
-      .andThen { case _ => auditEvent(AgentMappingEvent.KnownFactsCheck, "known-facts-check", utr, arn,
-        Seq("knownFactsMatched" -> matched) ++ (if(duplicated) Seq("duplicated"->"true") else Seq.empty)
-      )}
+      Future.successful(result).andThen {
+        case _ => auditEvent(AgentMappingEvent.KnownFactsCheck, "known-facts-check", utr, arn,
+          Seq("knownFactsMatched" -> matched) ++ (if (duplicate) Seq("duplicate" -> "true") else Seq.empty))
+      }
   }
 
 }

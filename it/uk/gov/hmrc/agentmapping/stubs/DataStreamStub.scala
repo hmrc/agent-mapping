@@ -23,7 +23,7 @@ import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.AgentMappingEvent
 trait DataStreamStub {
 
   def verifyAuditRequestSent(count: Int, event: AgentMappingEvent, tags: Map[String, String] = Map.empty, detail: Map[String, String] = Map.empty) = {
-    Thread.sleep(1000)
+    Thread.sleep(5000) // to avoid race-condition with WireMock
     verify(count, postRequestedFor(urlPathEqualTo(auditUrl))
       .withRequestBody(similarToJson(
         s"""{

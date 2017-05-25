@@ -111,6 +111,14 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/A1111A"
         )
       )
+
+      verifyAuditRequestSent(1,
+        event = AgentMappingEvent.KnownFactsCheck,
+        detail = Map(
+          "knownFactsMatched" -> "true",
+          "duplicate" -> "true")
+      )
+
     }
 
     "return forbidden when the supplied arn does not match the DES business partner record arn" in {
