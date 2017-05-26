@@ -36,6 +36,7 @@ import scala.concurrent.Future
 @Singleton
 class MappingController @Inject()(mappingRepository: MappingRepository, desConnector: DesConnector, auditService: AuditService) extends BaseController {
 
+  import auditService._
   import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
   def createMapping(utr: Utr, arn: Arn, saAgentReference: SaAgentReference) = Action.async { implicit request =>
@@ -43,15 +44,20 @@ class MappingController @Inject()(mappingRepository: MappingRepository, desConne
 
     desConnector.getArn(utr) flatMap {
       case Some(Arn(arn.value)) =>
-        auditService.sendKnownFactsCheckAuditEvent(utr, arn, matched = true)
-        mappingRepository.createMapping(arn, saAgentReference).map(_ => Created)
-          .recover({
+        sendKnownFactsCheckAuditEvent(utr, arn, matched = true)
+        mappingRepository
+          .createMapping(arn, saAgentReference)
+          .map { _ =>
+            sendCreateMappingAuditEvent(arn, saAgentReference)
+            Created
+          }
+          .recover {
             case e: DatabaseException if e.getMessage().contains("E11000") =>
               Conflict
-          })
+          }
 
       case _ =>
-        auditService.sendKnownFactsCheckAuditEvent(utr, arn, matched = false)
+        sendKnownFactsCheckAuditEvent(utr, arn, matched = false)
         Future.successful(Forbidden)
     }
   }
