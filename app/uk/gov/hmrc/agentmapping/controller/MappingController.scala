@@ -53,6 +53,7 @@ class MappingController @Inject()(mappingRepository: MappingRepository, desConne
           }
           .recover {
             case e: DatabaseException if e.getMessage().contains("E11000") =>
+              sendCreateMappingAuditEvent(arn, saAgentReference, duplicate = true)
               Conflict
           }
 
