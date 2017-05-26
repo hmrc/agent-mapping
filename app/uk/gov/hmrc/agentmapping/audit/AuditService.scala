@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentmapping.audit
 import javax.inject.Inject
 
 import com.google.inject.Singleton
-import play.api.mvc.{Request, Result}
+import play.api.mvc.Request
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.AgentMappingEvent
 import uk.gov.hmrc.agentmapping.connector.AuthConnector
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
@@ -48,9 +48,9 @@ class AuditService @Inject()(val auditConnector: AuditConnector, val authConnect
     auditEvent(AgentMappingEvent.KnownFactsCheck, "known-facts-check", Seq("knownFactsMatched" -> matched, "utr" -> utr.value, "agentReferenceNumber" -> arn.value))
   }
 
-  def sendCreateMappingAuditEvent(arn: Arn, saAgentRef: SaAgentReference)
-                                   (implicit hc: HeaderCarrier, request: Request[Any]): Unit = {
-    auditEvent(AgentMappingEvent.CreateMapping, "create-mapping", Seq("saAgentRef" -> saAgentRef, "agentReferenceNumber" -> arn.value))
+  def sendCreateMappingAuditEvent(arn: Arn, saAgentRef: SaAgentReference, duplicate: Boolean = false)
+                                 (implicit hc: HeaderCarrier, request: Request[Any]): Unit = {
+    auditEvent(AgentMappingEvent.CreateMapping, "create-mapping", Seq("saAgentRef" -> saAgentRef, "agentReferenceNumber" -> arn.value, "duplicate" -> duplicate))
   }
 
   private[audit] def auditEvent(event: AgentMappingEvent, transactionName: String, details: Seq[(String, Any)] = Seq.empty)
