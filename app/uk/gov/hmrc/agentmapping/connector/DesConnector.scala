@@ -19,8 +19,11 @@ package uk.gov.hmrc.agentmapping.connector
 import java.net.URL
 import javax.inject.{Inject, Named, Singleton}
 
+import com.codahale.metrics.MetricRegistry
+import com.kenshoo.play.metrics.Metrics
 import play.api.libs.json.Json.format
 import play.api.libs.json.{Format, JsValue, Writes}
+import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.play.encoding.UriPathEncoding.encodePathSegment
 import uk.gov.hmrc.play.http.logging.Authorization
@@ -38,7 +41,11 @@ case class DesRegistrationRequest(requiresNameMatch: Boolean = false, regime: St
 class DesConnector @Inject() (@Named("des.environment") environment: String,
                               @Named("des.authorization-token") authorizationToken: String,
                               @Named("des-baseUrl") baseUrl: URL,
-                              httpPost: HttpPost){
+                              httpPost: HttpPost,
+                              metrics: Metrics)
+  extends HttpAPIMonitor {
+  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
+
   def getArn(utr: Utr)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[Arn]] =
     getRegistrationJson(utr) map {
       case Some(r) => (r \ "agentReferenceNumber").asOpt[Arn]
@@ -46,8 +53,10 @@ class DesConnector @Inject() (@Named("des.environment") environment: String,
     }
 
   private def getRegistrationJson(utr: Utr)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[JsValue]] = {
-    (httpPost.POST[DesRegistrationRequest, Option[JsValue]](desRegistrationUrl(utr).toString, DesRegistrationRequest(isAnAgent = false))
-      (implicitly[Writes[DesRegistrationRequest]], implicitly[HttpReads[Option[JsValue]]], desHeaders))
+    monitor(s"ConsumedAPI-DES-RegistrationIndividualUtr-POST"){
+      (httpPost.POST[DesRegistrationRequest, Option[JsValue]](desRegistrationUrl(utr).toString, DesRegistrationRequest(isAnAgent = false))
+        (implicitly[Writes[DesRegistrationRequest]], implicitly[HttpReads[Option[JsValue]]], desHeaders))
+    }
   } recover {
     case badRequest: BadRequestException =>
       throw new RuntimeException(s"400 Bad Request response from DES for utr $utr", badRequest)
