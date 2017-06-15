@@ -2,7 +2,6 @@
 
 [![Build Status](https://travis-ci.org/hmrc/agent-mapping.svg)](https://travis-ci.org/hmrc/agent-mapping) [ ![Download](https://api.bintray.com/packages/hmrc/releases/agent-mapping/images/download.svg) ](https://bintray.com/hmrc/releases/agent-mapping/_latestVersion)
 
-This is a placeholder README.md for a new repository
 
 ### License
 
