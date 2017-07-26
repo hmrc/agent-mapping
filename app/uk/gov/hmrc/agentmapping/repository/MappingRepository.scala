@@ -30,9 +30,7 @@ import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
-import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.{ExecutionContext, Future}
-
 
 case class Mapping(arn: String, saAgentReference: String)
 
@@ -43,7 +41,8 @@ object Mapping extends ReactiveMongoFormats {
 @Singleton
 class MappingRepository @Inject()(mongoComponent: ReactiveMongoComponent) extends
     ReactiveRepository[Mapping, BSONObjectID]("agent-mapping", mongoComponent.mongoConnector.db, formats, ReactiveMongoFormats.objectIdFormats) {
-  def findBy(arn: Arn) :Future[List[Mapping]] = {
+
+  def findBy(arn: Arn)(implicit ec: ExecutionContext): Future[List[Mapping]] = {
     find(Seq("arn" -> Some(arn)).map(option => option._1 -> toJsFieldJsValueWrapper(option._2.get)): _*)
   }
 
