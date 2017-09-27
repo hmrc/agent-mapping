@@ -36,10 +36,15 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     new Resource(s"/agent-mapping/mappings/${requestArn.value}", port)
   }
 
+  def deleteMappingsRequest(requestArn: Arn = registeredArn): Resource = {
+    new Resource(s"/test-only/mappings/${requestArn.value}", port)
+  }
+
   implicit val hc = HeaderCarrier()
   implicit val fakeRequest = FakeRequest("GET", "/agent-mapping/add-code")
 
   private val findMappingsRequest: Resource = findMappingsRequest()
+  private val deleteMappingsRequest: Resource = deleteMappingsRequest()
 
   private val repo: MappingRepository = app.injector.instanceOf[MappingRepository]
 
@@ -52,7 +57,8 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "microservice.services.auth.port" -> wireMockPort,
           "microservice.services.des.port" -> wireMockPort,
           "auditing.consumer.baseUri.host" -> wireMockHost,
-          "auditing.consumer.baseUri.port" -> wireMockPort
+          "auditing.consumer.baseUri.port" -> wireMockPort,
+          "application.router" -> "testOnlyDoNotUseInAppConf.Routes"
         )
     ).overrides(new TestGuiceModule)
   }
@@ -229,6 +235,26 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
     "return 404 when there are no mappings that match the supplied arn" in {
       findMappingsRequest.get().status shouldBe 404
+    }
+  }
+
+  "delete" should {
+    "return no content when a record is deleted" in {
+      await(repo.createMapping(registeredArn, SaAgentReference(saAgentReference)))
+
+      val foundResponse = findMappingsRequest.get()
+      foundResponse.status shouldBe 200
+
+      val deleteResponse = deleteMappingsRequest.delete()
+      deleteResponse.status shouldBe 204
+
+      val notFoundResponse = findMappingsRequest.get()
+      notFoundResponse.status shouldBe 404
+    }
+
+    "return no content when no record is deleted" in {
+      val deleteResponse = deleteMappingsRequest.delete()
+      deleteResponse.status shouldBe 204
     }
   }
 }

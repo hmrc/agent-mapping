@@ -64,6 +64,8 @@ class Resource(path: String, port: Int) {
 
   def get()(implicit hc: HeaderCarrier = HeaderCarrier(), client: WSClient): HttpResponse = Http.get(url)(hc, client)
 
+  def delete()(implicit hc: HeaderCarrier = HeaderCarrier(), client: WSClient): HttpResponse = Http.delete(url)(hc, client)
+
   def postAsJson(body: String)(implicit hc: HeaderCarrier = HeaderCarrier(), client: WSClient): HttpResponse =
     Http.post(url, body, Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON))(hc, client)
 

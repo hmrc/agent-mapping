@@ -21,6 +21,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Format
 import play.api.libs.json.Json.{format, toJsFieldJsValueWrapper}
 import play.modules.reactivemongo.ReactiveMongoComponent
+import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.bson.BSONObjectID
@@ -52,5 +53,9 @@ class MappingRepository @Inject()(mongoComponent: ReactiveMongoComponent) extend
 
   def createMapping(arn: Arn, saAgentReference: SaAgentReference)(implicit ec: ExecutionContext): Future[Unit] = {
     insert(Mapping(arn.value, saAgentReference.value)).map(_ => ())
+  }
+
+  def delete(arn: Arn)(implicit ec: ExecutionContext): Future[WriteResult] = {
+    remove("arn" -> arn.value)
   }
 }

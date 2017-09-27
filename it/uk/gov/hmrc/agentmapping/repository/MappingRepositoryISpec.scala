@@ -1,6 +1,7 @@
 package uk.gov.hmrc.agentmapping.repository
 
 import play.api.test.FakeApplication
+import reactivemongo.api.commands.WriteResult
 import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.support.MongoApp
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
@@ -78,6 +79,30 @@ class MappingRepositoryISpec extends UnitSpec with MongoApp {
       await(repo.createMapping(arn1, saAgentReference1))
       val result =await(repo.findBy(arn2))
       result.size shouldBe 0
+    }
+  }
+
+  "delete by arn and SA Agent Reference" should {
+    "delete a matching record" in {
+      await(repo.createMapping(arn1, saAgentReference1))
+      await(repo.createMapping(arn2, saAgentReference2))
+
+      val mappings: List[Mapping] = await(repo.findAll())
+      mappings.size shouldBe 2
+
+      val result : WriteResult = await(repo.delete(arn1))
+      result.code shouldBe None
+
+      val mappingsAfterDelete: List[Mapping] = await(repo.findAll())
+      mappingsAfterDelete.size shouldBe 1
+    }
+
+    "tolerate no matching record" in {
+      val mappings: List[Mapping] = await(repo.findAll())
+      mappings.size shouldBe 0
+
+      val result : WriteResult = await(repo.delete(arn1))
+      result.code shouldBe None
     }
   }
 }

@@ -69,6 +69,9 @@ class MappingController @Inject()(mappingRepository: MappingRepository, desConne
     }
   }
 
+  def delete(arn: Arn) = Action.async { implicit request =>
+    mappingRepository.delete(arn) map { _ => NoContent }
+  }
 }
 
 case class Mappings(mappings: List[Mapping])
