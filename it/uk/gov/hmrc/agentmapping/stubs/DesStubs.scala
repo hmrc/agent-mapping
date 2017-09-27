@@ -10,21 +10,21 @@ trait DesStubs {
 
   val registeredArn : Arn = Arn("AARN0000002")
 
-  def individualRegistrationExists(utr: Utr, isAnASAgent: Boolean = true): Unit = {
+  def givenIndividualRegistrationExists(utr: Utr, isAnASAgent: Boolean = true): Unit = {
     stubFor(maybeWithDesHeaderCheck(registrationRequest(utr, isAnAgent = false))
       .willReturn(aResponse()
         .withStatus(200)
         .withBody(s"""{ "agentReferenceNumber": "${registeredArn.value}" }""".stripMargin)))
   }
 
-  def individualRegistrationExistsWithoutArn(utr: Utr, isAnASAgent: Boolean = true): Unit = {
+  def givenIndividualRegistrationExistsWithoutArn(utr: Utr, isAnASAgent: Boolean = true): Unit = {
     stubFor(maybeWithDesHeaderCheck(registrationRequest(utr, isAnAgent = false))
       .willReturn(aResponse()
         .withStatus(200)
         .withBody(s"""{}""".stripMargin)))
   }
 
-  def registrationDoesNotExist(utr: Utr): Unit = {
+  def givenRegistrationDoesNotExist(utr: Utr): Unit = {
     stubFor(maybeWithDesHeaderCheck(registrationRequest(utr, isAnAgent = false))
       .willReturn(aResponse()
         .withStatus(404)

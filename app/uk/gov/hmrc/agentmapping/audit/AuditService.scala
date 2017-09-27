@@ -21,7 +21,6 @@ import javax.inject.Inject
 import com.google.inject.Singleton
 import play.api.mvc.Request
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.AgentMappingEvent
-import uk.gov.hmrc.agentmapping.connector.AuthConnector
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
@@ -41,33 +40,29 @@ object AgentMappingEvent extends Enumeration {
 }
 
 @Singleton
-class AuditService @Inject()(val auditConnector: AuditConnector, val authConnector: AuthConnector) {
+class AuditService @Inject()(val auditConnector: AuditConnector) {
 
-  def sendKnownFactsCheckAuditEvent(utr: Utr, arn: Arn, matched: Boolean)
+  def sendKnownFactsCheckAuditEvent(utr: Utr, arn: Arn, authProviderId: String, matched: Boolean)
                                    (implicit hc: HeaderCarrier, request: Request[Any]): Unit = {
-    auditEvent(AgentMappingEvent.KnownFactsCheck, "known-facts-check", Seq("knownFactsMatched" -> matched, "utr" -> utr.value, "agentReferenceNumber" -> arn.value))
+    auditEvent(AgentMappingEvent.KnownFactsCheck, "known-facts-check", Seq("authProviderId" -> authProviderId, "knownFactsMatched" -> matched, "utr" -> utr.value, "agentReferenceNumber" -> arn.value))
   }
 
-  def sendCreateMappingAuditEvent(arn: Arn, saAgentRef: SaAgentReference, duplicate: Boolean = false)
+  def sendCreateMappingAuditEvent(arn: Arn, saAgentRef: SaAgentReference, authProviderId: String, duplicate: Boolean = false)
                                  (implicit hc: HeaderCarrier, request: Request[Any]): Unit = {
-    auditEvent(AgentMappingEvent.CreateMapping, "create-mapping", Seq("saAgentRef" -> saAgentRef, "agentReferenceNumber" -> arn.value, "duplicate" -> duplicate))
+    auditEvent(AgentMappingEvent.CreateMapping, "create-mapping", Seq("authProviderId" -> authProviderId, "saAgentRef" -> saAgentRef, "agentReferenceNumber" -> arn.value, "duplicate" -> duplicate))
   }
 
   private[audit] def auditEvent(event: AgentMappingEvent, transactionName: String, details: Seq[(String, Any)] = Seq.empty)
                 (implicit hc: HeaderCarrier, request: Request[Any]): Future[Unit] = {
-     authConnector.currentAuthDetails() flatMap {
-       case authDetailsOpt =>
-         send(createEvent(event, transactionName, authDetailsOpt.flatMap(_.ggCredentialId), details: _*))
-     }
+    send(createEvent(event, transactionName, details: _*))
   }
 
-  private def createEvent(event: AgentMappingEvent, transactionName: String, authCredId: Option[String], details: (String, Any)*)
+  private def createEvent(event: AgentMappingEvent, transactionName: String, details: (String, Any)*)
                          (implicit hc: HeaderCarrier, request: Request[Any]): DataEvent = {
     DataEvent(auditSource = "agent-mapping",
       auditType = event.toString,
       tags = hc.toAuditTags(transactionName, request.path),
       detail = hc.toAuditDetails(details.map(pair => pair._1 -> pair._2.toString): _*)
-        ++ authCredId.map(id => Map("authProviderId" -> id)).getOrElse(Seq.empty)
     )
   }
 

@@ -13,6 +13,7 @@ import uk.gov.hmrc.agentmapping.repository.MappingRepository
 import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DataStreamStub, DesStubs}
 import uk.gov.hmrc.agentmapping.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
+import uk.gov.hmrc.auth.core.authorise.AffinityGroup
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
@@ -68,13 +69,14 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
   "mapping creation requests" should {
     "return created upon success" in {
-      individualRegistrationExists(utr)
+      givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","2000000000","testCredId")
+      givenIndividualRegistrationExists(utr)
       createMappingRequest.putEmpty().status shouldBe 201
     }
 
     "return a successful audit event with known facts set to true" in {
-      individualRegistrationExists(utr)
-      givenAuthority("testCredId")
+      givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","2000000000","testCredId")
+      givenIndividualRegistrationExists(utr)
       givenAuditConnector()
       createMappingRequest.putEmpty().status shouldBe 201
 
@@ -107,8 +109,8 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     }
 
     "return conflict when the mapping already exists" in {
-      individualRegistrationExists(utr)
-      givenAuthority("testCredId")
+      givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","2000000000","testCredId")
+      givenIndividualRegistrationExists(utr)
       givenAuditConnector()
       createMappingRequest.putEmpty().status shouldBe 201
       createMappingRequest.putEmpty().status shouldBe 409
@@ -142,8 +144,8 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     }
 
     "return forbidden when the supplied arn does not match the DES business partner record arn" in {
-      individualRegistrationExists(utr)
-      givenAuthority("testCredId")
+      givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","2000000000","testCredId")
+      givenIndividualRegistrationExists(utr)
       givenAuditConnector()
       new Resource(s"/agent-mapping/mappings/${utr.value}/TARN0000001/${saAgentReference}", port).putEmpty().status shouldBe 403
 
@@ -162,8 +164,8 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     }
 
     "return forbidden when there is no arn on the DES business partner record" in {
-      individualRegistrationExistsWithoutArn(utr)
-      givenAuthority("testCredId")
+      givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","2000000000","testCredId")
+      givenIndividualRegistrationExistsWithoutArn(utr)
       givenAuditConnector()
       createMappingRequest.putEmpty().status shouldBe 403
 
@@ -182,8 +184,8 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     }
 
     "return forbidden when the DES business partner record does not exist" in {
-      registrationDoesNotExist(utr)
-      givenAuthority("testCredId")
+      givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","2000000000","testCredId")
+      givenRegistrationDoesNotExist(utr)
       givenAuditConnector()
       createMappingRequest.putEmpty().status shouldBe 403
 
@@ -211,6 +213,32 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
       val response = createMappingRequest(requestArn = Arn("A_BAD_ARN")).putEmpty()
       response.status shouldBe 400
       (response.json \ "message").as[String] shouldBe """"A_BAD_ARN" is not a valid ARN"""
+    }
+
+    "return unauthenticated" when {
+      "unauthenticated user attempts to create mapping" in {
+        givenUserNotAuthorisedWithError("MissingBearerToken")
+        givenIndividualRegistrationExists(utr)
+        createMappingRequest.putEmpty().status shouldBe 401
+      }
+    }
+
+    "return forbidden" when {
+      "user with Agent affinity group and HMRC-AS-AGENT enrolment attempts to create mapping" in {
+        givenUserAuthorisedFor("HMRC-AS-AGENT","AgentReferenceNumber","TARN000003","testCredId")
+        givenIndividualRegistrationExists(utr)
+        createMappingRequest.putEmpty().status shouldBe 403
+      }
+      "authenticated user with IR-SA-AGENT enrolment but without Agent Affinity group attempts to create mapping" in {
+        givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","2000000000","testCredId", AffinityGroup.Individual)
+        givenIndividualRegistrationExists(utr)
+        createMappingRequest.putEmpty().status shouldBe 403
+      }
+      "user with Agent affinity group and IR-SA-AGENT enrolment attempts to create mapping for invalid saAgentReference" in {
+        givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","3000000000","testCredId")
+        givenIndividualRegistrationExists(utr)
+        createMappingRequest.putEmpty().status shouldBe 403
+      }
     }
   }
 

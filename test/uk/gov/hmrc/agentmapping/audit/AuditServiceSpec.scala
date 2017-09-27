@@ -18,28 +18,24 @@ package uk.gov.hmrc.agentmapping.audit
 
 import org.mockito.ArgumentCaptor
 import org.mockito.Matchers._
-import org.mockito.Mockito.{verify, _}
+import org.mockito.Mockito.verify
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mock.MockitoSugar
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.KnownFactsCheck
-import uk.gov.hmrc.agentmapping.connector.{AuthConnector, AuthDetails}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.{AuditEvent, DataEvent}
 import uk.gov.hmrc.play.http.HeaderCarrier
 import uk.gov.hmrc.play.http.logging.{Authorization, RequestId, SessionId}
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
 
 class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
   "auditEvent" should {
     "send an event with the correct fields" in {
       val mockConnector = mock[AuditConnector]
-      val mockAuthConnector = mock[AuthConnector]
-      val service = new AuditService(mockConnector, mockAuthConnector)
-
-      when(mockAuthConnector.currentAuthDetails()(any(),any())).thenReturn(Future.successful(Some(AuthDetails(Some("testCredId")))))
+      val service = new AuditService(mockConnector)
 
       val hc = HeaderCarrier(
         authorization = Some(Authorization("dummy bearer token")),
