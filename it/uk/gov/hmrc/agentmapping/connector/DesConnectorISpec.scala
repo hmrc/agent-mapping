@@ -30,7 +30,7 @@ class DesConnectorISpec extends UnitSpec with OneAppPerSuite with WireMockSuppor
   "getRegistration" should {
 
     "return an arn for an individual UTR that is known by DES" in {
-      individualRegistrationExists(utr)
+      givenIndividualRegistrationExists(utr)
       givenCleanMetricRegistry()
 
       val registration = await(connector.getArn(utr))
@@ -41,7 +41,7 @@ class DesConnectorISpec extends UnitSpec with OneAppPerSuite with WireMockSuppor
     }
 
     "return None for an individual UTR that is known by DES but has no associated ARN" in {
-      individualRegistrationExistsWithoutArn(utr)
+      givenIndividualRegistrationExistsWithoutArn(utr)
       givenCleanMetricRegistry()
 
       val registration = await(connector.getArn(utr))
@@ -52,7 +52,7 @@ class DesConnectorISpec extends UnitSpec with OneAppPerSuite with WireMockSuppor
     }
 
     "not return None for a UTR that is unknown to DES" in {
-      registrationDoesNotExist(utr)
+      givenRegistrationDoesNotExist(utr)
       givenCleanMetricRegistry()
 
       val registration = await(connector.getArn(utr))
