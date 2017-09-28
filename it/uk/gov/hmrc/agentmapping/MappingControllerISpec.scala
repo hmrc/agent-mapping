@@ -75,13 +75,13 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
   "mapping creation requests" should {
     "return created upon success" in {
-      givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","2000000000","testCredId")
+      givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","A1111A","testCredId")
       givenIndividualRegistrationExists(utr)
       createMappingRequest.putEmpty().status shouldBe 201
     }
 
     "return a successful audit event with known facts set to true" in {
-      givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","2000000000","testCredId")
+      givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","A1111A","testCredId")
       givenIndividualRegistrationExists(utr)
       givenAuditConnector()
       createMappingRequest.putEmpty().status shouldBe 201
@@ -115,7 +115,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     }
 
     "return conflict when the mapping already exists" in {
-      givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","2000000000","testCredId")
+      givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","A1111A","testCredId")
       givenIndividualRegistrationExists(utr)
       givenAuditConnector()
       createMappingRequest.putEmpty().status shouldBe 201
@@ -150,7 +150,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     }
 
     "return forbidden when the supplied arn does not match the DES business partner record arn" in {
-      givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","2000000000","testCredId")
+      givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","A1111A","testCredId")
       givenIndividualRegistrationExists(utr)
       givenAuditConnector()
       new Resource(s"/agent-mapping/mappings/${utr.value}/TARN0000001/${saAgentReference}", port).putEmpty().status shouldBe 403
@@ -170,7 +170,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     }
 
     "return forbidden when there is no arn on the DES business partner record" in {
-      givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","2000000000","testCredId")
+      givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","A1111A","testCredId")
       givenIndividualRegistrationExistsWithoutArn(utr)
       givenAuditConnector()
       createMappingRequest.putEmpty().status shouldBe 403
@@ -190,7 +190,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     }
 
     "return forbidden when the DES business partner record does not exist" in {
-      givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","2000000000","testCredId")
+      givenUserAuthorisedFor("IR-SA-AGENT","saAgentReference","A1111A","testCredId")
       givenRegistrationDoesNotExist(utr)
       givenAuditConnector()
       createMappingRequest.putEmpty().status shouldBe 403
