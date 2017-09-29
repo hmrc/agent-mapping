@@ -47,7 +47,7 @@ class MappingController @Inject()(mappingRepository: MappingRepository, desConne
 
   def createMapping(utr: Utr, arn: Arn, saAgentReference: SaAgentReference): Action[AnyContent] = Action.async { implicit request =>
     implicit val hc = HeaderCarrier.fromHeadersAndSession(request.headers, None)
-    authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent and Enrolment("IR-SA-AGENT").withIdentifier("saAgentReference", saAgentReference.value))
+    authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent and Enrolment("IR-SA-AGENT").withIdentifier("IRAgentReference", saAgentReference.value))
       .retrieve(Retrievals.authProviderId) {
         case ggCredId: GGCredId =>
           desConnector.getArn(utr) flatMap {

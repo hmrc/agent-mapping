@@ -3,6 +3,8 @@ import sbt.Tests.{Group, SubProcess}
 import sbt._
 import play.routes.compiler.StaticRoutesGenerator
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin._
+import play.sbt.PlayImport.PlayKeys
+import play.sbt.PlayImport.PlayKeys._
 
 
 trait MicroService {
@@ -20,7 +22,7 @@ trait MicroService {
 
   lazy val appDependencies : Seq[ModuleID] = ???
   lazy val plugins : Seq[Plugins] = Seq.empty
-  lazy val playSettings : Seq[Setting[_]] = Seq.empty
+  lazy val playSettings : Seq[Setting[_]] = Seq(PlayKeys.playDefaultPort := 9439)
 
   lazy val scoverageSettings = {
     import scoverage.ScoverageKeys
