@@ -38,7 +38,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
   }
 
   def deleteMappingsRequest(requestArn: Arn = registeredArn): Resource = {
-    new Resource(s"/test-only/mappings/${requestArn.value}", port)
+    new Resource(s"/agent-mapping/test-only/mappings/${requestArn.value}", port)
   }
 
   implicit val hc = HeaderCarrier()
