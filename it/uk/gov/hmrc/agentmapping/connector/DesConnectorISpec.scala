@@ -8,7 +8,7 @@ import uk.gov.hmrc.agentmapping.WSHttp
 import uk.gov.hmrc.agentmapping.stubs.DesStubs
 import uk.gov.hmrc.agentmapping.support.{MetricTestSupport, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.Utr
-import uk.gov.hmrc.play.http.HeaderCarrier
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global

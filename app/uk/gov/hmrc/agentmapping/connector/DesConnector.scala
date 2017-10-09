@@ -26,10 +26,10 @@ import play.api.libs.json.{Format, JsValue, Writes}
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.play.encoding.UriPathEncoding.encodePathSegment
-import uk.gov.hmrc.play.http.logging.Authorization
-import uk.gov.hmrc.play.http.{BadRequestException, HeaderCarrier, HttpPost, HttpReads}
 
 import scala.concurrent.{ExecutionContext, Future}
+import uk.gov.hmrc.http.{ BadRequestException, HeaderCarrier, HttpPost, HttpReads }
+import uk.gov.hmrc.http.logging.Authorization
 
 object DesRegistrationRequest {
   implicit val formats: Format[DesRegistrationRequest] = format[DesRegistrationRequest]
@@ -55,7 +55,7 @@ class DesConnector @Inject() (@Named("des.environment") environment: String,
   private def getRegistrationJson(utr: Utr)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[JsValue]] = {
     monitor(s"ConsumedAPI-DES-RegistrationIndividualUtr-POST"){
       (httpPost.POST[DesRegistrationRequest, Option[JsValue]](desRegistrationUrl(utr).toString, DesRegistrationRequest(isAnAgent = false))
-        (implicitly[Writes[DesRegistrationRequest]], implicitly[HttpReads[Option[JsValue]]], desHeaders))
+        (implicitly[Writes[DesRegistrationRequest]], implicitly[HttpReads[Option[JsValue]]], desHeaders, ec))
     }
   } recover {
     case badRequest: BadRequestException =>

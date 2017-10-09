@@ -13,9 +13,9 @@ import uk.gov.hmrc.agentmapping.repository.MappingRepository
 import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DataStreamStub, DesStubs}
 import uk.gov.hmrc.agentmapping.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
-import uk.gov.hmrc.auth.core.authorise.AffinityGroup
+import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.domain.SaAgentReference
-import uk.gov.hmrc.play.http.HeaderCarrier
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
