@@ -27,13 +27,12 @@ import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.connector.DesConnector
 import uk.gov.hmrc.agentmapping.repository.{Mapping, MappingRepository}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
-import uk.gov.hmrc.auth.core.authorise.{AffinityGroup, Enrolment}
-import uk.gov.hmrc.auth.core.retrieve.AuthProvider.GovernmentGateway
-import uk.gov.hmrc.auth.core.retrieve._
-import uk.gov.hmrc.auth.core.{AuthConnector, AuthorisationException, AuthorisedFunctions, NoActiveSession}
+import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
+import uk.gov.hmrc.auth.core._
+import uk.gov.hmrc.auth.core.retrieve.{GGCredId, Retrievals}
 import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import uk.gov.hmrc.play.http.HeaderCarrier
+import uk.gov.hmrc.play.HeaderCarrierConverter.fromHeadersAndSession
 import uk.gov.hmrc.play.microservice.controller.BaseController
 
 import scala.concurrent.Future
@@ -46,7 +45,7 @@ class MappingController @Inject()(mappingRepository: MappingRepository, desConne
   import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
   def createMapping(utr: Utr, arn: Arn, saAgentReference: SaAgentReference): Action[AnyContent] = Action.async { implicit request =>
-    implicit val hc = HeaderCarrier.fromHeadersAndSession(request.headers, None)
+    implicit val hc = fromHeadersAndSession(request.headers, None)
     authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent and Enrolment("IR-SA-AGENT").withIdentifier("IRAgentReference", saAgentReference.value))
       .retrieve(Retrievals.authProviderId) {
         case ggCredId: GGCredId =>

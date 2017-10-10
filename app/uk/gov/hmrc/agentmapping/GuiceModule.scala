@@ -27,7 +27,7 @@ import uk.gov.hmrc.agentmapping.connector.DesConnector
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.config.ServicesConfig
-import uk.gov.hmrc.play.http.{HttpGet, HttpPost}
+import uk.gov.hmrc.http.{ HttpGet, HttpPost }
 
 class GuiceModule(environment: Environment, configuration: Configuration) extends AbstractModule with ServicesConfig {
 

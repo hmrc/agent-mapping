@@ -26,11 +26,11 @@ import uk.gov.hmrc.domain.SaAgentReference
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
-import uk.gov.hmrc.play.http.HeaderCarrier
 
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import scala.concurrent.Future
 import scala.util.Try
+import uk.gov.hmrc.http.HeaderCarrier
 
 object AgentMappingEvent extends Enumeration {
 

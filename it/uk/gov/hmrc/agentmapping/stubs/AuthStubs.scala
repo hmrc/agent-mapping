@@ -1,7 +1,7 @@
 package uk.gov.hmrc.agentmapping.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import uk.gov.hmrc.auth.core.authorise.AffinityGroup
+import uk.gov.hmrc.auth.core.AffinityGroup
 
 trait AuthStubs {
 

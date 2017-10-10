@@ -17,9 +17,9 @@
 package uk.gov.hmrc.agentmapping.controller
 
 import play.api.mvc.PathBindable
+import uk.gov.hmrc.agentmapping.binders.SimpleObjectBinder
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.domain.SaAgentReference
-import uk.gov.hmrc.play.binders.SimpleObjectBinder
 
 object UrlBinders {
   implicit val utrBinder = new PathBindable[Utr] {
