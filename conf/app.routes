@@ -2,7 +2,7 @@
 
 PUT  /mappings/:utr/:arn/:identifiers      @uk.gov.hmrc.agentmapping.controller.MappingController.createMapping(utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, identifiers: uk.gov.hmrc.agentmapping.model.Identifiers)
 
-# deprecated, use /mappings/sa/:arn
+# DEPRECATED, use /mappings/sa/:arn
 GET  /mappings/:arn                        @uk.gov.hmrc.agentmapping.controller.MappingController.findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
 GET  /mappings/sa/:arn                     @uk.gov.hmrc.agentmapping.controller.MappingController.findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
