@@ -1,4 +1,9 @@
 # microservice specific routes
 
-PUT  /mappings/:utr/:arn/:saAgentReference @uk.gov.hmrc.agentmapping.controller.MappingController.createMapping(utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, saAgentReference: uk.gov.hmrc.domain.SaAgentReference)
-GET  /mappings/:arn                        @uk.gov.hmrc.agentmapping.controller.MappingController.findMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+PUT  /mappings/:utr/:arn/:identifiers      @uk.gov.hmrc.agentmapping.controller.MappingController.createMapping(utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, identifiers: uk.gov.hmrc.agentmapping.model.Identifiers)
+
+# deprecated, use /mappings/sa/:arn
+GET  /mappings/:arn                        @uk.gov.hmrc.agentmapping.controller.MappingController.findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+
+GET  /mappings/sa/:arn                     @uk.gov.hmrc.agentmapping.controller.MappingController.findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+GET  /mappings/vat/:arn                    @uk.gov.hmrc.agentmapping.controller.MappingController.findVatMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
