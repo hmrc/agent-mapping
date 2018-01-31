@@ -42,8 +42,8 @@ import scala.concurrent.Future
 class UnsupportedIdentifierKey(identifier: Identifier) extends Exception(s"Unsupported identifier key ${identifier.key}")
 
 @Singleton
-class MappingController @Inject()(saAgentReferenceMappingRepository: SaAgentReferenceMappingRepository,
-                                  vatAgentReferenceMappingRepository: VatAgentReferenceMappingRepository,
+class MappingController @Inject()(vatAgentReferenceMappingRepository: VatAgentReferenceMappingRepository,
+                                  saAgentReferenceMappingRepository: SaAgentReferenceMappingRepository,
                                   desConnector: DesConnector,
                                   auditService: AuditService,
                                   val authConnector: AuthConnector)
@@ -77,7 +77,12 @@ class MappingController @Inject()(saAgentReferenceMappingRepository: SaAgentRefe
                   identifier => createMappingInRepository(arn, identifier, ggCredId.credId)
                 )
                   .reduce((f1,f2) => f1.flatMap(b1 => f2.map(b2 => b1 & b2)))
-                  .map(allConflicted => if(allConflicted) Conflict else Created)
+                  .map(
+                    allConflicted => if(allConflicted)
+                      Conflict
+                    else
+                      Created
+                  )
 
             case _ =>
               sendKnownFactsCheckAuditEvent(utr, arn, ggCredId.credId, matched = false)
@@ -101,6 +106,7 @@ class MappingController @Inject()(saAgentReferenceMappingRepository: SaAgentRefe
       .createMapping(arn, identifier.value)
       .map { _ =>
         sendCreateMappingAuditEvent(arn, identifier, ggCredId)
+        println(identifier)
         false
       }
       .recover {

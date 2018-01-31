@@ -80,6 +80,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
   override def beforeEach() {
     super.beforeEach()
     await(saRepo.ensureIndexes)
+    await(vatRepo.ensureIndexes)
   }
 
   "mapping creation requests" should {
@@ -172,7 +173,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
     }
 
-    "return conflict when the mapping already exists" in {
+    "return conflict when the mapping already exists for sa" in {
       givenUserAuthorisedFor("IR-SA-AGENT","IRAgentReference","A1111A","testCredId")
       givenIndividualRegistrationExists(utr)
       givenAuditConnector()
@@ -202,6 +203,41 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
         tags = Map(
           "transactionName" -> "create-mapping",
           "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/IRAgentReference~A1111A"
+        )
+      )
+
+    }
+
+    "return conflict when the mapping already exists for vat" in {
+      givenUserAuthorisedFor("HMCE-VATDEC-ORG","VATRegNo","B1111B","testCredId")
+      givenIndividualRegistrationExists(utr)
+      givenAuditConnector()
+      createMappingRequest(vatOnlyIdentifier).putEmpty().status shouldBe 201
+      createMappingRequest(vatOnlyIdentifier).putEmpty().status shouldBe 409
+
+      verifyAuditRequestSent(2,
+        event = AgentMappingEvent.KnownFactsCheck,
+        detail = Map(
+          "knownFactsMatched" -> "true",
+          "utr" -> "2000000000",
+          "agentReferenceNumber" -> "AARN0000002",
+          "authProviderId" -> "testCredId"),
+        tags = Map(
+          "transactionName"->"known-facts-check",
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/VATRegNo~B1111B"
+        )
+      )
+
+      verifyAuditRequestSent(1,
+        event = AgentMappingEvent.CreateMapping,
+        detail = Map(
+          "vatAgentRef" -> "B1111B",
+          "agentReferenceNumber" -> "AARN0000002",
+          "authProviderId" -> "testCredId",
+          "duplicate" -> "true"),
+        tags = Map(
+          "transactionName" -> "create-mapping",
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/VATRegNo~B1111B"
         )
       )
 
@@ -285,11 +321,11 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
     }
 
-    "return conflict when the mapping already exists for SA and VAT" in {
+    "return conflict when the mapping already exists for both SA and VAT" in {
       givenUserAuthorisedForMultiple(Set(
         Enrolment("IR-SA-AGENT",Seq(EnrolmentIdentifier("IRAgentReference","A1111A")),"Activated"),
         Enrolment("HMCE-VATDEC-ORG",Seq(EnrolmentIdentifier("VATRegNo","B1111B")), "Activated")
-      ),"testCredId")
+      ), "testCredId")
       givenIndividualRegistrationExists(utr)
       givenAuditConnector()
       createMappingRequest(saAndVatIdentifiers).putEmpty().status shouldBe 201
@@ -493,7 +529,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
       response.status shouldBe 200
       val body = response.body
-      body shouldBe """{"mappings":[{"arn":"AARN0000002","vatRegNo":"B1111B"},{"arn":"AARN0000002","vatRegNo":"B1111A"}]}"""
+      body shouldBe """{"mappings":[{"arn":"AARN0000002","vatRegNo":"B1111A"},{"arn":"AARN0000002","vatRegNo":"B1111B"}]}"""
     }
 
     "return 404 when there are no mappings that match the supplied arn" in {
