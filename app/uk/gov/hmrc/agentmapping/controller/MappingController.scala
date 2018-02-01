@@ -62,7 +62,7 @@ class MappingController @Inject()(vatAgentReferenceMappingRepository: VatAgentRe
       .map(i => Enrolment(
         validEnrolmentIdentifierKeys.getOrElse(i.key, throw new UnsupportedIdentifierKey(i))
       ).withIdentifier(i.key, i.value)
-      ).reduce[Predicate](_ or _)
+      ).reduce[Predicate](_ and _)
   }
 
   def createMapping(utr: Utr, arn: Arn, identifiers: Identifiers): Action[AnyContent] = Action.async { implicit request =>
@@ -106,7 +106,6 @@ class MappingController @Inject()(vatAgentReferenceMappingRepository: VatAgentRe
       .createMapping(arn, identifier.value)
       .map { _ =>
         sendCreateMappingAuditEvent(arn, identifier, ggCredId)
-        println(identifier)
         false
       }
       .recover {

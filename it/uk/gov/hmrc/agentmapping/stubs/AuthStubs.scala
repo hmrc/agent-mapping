@@ -19,12 +19,18 @@ trait AuthStubs {
       .withRequestBody(
         equalToJson(
           s"""{"authorise":[
-             |{"authProviders":["GovernmentGateway"]},
-             |{"affinityGroup":"$affinityGroup"},
-             |{"identifiers":[{"key":"$identifierName","value":"$identifierValue"}],
-             |"state":"Activated",
-             |"enrolment":"$enrolment"}]
-          }""".stripMargin, true, true))
+             |  {"authProviders":["GovernmentGateway"]},
+             |  {"affinityGroup":"$affinityGroup"},
+             |  {
+             |    "identifiers":[
+             |      {"key":"$identifierName","value":"$identifierValue"}
+             |    ],
+             |    "state":"Activated",
+             |    "enrolment":"$enrolment"
+             |  }
+             |],
+             |"retrieve":["authProviderId"]
+          }""".stripMargin, true, false))
       .willReturn(aResponse()
         .withStatus(200)
         .withHeader("Content-Type", "application/json")
@@ -43,20 +49,18 @@ trait AuthStubs {
       .withRequestBody(
         equalToJson(
           s"""|
-              |{"authorise":[
-              |  {"authProviders":["GovernmentGateway"]},
-              |  {"affinityGroup":"$affinityGroup"},
-              |  {"$$or":[
-              |     ${enrolments.map(e => s"""{
+              |{ "authorise":[
+              |   {"authProviders":["GovernmentGateway"]},
+              |   {"affinityGroup":"$affinityGroup"},
+              |   ${enrolments.map(e => s"""{
               |      "identifiers":[${e.identifiers.map(i => s"""{"key":"${i.key}","value":"${i.value}"}""").mkString(",")}],
               |      "state":"${e.state}",
               |      "enrolment":"${e.key}"
               |      }""".stripMargin).mkString(",")}
-              |     ]
-              |   }],
-              |   "retrieve":["authProviderId"]
+              |   ],
+              |  "retrieve":["authProviderId"]
               |}
-           """.stripMargin, true, true))
+           """.stripMargin, true, false))
       .willReturn(aResponse()
         .withStatus(200)
         .withHeader("Content-Type", "application/json")

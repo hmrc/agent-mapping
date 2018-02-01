@@ -81,6 +81,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     super.beforeEach()
     await(saRepo.ensureIndexes)
     await(vatRepo.ensureIndexes)
+    givenAuditConnector()
   }
 
   "mapping creation requests" should {
@@ -105,10 +106,15 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
       createMappingRequest(saAndVatIdentifiers).putEmpty().status shouldBe 201
     }
 
+    "return forbidden when agent got single enrolment but tries to map more identifiers" in {
+      givenUserAuthorisedFor("IR-SA-AGENT","IRAgentReference","A1111A","testCredId")
+      givenIndividualRegistrationExists(utr)
+      createMappingRequest(saAndVatIdentifiers).putEmpty().status shouldBe 403
+    }
+
     "return a successful audit event with known facts set to true for SA" in {
       givenUserAuthorisedFor("IR-SA-AGENT","IRAgentReference","A1111A","testCredId")
       givenIndividualRegistrationExists(utr)
-      givenAuditConnector()
       createMappingRequest(saOnlyIdentifier).putEmpty().status shouldBe 201
 
       verifyAuditRequestSent(1,
@@ -142,7 +148,6 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     "return a successful audit event with known facts set to true for VAT" in {
       givenUserAuthorisedFor("HMCE-VATDEC-ORG","VATRegNo","B1111B","testCredId")
       givenIndividualRegistrationExists(utr)
-      givenAuditConnector()
       createMappingRequest(vatOnlyIdentifier).putEmpty().status shouldBe 201
 
       verifyAuditRequestSent(1,
@@ -176,7 +181,6 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     "return conflict when the mapping already exists for sa" in {
       givenUserAuthorisedFor("IR-SA-AGENT","IRAgentReference","A1111A","testCredId")
       givenIndividualRegistrationExists(utr)
-      givenAuditConnector()
       createMappingRequest(saOnlyIdentifier).putEmpty().status shouldBe 201
       createMappingRequest(saOnlyIdentifier).putEmpty().status shouldBe 409
 
@@ -211,7 +215,6 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     "return conflict when the mapping already exists for vat" in {
       givenUserAuthorisedFor("HMCE-VATDEC-ORG","VATRegNo","B1111B","testCredId")
       givenIndividualRegistrationExists(utr)
-      givenAuditConnector()
       createMappingRequest(vatOnlyIdentifier).putEmpty().status shouldBe 201
       createMappingRequest(vatOnlyIdentifier).putEmpty().status shouldBe 409
 
@@ -250,7 +253,6 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
         Enrolment("HMCE-VATDEC-ORG",Seq(EnrolmentIdentifier("VATRegNo","B1111B")), "Activated")
       ),"testCredId")
       givenIndividualRegistrationExists(utr)
-      givenAuditConnector()
       createMappingRequest(saOnlyIdentifier).putEmpty().status shouldBe 201
       createMappingRequest(saAndVatIdentifiers).putEmpty().status shouldBe 201
 
@@ -327,7 +329,6 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
         Enrolment("HMCE-VATDEC-ORG",Seq(EnrolmentIdentifier("VATRegNo","B1111B")), "Activated")
       ), "testCredId")
       givenIndividualRegistrationExists(utr)
-      givenAuditConnector()
       createMappingRequest(saAndVatIdentifiers).putEmpty().status shouldBe 201
       createMappingRequest(saAndVatIdentifiers).putEmpty().status shouldBe 409
 
@@ -401,7 +402,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     "return forbidden when the supplied arn does not match the DES business partner record arn" in {
       givenUserAuthorisedFor("IR-SA-AGENT","IRAgentReference","A1111A","testCredId")
       givenIndividualRegistrationExists(utr)
-      givenAuditConnector()
+      
       new Resource(s"/agent-mapping/mappings/${utr.value}/TARN0000001/${saOnlyIdentifier}", port).putEmpty().status shouldBe 403
 
       verifyAuditRequestSent(1,
@@ -421,7 +422,6 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     "return forbidden when there is no arn on the DES business partner record" in {
       givenUserAuthorisedFor("IR-SA-AGENT","IRAgentReference","A1111A","testCredId")
       givenIndividualRegistrationExistsWithoutArn(utr)
-      givenAuditConnector()
       createMappingRequest(saOnlyIdentifier).putEmpty().status shouldBe 403
 
       verifyAuditRequestSent(1,
@@ -441,7 +441,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     "return forbidden when the DES business partner record does not exist" in {
       givenUserAuthorisedFor("IR-SA-AGENT","IRAgentReference","A1111A","testCredId")
       givenRegistrationDoesNotExist(utr)
-      givenAuditConnector()
+      
       createMappingRequest(saOnlyIdentifier).putEmpty().status shouldBe 403
 
       verifyAuditRequestSent(1,
@@ -459,12 +459,14 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     }
 
     "return bad request when the UTR is invalid" in {
+      
       val response = createMappingRequest(saOnlyIdentifier, requestUtr = Utr("A_BAD_UTR")).putEmpty()
       response.status shouldBe 400
       (response.json \ "message").as[String] shouldBe """"A_BAD_UTR" is not a valid UTR"""
     }
 
     "return bad request when the ARN is invalid" in {
+      
       val response = createMappingRequest(saOnlyIdentifier, requestArn = Arn("A_BAD_ARN")).putEmpty()
       response.status shouldBe 400
       (response.json \ "message").as[String] shouldBe """"A_BAD_ARN" is not a valid ARN"""
@@ -472,6 +474,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
     "return unauthenticated" when {
       "unauthenticated user attempts to create mapping" in {
+        
         givenUserNotAuthorisedWithError("MissingBearerToken")
         givenIndividualRegistrationExists(utr)
         createMappingRequest(saOnlyIdentifier).putEmpty().status shouldBe 401
@@ -480,16 +483,19 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
     "return forbidden" when {
       "user with Agent affinity group and HMRC-AS-AGENT enrolment attempts to create mapping" in {
+        
         givenUserAuthorisedFor("HMRC-AS-AGENT","AgentReferenceNumber","TARN000003","testCredId")
         givenIndividualRegistrationExists(utr)
         createMappingRequest(saOnlyIdentifier).putEmpty().status shouldBe 403
       }
       "authenticated user with IR-SA-AGENT enrolment but without Agent Affinity group attempts to create mapping" in {
+        
         givenUserAuthorisedFor("IR-SA-AGENT","IRAgentReference","2000000000","testCredId", AffinityGroup.Individual)
         givenIndividualRegistrationExists(utr)
         createMappingRequest(saOnlyIdentifier).putEmpty().status shouldBe 403
       }
       "user with Agent affinity group and IR-SA-AGENT enrolment attempts to create mapping for invalid saAgentReference" in {
+        
         givenUserAuthorisedFor("IR-SA-AGENT","IRAgentReference","3000000000","testCredId")
         givenIndividualRegistrationExists(utr)
         createMappingRequest(saOnlyIdentifier).putEmpty().status shouldBe 403
