@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 HM Revenue & Customs
+ * Copyright 2018 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,78 +19,124 @@ package uk.gov.hmrc.agentmapping.controller
 import javax.inject.{Inject, Singleton}
 
 import play.api.Logger
-import play.api.libs.json.Format
-import play.api.libs.json.Json.{format, toJson}
-import play.api.mvc.{Action, AnyContent}
+import play.api.libs.json.Json.toJson
+import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.connector.DesConnector
-import uk.gov.hmrc.agentmapping.repository.{Mapping, MappingRepository}
+import uk.gov.hmrc.agentmapping.model._
+import uk.gov.hmrc.agentmapping.repository._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
+import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.{GGCredId, Retrievals}
-import uk.gov.hmrc.domain.SaAgentReference
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.HeaderCarrierConverter.fromHeadersAndSession
 import uk.gov.hmrc.play.microservice.controller.BaseController
+import uk.gov.hmrc.agentmapping.model.Names._
 
 import scala.concurrent.Future
 
+class UnsupportedIdentifierKey(identifier: Identifier) extends Exception(s"Unsupported identifier key ${identifier.key}")
+
 @Singleton
-class MappingController @Inject()(mappingRepository: MappingRepository, desConnector: DesConnector, auditService: AuditService, val authConnector: AuthConnector)
+class MappingController @Inject()(vatAgentReferenceMappingRepository: VatAgentReferenceMappingRepository,
+                                  saAgentReferenceMappingRepository: SaAgentReferenceMappingRepository,
+                                  desConnector: DesConnector,
+                                  auditService: AuditService,
+                                  val authConnector: AuthConnector)
   extends BaseController with AuthorisedFunctions {
 
   import auditService._
   import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
-  def createMapping(utr: Utr, arn: Arn, saAgentReference: SaAgentReference): Action[AnyContent] = Action.async { implicit request =>
+  private val validEnrolmentIdentifierKeys: Map[String, String] = Map(
+    IRAgentReference -> `IR-SA-AGENT`,
+    VATRegNo -> `HMCE-VATDEC-ORG`
+  )
+
+  def enrolmentsFor(identifiers: Identifiers): Predicate = {
+    identifiers.get
+      .map(i => Enrolment(
+        validEnrolmentIdentifierKeys.getOrElse(i.key, throw new UnsupportedIdentifierKey(i))
+      ).withIdentifier(i.key, i.value)
+      ).reduce[Predicate](_ and _)
+  }
+
+  def createMapping(utr: Utr, arn: Arn, identifiers: Identifiers): Action[AnyContent] = Action.async { implicit request =>
     implicit val hc = fromHeadersAndSession(request.headers, None)
-    authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent and Enrolment("IR-SA-AGENT").withIdentifier("IRAgentReference", saAgentReference.value))
+    authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent and enrolmentsFor(identifiers))
       .retrieve(Retrievals.authProviderId) {
         case ggCredId: GGCredId =>
           desConnector.getArn(utr) flatMap {
             case Some(Arn(arn.value)) =>
               sendKnownFactsCheckAuditEvent(utr, arn, ggCredId.credId, matched = true)
-              mappingRepository
-                .createMapping(arn, saAgentReference)
-                .map { _ =>
-                  sendCreateMappingAuditEvent(arn, saAgentReference, ggCredId.credId)
-                  Created
-                }
-                .recover {
-                  case e: DatabaseException if e.getMessage().contains("E11000") =>
-                  sendCreateMappingAuditEvent(arn, saAgentReference, ggCredId.credId, duplicate = true)
-                  Conflict
-              }
+                identifiers.get.map(
+                  identifier => createMappingInRepository(arn, identifier, ggCredId.credId)
+                )
+                  .reduce((f1,f2) => f1.flatMap(b1 => f2.map(b2 => b1 & b2)))
+                  .map(
+                    allConflicted => if(allConflicted)
+                      Conflict
+                    else
+                      Created
+                  )
 
-          case _ =>
-            sendKnownFactsCheckAuditEvent(utr, arn, ggCredId.credId, matched = false)
-            Future.successful(Forbidden)
-        }
-    }.recoverWith {
-      case ex: NoActiveSession        =>
+            case _ =>
+              sendKnownFactsCheckAuditEvent(utr, arn, ggCredId.credId, matched = false)
+              Future.successful(Forbidden)
+          }
+      }.recoverWith {
+      case ex: NoActiveSession =>
         Logger.warn("No active session whilst trying to create mapping", ex)
         Future.successful(Unauthorized)
       case ex: AuthorisationException =>
         Logger.warn("Authorisation exception whilst trying to create mapping", ex)
         Future.successful(Forbidden)
+      case ex: UnsupportedIdentifierKey =>
+        Logger.warn("An attempt to do mapping with an invalid identifier", ex)
+        Future.successful(Forbidden)
     }
   }
 
-  def findMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
-    mappingRepository.findBy(arn) map { matches =>
-      if (matches.nonEmpty) Ok(toJson(Mappings(matches))) else NotFound
+  def createMappingInRepository(arn: Arn, identifier: Identifier, ggCredId: String)(implicit hc: HeaderCarrier, request: Request[Any]): Future[Boolean] = {
+    repository(identifier.key)
+      .createMapping(arn, identifier.value)
+      .map { _ =>
+        sendCreateMappingAuditEvent(arn, identifier, ggCredId)
+        false
+      }
+      .recover {
+        case e: DatabaseException if e.getMessage().contains("E11000") =>
+          sendCreateMappingAuditEvent(arn, identifier, ggCredId, duplicate = true)
+          Logger.warn(s"Duplicated mapping attempt for ${identifier.key}")
+          true
+      }
+  }
+
+  val repository: Map[String, MappingRepository] = Map(
+    IRAgentReference -> saAgentReferenceMappingRepository,
+    VATRegNo -> vatAgentReferenceMappingRepository
+  )
+
+  def findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
+    saAgentReferenceMappingRepository.findBy(arn) map { matches =>
+      if (matches.nonEmpty) Ok(toJson(SaAgentReferenceMappings(matches))) else NotFound
+    }
+  }
+
+  def findVatMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
+    vatAgentReferenceMappingRepository.findBy(arn) map { matches =>
+      if (matches.nonEmpty) Ok(toJson(VatAgentReferenceMappings(matches))) else NotFound
     }
   }
 
   def delete(arn: Arn) = Action.async { implicit request =>
-    mappingRepository.delete(arn) map { _ => NoContent }
+    saAgentReferenceMappingRepository.delete(arn)
+      .andThen {
+        case _ => vatAgentReferenceMappingRepository.delete(arn)
+      }
+      .map { _ => NoContent }
   }
-}
-
-case class Mappings(mappings: List[Mapping])
-
-object Mappings extends ReactiveMongoFormats {
-  implicit val formats: Format[Mappings] = format[Mappings]
 }

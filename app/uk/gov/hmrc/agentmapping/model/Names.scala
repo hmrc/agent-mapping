@@ -14,16 +14,13 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentmapping.binders
+package uk.gov.hmrc.agentmapping.model
 
-import play.api.mvc.PathBindable
+object Names {
 
-class SimpleObjectBinder[T](bind: String => T, unbind: T => String)(implicit m: Manifest[T]) extends PathBindable[T] {
-  override def bind(key: String, value: String): Either[String, T] = try {
-    Right(bind(value))
-  } catch {
-    case e: Throwable => Left(s"Cannot parse parameter '$key' with value '$value' as '${m.runtimeClass.getSimpleName}'")
-  }
+  val IRAgentReference = "IRAgentReference"
+  val VATRegNo = "VATRegNo"
 
-  def unbind(key: String, value: T): String = unbind(value)
+  val `IR-SA-AGENT` = "IR-SA-AGENT"
+  val `HMCE-VATDEC-ORG` = "HMCE-VATDEC-ORG"
 }

@@ -40,7 +40,8 @@ trait DataStreamStub extends Eventually {
   }
 
   def givenAuditConnector() = {
-    stubFor(post(urlPathEqualTo(auditUrl)).willReturn(aResponse().withStatus(200)))
+    stubFor(post(urlPathEqualTo(auditUrl)).willReturn(aResponse().withStatus(204)))
+    stubFor(post(urlPathEqualTo(auditUrl+"/merged")).willReturn(aResponse().withStatus(204)))
   }
 
   private def auditUrl = "/write/audit"
