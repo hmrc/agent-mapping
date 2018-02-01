@@ -17,12 +17,13 @@
 package uk.gov.hmrc.agentmapping.model
 
 import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.agentmapping.model.Names._
 
 class IdentifierSpec extends UnitSpec {
 
   "Identifiers" should {
     "parse arguments into an Identifiers object" in {
-      Identifiers.parse("foo") shouldBe Identifiers(Seq(Identifier("IRAgentReference", "foo")))
+      Identifiers.parse("foo") shouldBe Identifiers(Seq(Identifier(IRAgentReference, "foo")))
       Identifiers.parse("foo~bar") shouldBe Identifiers(Seq(Identifier("foo", "bar")))
       Identifiers.parse("foo~bar~foo~bar") shouldBe Identifiers(Seq(Identifier("foo", "bar"), Identifier("foo", "bar")))
       an[IllegalArgumentException] shouldBe thrownBy(

@@ -32,6 +32,7 @@ import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 import scala.concurrent.Future
 import scala.util.Try
 import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.agentmapping.model.Names._
 
 object AgentMappingEvent extends Enumeration {
 
@@ -51,9 +52,9 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
   def sendCreateMappingAuditEvent(arn: Arn, identifier: Identifier, authProviderId: String, duplicate: Boolean = false)
                                  (implicit hc: HeaderCarrier, request: Request[Any]): Unit = {
     identifier.key match {
-      case "IRAgentReference" =>
+      case IRAgentReference =>
         auditEvent(AgentMappingEvent.CreateMapping, "create-mapping", Seq("authProviderId" -> authProviderId, "saAgentRef" -> identifier.value, "agentReferenceNumber" -> arn.value, "duplicate" -> duplicate))
-      case "VATRegNo" =>
+      case VATRegNo =>
         auditEvent(AgentMappingEvent.CreateMapping, "create-mapping", Seq("authProviderId" -> authProviderId, "vatAgentRef" -> identifier.value, "agentReferenceNumber" -> arn.value, "duplicate" -> duplicate))
     }
   }

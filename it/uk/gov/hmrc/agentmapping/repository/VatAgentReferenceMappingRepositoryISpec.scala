@@ -35,7 +35,7 @@ class VatAgentReferenceMappingRepositoryISpec extends UnitSpec with MongoApp {
 
       result.size shouldBe 1
       result.head.arn shouldBe arn1.value
-      result.head.vatRegNo shouldBe vatRegNo1
+      result.head.vrn shouldBe vatRegNo1
 
     }
 
@@ -57,9 +57,9 @@ class VatAgentReferenceMappingRepositoryISpec extends UnitSpec with MongoApp {
 
       result.size shouldBe 2
       result.head.arn shouldBe arn1.value
-      result.head.vatRegNo shouldBe vatRegNo1
+      result.head.vrn shouldBe vatRegNo1
       result(1).arn shouldBe arn1.value
-      result(1).vatRegNo shouldBe vatRegNo2
+      result(1).vrn shouldBe vatRegNo2
     }
   }
 

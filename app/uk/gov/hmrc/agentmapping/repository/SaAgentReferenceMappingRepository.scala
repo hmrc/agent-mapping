@@ -49,7 +49,7 @@ class SaAgentReferenceMappingRepository @Inject()(mongoComponent: ReactiveMongoC
 
   override def indexes = Seq(
     Index(Seq("arn" -> Ascending, "saAgentReference" -> Ascending), Some("arnAndAgentReference"), unique = true),
-    Index(Seq("arn" -> Ascending), Some("AgentReferenceNumberSa"))
+    Index(Seq("arn" -> Ascending), Some("AgentReferenceNumber"))
   )
 
   def createMapping(arn: Arn, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit] = {

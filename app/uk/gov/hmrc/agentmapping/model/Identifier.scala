@@ -20,6 +20,7 @@ import play.api.libs.json.Format
 import play.api.libs.json.Json.format
 import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import uk.gov.hmrc.http.BadRequestException
+import Names._
 
 case class Identifiers(get: Seq[Identifier]){
   def isSingle: Boolean = get.size == 1
@@ -29,7 +30,7 @@ case class Identifiers(get: Seq[Identifier]){
 case class Identifier(key: String, value: String){
 
   key match {
-    case "VATRegNo" =>
+    case VATRegNo =>
       if (!Vrn.isValid(value)) {
         throw new BadRequestException(s"Identifier validation failed for $this")
       }
@@ -44,9 +45,10 @@ object Identifier {
 }
 
 object Identifiers {
+
   def parse(arg: String): Identifiers = {
     val args = arg.split("~")
-    if (args.size == 1) Identifiers(Seq(Identifier("IRAgentReference", args(0)))) //Backward compatibility with agent-mapping-frontend <= 0.26.0
+    if (args.size == 1) Identifiers(Seq(Identifier(IRAgentReference, args(0)))) //Backward compatibility with agent-mapping-frontend <= 0.26.0
     else {
       if(args.size % 2 != 0) throw new IllegalArgumentException("Identifier must be KEY~VALUE formatted or a sequence of such separated by ~")
       else {

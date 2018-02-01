@@ -25,15 +25,14 @@ import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.agentmapping.model.Identifier
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Vrn}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 import scala.collection.Seq
 import scala.concurrent.{ExecutionContext, Future}
 
-case class VatAgentReferenceMapping(arn: String, vatRegNo: String)
+case class VatAgentReferenceMapping(arn: String, vrn: String)
 
 object VatAgentReferenceMapping extends ReactiveMongoFormats {
   implicit val formats: Format[VatAgentReferenceMapping] = format[VatAgentReferenceMapping]
@@ -49,8 +48,8 @@ class VatAgentReferenceMappingRepository @Inject()(mongoComponent: ReactiveMongo
   }
 
   override def indexes = Seq(
-    Index(Seq("arn" -> Ascending, "vatRegNo" -> Ascending), Some("arnAndVatRegNo"), unique = true),
-    Index(Seq("arn" -> Ascending), Some("AgentReferenceNumberVat"))
+    Index(Seq("arn" -> Ascending, "vrn" -> Ascending), Some("arnAndVrn"), unique = true),
+    Index(Seq("arn" -> Ascending), Some("AgentReferenceNumber"))
   )
 
   def createMapping(arn: Arn, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit] = {

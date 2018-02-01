@@ -19,13 +19,12 @@ package uk.gov.hmrc.agentmapping.controller
 import javax.inject.{Inject, Singleton}
 
 import play.api.Logger
-import play.api.libs.json.Format
-import play.api.libs.json.Json.{format, toJson}
+import play.api.libs.json.Json.toJson
 import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.connector.DesConnector
-import uk.gov.hmrc.agentmapping.model.{Identifier, Identifiers, SaAgentReferenceMappings, VatAgentReferenceMappings}
+import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
@@ -33,9 +32,9 @@ import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve.{GGCredId, Retrievals}
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 import uk.gov.hmrc.play.HeaderCarrierConverter.fromHeadersAndSession
 import uk.gov.hmrc.play.microservice.controller.BaseController
+import uk.gov.hmrc.agentmapping.model.Names._
 
 import scala.concurrent.Future
 
@@ -53,8 +52,8 @@ class MappingController @Inject()(vatAgentReferenceMappingRepository: VatAgentRe
   import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
   private val validEnrolmentIdentifierKeys: Map[String, String] = Map(
-    "IRAgentReference" -> "IR-SA-AGENT",
-    "VATRegNo" -> "HMCE-VATDEC-ORG"
+    IRAgentReference -> `IR-SA-AGENT`,
+    VATRegNo -> `HMCE-VATDEC-ORG`
   )
 
   def enrolmentsFor(identifiers: Identifiers): Predicate = {
@@ -117,8 +116,8 @@ class MappingController @Inject()(vatAgentReferenceMappingRepository: VatAgentRe
   }
 
   val repository: Map[String, MappingRepository] = Map(
-    "IRAgentReference" -> saAgentReferenceMappingRepository,
-    "VATRegNo" -> vatAgentReferenceMappingRepository
+    IRAgentReference -> saAgentReferenceMappingRepository,
+    VATRegNo -> vatAgentReferenceMappingRepository
   )
 
   def findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
