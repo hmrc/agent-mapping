@@ -59,4 +59,5 @@ class SaAgentReferenceMappingRepository @Inject()(mongoComponent: ReactiveMongoC
   def delete(arn: Arn)(implicit ec: ExecutionContext): Future[WriteResult] = {
     remove("arn" -> arn.value)
   }
+
 }

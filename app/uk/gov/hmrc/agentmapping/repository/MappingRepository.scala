@@ -25,3 +25,4 @@ trait MappingRepository {
   def createMapping(arn: Arn, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit]
 
 }
+

@@ -64,7 +64,7 @@ class VatAgentReferenceMappingRepositoryISpec extends UnitSpec with MongoApp {
   }
 
   "findBy arn" should {
-    "find all mpppings fpr an arn" in {
+    "find all mpppings for an arn" in {
       await(repo.createMapping(arn1, vatRegNo1))
       await(repo.createMapping(arn1, vatRegNo2))
       await(repo.createMapping(arn2, vatRegNo2))

@@ -18,13 +18,24 @@ package uk.gov.hmrc.agentmapping.model
 
 import play.api.libs.json.Format
 import play.api.libs.json.Json.format
+import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
+import uk.gov.hmrc.http.BadRequestException
 
 case class Identifiers(get: Seq[Identifier]){
   def isSingle: Boolean = get.size == 1
   override def toString: String = get.mkString("~")
 }
 
-case class Identifier(key: String, value: String, activated: Boolean = true){
+case class Identifier(key: String, value: String){
+
+  key match {
+    case "VATRegNo" =>
+      if (!Vrn.isValid(value)) {
+        throw new BadRequestException(s"Identifier validation failed for $this")
+      }
+    case _ =>
+  }
+
   override def toString: String = s"$key~$value"
 }
 
