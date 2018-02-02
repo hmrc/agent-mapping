@@ -19,8 +19,8 @@ package uk.gov.hmrc.agentmapping.model
 object Names {
 
   val IRAgentReference = "IRAgentReference"
-  val VATRegNo = "VATRegNo"
+  val AgentRefNo = "AgentRefNo"
 
   val `IR-SA-AGENT` = "IR-SA-AGENT"
-  val `HMCE-VATDEC-ORG` = "HMCE-VATDEC-ORG"
+  val `HMCE-VAT-AGNT` = "HMCE-VAT-AGNT"
 }

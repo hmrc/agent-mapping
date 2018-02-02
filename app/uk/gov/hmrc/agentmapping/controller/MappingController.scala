@@ -54,7 +54,7 @@ class MappingController @Inject() (
 
   private val validEnrolmentIdentifierKeys: Map[String, String] = Map(
     IRAgentReference -> `IR-SA-AGENT`,
-    VATRegNo -> `HMCE-VATDEC-ORG`)
+    AgentRefNo -> `HMCE-VAT-AGNT`)
 
   def enrolmentsFor(identifiers: Identifiers): Predicate = {
     identifiers.get
@@ -113,7 +113,7 @@ class MappingController @Inject() (
 
   val repository: Map[String, MappingRepository] = Map(
     IRAgentReference -> saAgentReferenceMappingRepository,
-    VATRegNo -> vatAgentReferenceMappingRepository)
+    AgentRefNo -> vatAgentReferenceMappingRepository)
 
   def findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
     saAgentReferenceMappingRepository.findBy(arn) map { matches =>
