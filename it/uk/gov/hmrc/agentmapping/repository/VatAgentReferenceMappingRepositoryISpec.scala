@@ -11,8 +11,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class VatAgentReferenceMappingRepositoryISpec extends UnitSpec with MongoApp {
   override implicit lazy val app: FakeApplication = FakeApplication(
-    additionalConfiguration = mongoConfiguration
-  )
+    additionalConfiguration = mongoConfiguration)
 
   val arn1 = Arn("ARN00001")
   val arn2 = Arn("ARN00002")
@@ -46,7 +45,7 @@ class VatAgentReferenceMappingRepositoryISpec extends UnitSpec with MongoApp {
         await(repo.createMapping(arn1, vatRegNo1))
       }
 
-      e.getMessage() should include ("E11000")
+      e.getMessage() should include("E11000")
     }
 
     "allow more than one SA Agent Reference to be mapped to the same ARN" in {
@@ -69,14 +68,14 @@ class VatAgentReferenceMappingRepositoryISpec extends UnitSpec with MongoApp {
       await(repo.createMapping(arn1, vatRegNo2))
       await(repo.createMapping(arn2, vatRegNo2))
 
-      val result:List[VatAgentReferenceMapping] = await(repo.findBy(arn1))
+      val result: List[VatAgentReferenceMapping] = await(repo.findBy(arn1))
 
       result.size shouldBe 2
     }
 
     "return an empty list when no match is found" in {
       await(repo.createMapping(arn1, vatRegNo1))
-      val result =await(repo.findBy(arn2))
+      val result = await(repo.findBy(arn2))
       result.size shouldBe 0
     }
   }
@@ -89,7 +88,7 @@ class VatAgentReferenceMappingRepositoryISpec extends UnitSpec with MongoApp {
       val mappings: List[VatAgentReferenceMapping] = await(repo.findAll())
       mappings.size shouldBe 2
 
-      val result : WriteResult = await(repo.delete(arn1))
+      val result: WriteResult = await(repo.delete(arn1))
       result.code shouldBe None
 
       val mappingsAfterDelete: List[VatAgentReferenceMapping] = await(repo.findAll())
@@ -100,7 +99,7 @@ class VatAgentReferenceMappingRepositoryISpec extends UnitSpec with MongoApp {
       val mappings: List[VatAgentReferenceMapping] = await(repo.findAll())
       mappings.size shouldBe 0
 
-      val result : WriteResult = await(repo.delete(arn1))
+      val result: WriteResult = await(repo.delete(arn1))
       result.code shouldBe None
     }
   }

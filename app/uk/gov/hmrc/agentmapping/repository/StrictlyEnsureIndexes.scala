@@ -21,16 +21,16 @@ import reactivemongo.core.errors.GenericDatabaseException
 import uk.gov.hmrc.mongo.ReactiveRepository
 
 import scala.collection.Seq
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 trait StrictlyEnsureIndexes[A <: Any, ID <: Any] {
 
-  self: ReactiveRepository[A,ID] =>
+  self: ReactiveRepository[A, ID] =>
 
   private def ensureIndexOrFail(index: Index)(implicit ec: ExecutionContext): Future[Boolean] = {
-    val indexInfo = s"""${index.eventualName}, key=${index.key.map{case (k,_) => k}.mkString("+")}, unique=${index.unique}, background=${index.background}, sparse=${index.sparse}"""
+    val indexInfo = s"""${index.eventualName}, key=${index.key.map { case (k, _) => k }.mkString("+")}, unique=${index.unique}, background=${index.background}, sparse=${index.sparse}"""
     collection.indexesManager.create(index).map(wr => {
-      if(wr.ok) {
+      if (wr.ok) {
         logger.info(s"Successfully Created Index ${collection.name}.$indexInfo")
         true
       } else {

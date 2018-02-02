@@ -2,13 +2,13 @@ package uk.gov.hmrc.agentmapping.stubs
 
 import com.github.tomakehurst.wiremock.client.MappingBuilder
 import com.github.tomakehurst.wiremock.client.WireMock._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, Utr }
 
 trait DesStubs {
   protected def expectedEnvironment: Option[String] = None
   protected def expectedBearerToken: Option[String] = None
 
-  val registeredArn : Arn = Arn("AARN0000002")
+  val registeredArn: Arn = Arn("AARN0000002")
 
   def givenIndividualRegistrationExists(utr: Utr, isAnASAgent: Boolean = true): Unit = {
     stubFor(maybeWithDesHeaderCheck(registrationRequest(utr, isAnAgent = false))

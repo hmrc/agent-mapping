@@ -16,10 +16,10 @@
 
 package uk.gov.hmrc.agentmapping.repository
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.{ Inject, Singleton }
 
 import play.api.libs.json.Format
-import play.api.libs.json.Json.{format, toJsFieldJsValueWrapper}
+import play.api.libs.json.Json.{ format, toJsFieldJsValueWrapper }
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.Index
@@ -30,7 +30,7 @@ import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 import scala.collection.Seq
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 
 case class SaAgentReferenceMapping(arn: String, saAgentReference: String)
 
@@ -39,9 +39,8 @@ object SaAgentReferenceMapping extends ReactiveMongoFormats {
 }
 
 @Singleton
-class SaAgentReferenceMappingRepository @Inject()(mongoComponent: ReactiveMongoComponent) extends
-    ReactiveRepository[SaAgentReferenceMapping, BSONObjectID]("agent-mapping", mongoComponent.mongoConnector.db, SaAgentReferenceMapping.formats, ReactiveMongoFormats.objectIdFormats)
-    with MappingRepository with StrictlyEnsureIndexes[SaAgentReferenceMapping, BSONObjectID] {
+class SaAgentReferenceMappingRepository @Inject() (mongoComponent: ReactiveMongoComponent) extends ReactiveRepository[SaAgentReferenceMapping, BSONObjectID]("agent-mapping", mongoComponent.mongoConnector.db, SaAgentReferenceMapping.formats, ReactiveMongoFormats.objectIdFormats)
+  with MappingRepository with StrictlyEnsureIndexes[SaAgentReferenceMapping, BSONObjectID] {
 
   def findBy(arn: Arn)(implicit ec: ExecutionContext): Future[List[SaAgentReferenceMapping]] = {
     find(Seq("arn" -> Some(arn)).map(option => option._1 -> toJsFieldJsValueWrapper(option._2.get)): _*)
@@ -49,8 +48,7 @@ class SaAgentReferenceMappingRepository @Inject()(mongoComponent: ReactiveMongoC
 
   override def indexes = Seq(
     Index(Seq("arn" -> Ascending, "saAgentReference" -> Ascending), Some("arnAndAgentReference"), unique = true),
-    Index(Seq("arn" -> Ascending), Some("AgentReferenceNumber"))
-  )
+    Index(Seq("arn" -> Ascending), Some("AgentReferenceNumber")))
 
   def createMapping(arn: Arn, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit] = {
     insert(SaAgentReferenceMapping(arn.value, identifierValue)).map(_ => ())

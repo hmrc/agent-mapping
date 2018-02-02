@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentmapping.model
 
 import play.api.libs.json.Format
 import play.api.libs.json.Json.format
-import uk.gov.hmrc.agentmapping.repository.{SaAgentReferenceMapping, VatAgentReferenceMapping}
+import uk.gov.hmrc.agentmapping.repository.{ SaAgentReferenceMapping, VatAgentReferenceMapping }
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 case class Mapping(arn: String, identifiers: Seq[Identifier])
