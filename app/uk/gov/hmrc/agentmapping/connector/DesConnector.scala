@@ -17,17 +17,17 @@
 package uk.gov.hmrc.agentmapping.connector
 
 import java.net.URL
-import javax.inject.{Inject, Named, Singleton}
+import javax.inject.{ Inject, Named, Singleton }
 
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import play.api.libs.json.Json.format
-import play.api.libs.json.{Format, JsValue, Writes}
+import play.api.libs.json.{ Format, JsValue, Writes }
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
+import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, Utr }
 import uk.gov.hmrc.play.encoding.UriPathEncoding.encodePathSegment
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ ExecutionContext, Future }
 import uk.gov.hmrc.http.{ BadRequestException, HeaderCarrier, HttpPost, HttpReads }
 import uk.gov.hmrc.http.logging.Authorization
 
@@ -38,11 +38,12 @@ object DesRegistrationRequest {
 case class DesRegistrationRequest(requiresNameMatch: Boolean = false, regime: String = "ITSA", isAnAgent: Boolean)
 
 @Singleton
-class DesConnector @Inject() (@Named("des.environment") environment: String,
-                              @Named("des.authorization-token") authorizationToken: String,
-                              @Named("des-baseUrl") baseUrl: URL,
-                              httpPost: HttpPost,
-                              metrics: Metrics)
+class DesConnector @Inject() (
+  @Named("des.environment") environment: String,
+  @Named("des.authorization-token") authorizationToken: String,
+  @Named("des-baseUrl") baseUrl: URL,
+  httpPost: HttpPost,
+  metrics: Metrics)
   extends HttpAPIMonitor {
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
@@ -53,9 +54,8 @@ class DesConnector @Inject() (@Named("des.environment") environment: String,
     }
 
   private def getRegistrationJson(utr: Utr)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Option[JsValue]] = {
-    monitor(s"ConsumedAPI-DES-RegistrationIndividualUtr-POST"){
-      (httpPost.POST[DesRegistrationRequest, Option[JsValue]](desRegistrationUrl(utr).toString, DesRegistrationRequest(isAnAgent = false))
-        (implicitly[Writes[DesRegistrationRequest]], implicitly[HttpReads[Option[JsValue]]], desHeaders, ec))
+    monitor(s"ConsumedAPI-DES-RegistrationIndividualUtr-POST") {
+      (httpPost.POST[DesRegistrationRequest, Option[JsValue]](desRegistrationUrl(utr).toString, DesRegistrationRequest(isAnAgent = false))(implicitly[Writes[DesRegistrationRequest]], implicitly[HttpReads[Option[JsValue]]], desHeaders, ec))
     }
   } recover {
     case badRequest: BadRequestException =>

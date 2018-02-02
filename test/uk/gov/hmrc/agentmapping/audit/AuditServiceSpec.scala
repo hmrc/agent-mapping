@@ -17,14 +17,14 @@
 package uk.gov.hmrc.agentmapping.audit
 
 import org.mockito.ArgumentCaptor
-import org.mockito.Matchers._
+import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.verify
 import org.scalatest.concurrent.Eventually
-import org.scalatest.mock.MockitoSugar
+import org.scalatest.mockito.MockitoSugar
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.KnownFactsCheck
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.logging.{Authorization, RequestId, SessionId}
+import uk.gov.hmrc.http.logging.{ Authorization, RequestId, SessionId }
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
 import uk.gov.hmrc.play.test.UnitSpec
@@ -40,17 +40,14 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
       val hc = HeaderCarrier(
         authorization = Some(Authorization("dummy bearer token")),
         sessionId = Some(SessionId("dummy session id")),
-        requestId = Some(RequestId("dummy request id"))
-      )
+        requestId = Some(RequestId("dummy request id")))
 
       await(service.auditEvent(
         KnownFactsCheck,
         "transaction name",
-        Seq("extra1" -> "first extra detail", "extra2" -> "second extra detail", "utr" -> "4000000009", "agentReferenceNumber" -> "GARN0000247")
-      )(
-        hc,
-        FakeRequest("GET", "/path"))
-      )
+        Seq("extra1" -> "first extra detail", "extra2" -> "second extra detail", "utr" -> "4000000009", "agentReferenceNumber" -> "GARN0000247"))(
+          hc,
+          FakeRequest("GET", "/path")))
 
       eventually {
         val captor = ArgumentCaptor.forClass(classOf[DataEvent])

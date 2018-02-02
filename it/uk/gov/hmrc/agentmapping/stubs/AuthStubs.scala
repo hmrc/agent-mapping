@@ -1,7 +1,7 @@
 package uk.gov.hmrc.agentmapping.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import uk.gov.hmrc.auth.core.{AffinityGroup, Enrolment}
+import uk.gov.hmrc.auth.core.{ AffinityGroup, Enrolment }
 
 trait AuthStubs {
 
@@ -9,9 +9,7 @@ trait AuthStubs {
     stubFor(post(urlEqualTo("/auth/authorise"))
       .willReturn(aResponse()
         .withStatus(401)
-        .withHeader("WWW-Authenticate", s"""MDTP detail="${mdtpDetail}"""")
-      )
-    )
+        .withHeader("WWW-Authenticate", s"""MDTP detail="${mdtpDetail}"""")))
   }
 
   def givenUserAuthorisedFor(enrolment: String, identifierName: String, identifierValue: String, ggCredId: String, affinityGroup: AffinityGroup = AffinityGroup.Agent): Unit = {
@@ -39,9 +37,7 @@ trait AuthStubs {
     stubFor(post(urlEqualTo("/auth/authorise")).atPriority(2)
       .willReturn(aResponse()
         .withStatus(401)
-        .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")
-      )
-    )
+        .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")))
   }
 
   def givenUserAuthorisedForMultiple(enrolments: Set[Enrolment], ggCredId: String, affinityGroup: AffinityGroup = AffinityGroup.Agent): Unit = {
@@ -52,11 +48,13 @@ trait AuthStubs {
               |{ "authorise":[
               |   {"authProviders":["GovernmentGateway"]},
               |   {"affinityGroup":"$affinityGroup"},
-              |   ${enrolments.map(e => s"""{
+              |   ${
+            enrolments.map(e => s"""{
               |      "identifiers":[${e.identifiers.map(i => s"""{"key":"${i.key}","value":"${i.value}"}""").mkString(",")}],
               |      "state":"${e.state}",
               |      "enrolment":"${e.key}"
-              |      }""".stripMargin).mkString(",")}
+              |      }""".stripMargin).mkString(",")
+          }
               |   ],
               |  "retrieve":["authProviderId"]
               |}
@@ -69,9 +67,7 @@ trait AuthStubs {
     stubFor(post(urlEqualTo("/auth/authorise")).atPriority(2)
       .willReturn(aResponse()
         .withStatus(401)
-        .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")
-      )
-    )
+        .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")))
   }
 
 }

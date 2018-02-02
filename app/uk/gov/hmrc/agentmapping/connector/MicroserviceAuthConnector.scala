@@ -14,15 +14,22 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentmapping.repository
+package uk.gov.hmrc.agentmapping.connector
 
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import java.net.URL
+import javax.inject.{ Inject, Named, Singleton }
 
-import scala.concurrent.{ ExecutionContext, Future }
+import uk.gov.hmrc.auth.core._
+import uk.gov.hmrc.http.HttpPost
+import uk.gov.hmrc.play.http.ws.WSPost
 
-trait MappingRepository {
+@Singleton
+class MicroserviceAuthConnector @Inject() (@Named("auth-baseUrl") baseUrl: URL)
+  extends PlayAuthConnector {
 
-  def createMapping(arn: Arn, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit]
+  override val serviceUrl = baseUrl.toString
 
+  override def http = new HttpPost with WSPost {
+    override val hooks = NoneRequired
+  }
 }
-

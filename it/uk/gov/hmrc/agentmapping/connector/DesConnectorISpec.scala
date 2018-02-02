@@ -4,15 +4,13 @@ import java.net.URL
 
 import com.kenshoo.play.metrics.Metrics
 import org.scalatestplus.play.OneAppPerSuite
-import uk.gov.hmrc.agentmapping.WSHttp
 import uk.gov.hmrc.agentmapping.stubs.DesStubs
-import uk.gov.hmrc.agentmapping.support.{MetricTestSupport, WireMockSupport}
+import uk.gov.hmrc.agentmapping.support.{ MetricTestSupport, WireMockSupport }
 import uk.gov.hmrc.agentmtdidentifiers.model.Utr
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{ HeaderCarrier, HttpPost }
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
-
 
 class DesConnectorISpec extends UnitSpec with OneAppPerSuite with WireMockSupport with DesStubs with MetricTestSupport {
   private implicit val hc = HeaderCarrier()
@@ -25,7 +23,7 @@ class DesConnectorISpec extends UnitSpec with OneAppPerSuite with WireMockSuppor
   override protected def expectedEnvironment = Some(environment)
 
   private lazy val connector: DesConnector =
-    new DesConnector(environment, bearerToken, new URL(s"http://localhost:$wireMockPort"), WSHttp, app.injector.instanceOf[Metrics])
+    new DesConnector(environment, bearerToken, new URL(s"http://localhost:$wireMockPort"), app.injector.instanceOf[HttpPost], app.injector.instanceOf[Metrics])
 
   "getRegistration" should {
 

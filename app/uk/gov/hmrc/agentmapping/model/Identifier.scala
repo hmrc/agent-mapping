@@ -22,12 +22,12 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Vrn
 import uk.gov.hmrc.http.BadRequestException
 import Names._
 
-case class Identifiers(get: Seq[Identifier]){
+case class Identifiers(get: Seq[Identifier]) {
   def isSingle: Boolean = get.size == 1
   override def toString: String = get.mkString("~")
 }
 
-case class Identifier(key: String, value: String){
+case class Identifier(key: String, value: String) {
 
   key match {
     case VATRegNo =>
@@ -50,9 +50,9 @@ object Identifiers {
     val args = arg.split("~")
     if (args.size == 1) Identifiers(Seq(Identifier(IRAgentReference, args(0)))) //Backward compatibility with agent-mapping-frontend <= 0.26.0
     else {
-      if(args.size % 2 != 0) throw new IllegalArgumentException("Identifier must be KEY~VALUE formatted or a sequence of such separated by ~")
+      if (args.size % 2 != 0) throw new IllegalArgumentException("Identifier must be KEY~VALUE formatted or a sequence of such separated by ~")
       else {
-        val identifiers: Seq[Identifier] = args.sliding(2,2).map(a => Identifier(a(0), a(1))).toSeq
+        val identifiers: Seq[Identifier] = args.sliding(2, 2).map(a => Identifier(a(0), a(1))).toSeq
         Identifiers(identifiers)
       }
     }

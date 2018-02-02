@@ -18,11 +18,13 @@ package uk.gov.hmrc.agentmapping.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Span,Millis,Seconds}
+import org.scalatest.time.{ Span, Millis, Seconds }
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.AgentMappingEvent
 
 trait DataStreamStub extends Eventually {
+
+  implicit val patience = PatienceConfig(scaled(Span(2, Seconds)), scaled(Span(500, Millis)))
 
   def verifyAuditRequestSent(count: Int, event: AgentMappingEvent, tags: Map[String, String] = Map.empty, detail: Map[String, String] = Map.empty) = {
     eventually {
@@ -33,15 +35,13 @@ trait DataStreamStub extends Eventually {
              |  "auditType": "$event",
              |  "tags": ${Json.toJson(tags)},
              |  "detail": ${Json.toJson(detail)}
-             |}"""
-        ))
-      )
-    } (PatienceConfig(scaled(Span(2,Seconds)), scaled(Span(500,Millis))))
+             |}""")))
+    }
   }
 
   def givenAuditConnector() = {
     stubFor(post(urlPathEqualTo(auditUrl)).willReturn(aResponse().withStatus(204)))
-    stubFor(post(urlPathEqualTo(auditUrl+"/merged")).willReturn(aResponse().withStatus(204)))
+    stubFor(post(urlPathEqualTo(auditUrl + "/merged")).willReturn(aResponse().withStatus(204)))
   }
 
   private def auditUrl = "/write/audit"
