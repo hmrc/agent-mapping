@@ -52,7 +52,7 @@ class AuditService @Inject() (val auditConnector: AuditConnector) {
     identifier.key match {
       case IRAgentReference =>
         auditEvent(AgentMappingEvent.CreateMapping, "create-mapping", Seq("authProviderId" -> authProviderId, "saAgentRef" -> identifier.value, "agentReferenceNumber" -> arn.value, "duplicate" -> duplicate))
-      case VATRegNo =>
+      case AgentRefNo =>
         auditEvent(AgentMappingEvent.CreateMapping, "create-mapping", Seq("authProviderId" -> authProviderId, "vatAgentRef" -> identifier.value, "agentReferenceNumber" -> arn.value, "duplicate" -> duplicate))
     }
   }

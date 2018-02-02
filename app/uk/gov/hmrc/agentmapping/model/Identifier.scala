@@ -30,7 +30,7 @@ case class Identifiers(get: Seq[Identifier]) {
 case class Identifier(key: String, value: String) {
 
   key match {
-    case VATRegNo =>
+    case AgentRefNo =>
       if (!Vrn.isValid(value)) {
         throw new BadRequestException(s"Identifier validation failed for $this")
       }
