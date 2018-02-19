@@ -20,6 +20,7 @@ object Names {
 
   val IRAgentReference = "IRAgentReference"
   val AgentRefNo = "AgentRefNo"
+  val AgentCode = "AgentCode"
 
   val `IR-SA-AGENT` = "IR-SA-AGENT"
   val `HMCE-VAT-AGNT` = "HMCE-VAT-AGNT"

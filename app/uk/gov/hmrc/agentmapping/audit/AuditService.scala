@@ -54,6 +54,8 @@ class AuditService @Inject() (val auditConnector: AuditConnector) {
         auditEvent(AgentMappingEvent.CreateMapping, "create-mapping", Seq("authProviderId" -> authProviderId, "saAgentRef" -> identifier.value, "agentReferenceNumber" -> arn.value, "duplicate" -> duplicate))
       case AgentRefNo =>
         auditEvent(AgentMappingEvent.CreateMapping, "create-mapping", Seq("authProviderId" -> authProviderId, "vatAgentRef" -> identifier.value, "agentReferenceNumber" -> arn.value, "duplicate" -> duplicate))
+      case AgentCode =>
+        auditEvent(AgentMappingEvent.CreateMapping, "create-mapping", Seq("authProviderId" -> authProviderId, "agentCode" -> identifier.value, "agentReferenceNumber" -> arn.value, "duplicate" -> duplicate))
     }
   }
 

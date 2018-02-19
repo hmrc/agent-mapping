@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentmapping.model
 
 import play.api.libs.json.Format
 import play.api.libs.json.Json.format
-import uk.gov.hmrc.agentmapping.repository.{ SaAgentReferenceMapping, VatAgentReferenceMapping }
+import uk.gov.hmrc.agentmapping.repository.{ AgentCodeMapping, SaAgentReferenceMapping, VatAgentReferenceMapping }
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 case class Mapping(arn: String, identifiers: Seq[Identifier])
@@ -37,4 +37,10 @@ case class VatAgentReferenceMappings(mappings: List[VatAgentReferenceMapping])
 
 object VatAgentReferenceMappings extends ReactiveMongoFormats {
   implicit val formats: Format[VatAgentReferenceMappings] = format[VatAgentReferenceMappings]
+}
+
+case class AgentCodeMappings(mappings: List[AgentCodeMapping])
+
+object AgentCodeMappings extends ReactiveMongoFormats {
+  implicit val formats: Format[AgentCodeMappings] = format[AgentCodeMappings]
 }
