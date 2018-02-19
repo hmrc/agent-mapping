@@ -24,17 +24,17 @@ import play.api.mvc.{ Action, AnyContent, Request }
 import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.connector.DesConnector
+import uk.gov.hmrc.agentmapping.model.Names._
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository._
 import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, Utr }
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
-import uk.gov.hmrc.auth.core.retrieve.{ GGCredId, Retrievals }
+import uk.gov.hmrc.auth.core.retrieve.{ Retrievals, _ }
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.HeaderCarrierConverter.fromHeadersAndSession
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
-import uk.gov.hmrc.agentmapping.model.Names._
 
 import scala.concurrent.Future
 
@@ -44,6 +44,7 @@ class UnsupportedIdentifierKey(identifier: Identifier) extends Exception(s"Unsup
 class MappingController @Inject() (
   vatAgentReferenceMappingRepository: VatAgentReferenceMappingRepository,
   saAgentReferenceMappingRepository: SaAgentReferenceMappingRepository,
+  agentCodeMappingRepository: AgentCodeMappingRepository,
   desConnector: DesConnector,
   auditService: AuditService,
   val authConnector: AuthConnector)
@@ -65,13 +66,13 @@ class MappingController @Inject() (
   def createMapping(utr: Utr, arn: Arn, identifiers: Identifiers): Action[AnyContent] = Action.async { implicit request =>
     implicit val hc = fromHeadersAndSession(request.headers, None)
     authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent and enrolmentsFor(identifiers))
-      .retrieve(Retrievals.authProviderId) {
-        case ggCredId: GGCredId =>
+      .retrieve(Retrievals.credentials and Retrievals.agentCode) {
+        case credentials ~ agentCodeOpt =>
           desConnector.getArn(utr) flatMap {
             case Some(Arn(arn.value)) =>
-              sendKnownFactsCheckAuditEvent(utr, arn, ggCredId.credId, matched = true)
-              identifiers.get.map(
-                identifier => createMappingInRepository(arn, identifier, ggCredId.credId))
+              sendKnownFactsCheckAuditEvent(utr, arn, credentials.providerId, matched = true)
+              withAgentCode(identifiers, agentCodeOpt).map(
+                identifier => createMappingInRepository(arn, identifier, credentials.providerId))
                 .reduce((f1, f2) => f1.flatMap(b1 => f2.map(b2 => b1 & b2)))
                 .map(
                   allConflicted => if (allConflicted)
@@ -80,7 +81,7 @@ class MappingController @Inject() (
                     Created)
 
             case _ =>
-              sendKnownFactsCheckAuditEvent(utr, arn, ggCredId.credId, matched = false)
+              sendKnownFactsCheckAuditEvent(utr, arn, credentials.providerId, matched = false)
               Future.successful(Forbidden)
           }
       }.recoverWith {
@@ -94,6 +95,11 @@ class MappingController @Inject() (
           Logger.warn("An attempt to do mapping with an invalid identifier", ex)
           Future.successful(Forbidden)
       }
+  }
+
+  private def withAgentCode(identifiers: Identifiers, agentCodeOpt: Option[String]) = agentCodeOpt match {
+    case None => identifiers.get
+    case Some(agentCode) => identifiers.get :+ Identifier(AgentCode, agentCode)
   }
 
   def createMappingInRepository(arn: Arn, identifier: Identifier, ggCredId: String)(implicit hc: HeaderCarrier, request: Request[Any]): Future[Boolean] = {
@@ -113,7 +119,8 @@ class MappingController @Inject() (
 
   val repository: Map[String, MappingRepository] = Map(
     IRAgentReference -> saAgentReferenceMappingRepository,
-    AgentRefNo -> vatAgentReferenceMappingRepository)
+    AgentRefNo -> vatAgentReferenceMappingRepository,
+    AgentCode -> agentCodeMappingRepository)
 
   def findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
     saAgentReferenceMappingRepository.findBy(arn) map { matches =>
@@ -127,10 +134,19 @@ class MappingController @Inject() (
     }
   }
 
+  def findAgentCodeMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
+    agentCodeMappingRepository.findBy(arn) map { matches =>
+      if (matches.nonEmpty) Ok(toJson(AgentCodeMappings(matches))) else NotFound
+    }
+  }
+
   def delete(arn: Arn) = Action.async { implicit request =>
     saAgentReferenceMappingRepository.delete(arn)
       .andThen {
         case _ => vatAgentReferenceMappingRepository.delete(arn)
+      }
+      .andThen {
+        case _ => agentCodeMappingRepository.delete(arn)
       }
       .map { _ => NoContent }
   }
