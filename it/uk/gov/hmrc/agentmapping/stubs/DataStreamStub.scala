@@ -35,13 +35,14 @@ trait DataStreamStub extends Eventually {
              |  "auditType": "$event",
              |  "tags": ${Json.toJson(tags)},
              |  "detail": ${Json.toJson(detail)}
+
              |}""")))
     }
   }
 
   def givenAuditConnector() = {
+    stubFor(post(urlPathEqualTo("/write/audit/merged")).willReturn(aResponse().withStatus(204)))
     stubFor(post(urlPathEqualTo(auditUrl)).willReturn(aResponse().withStatus(204)))
-    stubFor(post(urlPathEqualTo(auditUrl + "/merged")).willReturn(aResponse().withStatus(204)))
   }
 
   private def auditUrl = "/write/audit"
