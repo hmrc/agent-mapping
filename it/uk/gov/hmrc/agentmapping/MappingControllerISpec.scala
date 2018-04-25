@@ -530,8 +530,8 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
   "find mapping requests" should {
     "return 200 status with a json body representing the mappings that match the supplied arn" in {
-      await(saRepo.createMapping(registeredArn, "A1111A"))
-      await(saRepo.createMapping(registeredArn, "A1111B"))
+      await(saRepo.store(registeredArn, "A1111A"))
+      await(saRepo.store(registeredArn, "A1111B"))
 
       val response = findMappingsRequest().get()
 
@@ -541,8 +541,8 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     }
 
     "return 200 status with a json body representing the mappings that match the supplied arn for sa" in {
-      await(saRepo.createMapping(registeredArn, "A1111A"))
-      await(saRepo.createMapping(registeredArn, "A1111B"))
+      await(saRepo.store(registeredArn, "A1111A"))
+      await(saRepo.store(registeredArn, "A1111B"))
 
       val response = findSAMappingsRequest().get()
 
@@ -552,8 +552,8 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     }
 
     "return 200 status with a json body representing the mappings that match the supplied arn for vat" in {
-      await(vatRepo.createMapping(registeredArn, "101747696"))
-      await(vatRepo.createMapping(registeredArn, "101747641"))
+      await(vatRepo.store(registeredArn, "101747696"))
+      await(vatRepo.store(registeredArn, "101747641"))
 
       val response = findVATMappingsRequest().get()
 
@@ -565,8 +565,8 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     }
 
     "return 200 status with a json body representing the mappings that match the supplied arn for agent code" in {
-      await(agentCodeRepo.createMapping(registeredArn, "ABCDE1"))
-      await(agentCodeRepo.createMapping(registeredArn, "ABCDE2"))
+      await(agentCodeRepo.store(registeredArn, "ABCDE1"))
+      await(agentCodeRepo.store(registeredArn, "ABCDE2"))
 
       val response = findAgentCodeMappingsRequest().get()
 
@@ -592,9 +592,9 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
   "delete" should {
     "return no content when a record is deleted" in {
-      await(saRepo.createMapping(registeredArn, "foo"))
-      await(vatRepo.createMapping(registeredArn, "foo"))
-      await(agentCodeRepo.createMapping(registeredArn, "foo"))
+      await(saRepo.store(registeredArn, "foo"))
+      await(vatRepo.store(registeredArn, "foo"))
+      await(agentCodeRepo.store(registeredArn, "foo"))
 
       val foundResponse = findMappingsRequest().get()
       foundResponse.status shouldBe 200

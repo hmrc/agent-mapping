@@ -104,7 +104,7 @@ class MappingController @Inject() (
 
   def createMappingInRepository(arn: Arn, identifier: Identifier, ggCredId: String)(implicit hc: HeaderCarrier, request: Request[Any]): Future[Boolean] = {
     repository(identifier.key)
-      .createMapping(arn, identifier.value)
+      .store(arn, identifier.value)
       .map { _ =>
         sendCreateMappingAuditEvent(arn, identifier, ggCredId)
         false

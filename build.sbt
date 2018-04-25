@@ -22,6 +22,7 @@ lazy val compileDeps = Seq(
   "uk.gov.hmrc" %% "domain" % "5.1.0",
   "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "3.0.1",
   "uk.gov.hmrc" %% "play-reactivemongo" % "6.2.0",
+  "uk.gov.hmrc" %% "mongo-lock" % "5.1.0",
   ws
 )
 
