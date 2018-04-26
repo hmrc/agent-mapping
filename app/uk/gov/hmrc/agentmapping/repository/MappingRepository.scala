@@ -102,7 +102,8 @@ class NewAgentCodeMappingRepository @Inject() (implicit mongoComponent: Reactive
 class HMCEVATAGNTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
   extends NewMappingRepository("hmce-vat-agnt")
 
-//Old repositories
+// REMOVE AFTER DB MIGRATION
+// Old repositories
 
 case class SaAgentReferenceMapping(arn: String, saAgentReference: String) extends ArnToIdentifierMapping {
   override def identifier: String = saAgentReference

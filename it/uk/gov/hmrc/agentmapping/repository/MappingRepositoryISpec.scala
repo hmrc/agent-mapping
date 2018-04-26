@@ -11,9 +11,11 @@ import uk.gov.hmrc.play.test.UnitSpec
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.ClassTag
 
+// REMOVE AFTER DB MIGRATION - start
 class SaAgentReferenceMappingRepositoryISpec extends BaseRepositoryISpec[SaAgentReferenceMapping, SaAgentReferenceMappingRepository]
 class AgentCodeMappingRepositoryISpec extends BaseRepositoryISpec[AgentCodeMapping, AgentCodeMappingRepository]
 class VatAgentReferenceMappingRepositoryISpec extends BaseRepositoryISpec[VatAgentReferenceMapping, VatAgentReferenceMappingRepository]
+// REMOVE AFTER DB MIGRATION - end
 
 class IRSAAGENTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, IRSAAGENTMappingRepository]
 class NewAgentCodeMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, NewAgentCodeMappingRepository]

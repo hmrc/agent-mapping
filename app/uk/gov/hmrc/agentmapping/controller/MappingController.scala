@@ -42,9 +42,7 @@ class UnsupportedIdentifierKey(identifier: Identifier) extends Exception(s"Unsup
 
 @Singleton
 class MappingController @Inject() (
-  vatAgentReferenceMappingRepository: VatAgentReferenceMappingRepository,
-  saAgentReferenceMappingRepository: SaAgentReferenceMappingRepository,
-  agentCodeMappingRepository: AgentCodeMappingRepository,
+  repositories: MappingRepositories,
   desConnector: DesConnector,
   auditService: AuditService,
   val authConnector: AuthConnector)
@@ -103,7 +101,7 @@ class MappingController @Inject() (
   }
 
   def createMappingInRepository(arn: Arn, identifier: Identifier, ggCredId: String)(implicit hc: HeaderCarrier, request: Request[Any]): Future[Boolean] = {
-    repository(identifier.key)
+    repositories.get(identifier.key)
       .store(arn, identifier.value)
       .map { _ =>
         sendCreateMappingAuditEvent(arn, identifier, ggCredId)
@@ -117,37 +115,26 @@ class MappingController @Inject() (
       }
   }
 
-  val repository: Map[String, MappingRepository] = Map(
-    IRAgentReference -> saAgentReferenceMappingRepository,
-    AgentRefNo -> vatAgentReferenceMappingRepository,
-    AgentCode -> agentCodeMappingRepository)
-
   def findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
-    saAgentReferenceMappingRepository.findBy(arn) map { matches =>
-      if (matches.nonEmpty) Ok(toJson(SaAgentReferenceMappings(matches))) else NotFound
+    repositories.get(IRAgentReference).findBy(arn) map { matches =>
+      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))) else NotFound
     }
   }
 
   def findVatMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
-    vatAgentReferenceMappingRepository.findBy(arn) map { matches =>
-      if (matches.nonEmpty) Ok(toJson(VatAgentReferenceMappings(matches))) else NotFound
+    repositories.get(AgentRefNo).findBy(arn) map { matches =>
+      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))) else NotFound
     }
   }
 
   def findAgentCodeMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
-    agentCodeMappingRepository.findBy(arn) map { matches =>
-      if (matches.nonEmpty) Ok(toJson(AgentCodeMappings(matches))) else NotFound
+    repositories.get(AgentCode).findBy(arn) map { matches =>
+      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))) else NotFound
     }
   }
 
   def delete(arn: Arn) = Action.async { implicit request =>
-    saAgentReferenceMappingRepository.delete(arn)
-      .andThen {
-        case _ => vatAgentReferenceMappingRepository.delete(arn)
-      }
-      .andThen {
-        case _ => agentCodeMappingRepository.delete(arn)
-      }
+    Future.sequence(repositories.map(_.delete(arn)))
       .map { _ => NoContent }
   }
 }

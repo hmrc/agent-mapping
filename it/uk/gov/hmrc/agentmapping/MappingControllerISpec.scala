@@ -10,7 +10,6 @@ import play.api.libs.ws.ahc.AhcWSClient
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent
 import uk.gov.hmrc.agentmapping.model.{ Identifier, Identifiers }
-import uk.gov.hmrc.agentmapping.repository.{ AgentCodeMappingRepository, SaAgentReferenceMappingRepository, VatAgentReferenceMappingRepository }
 import uk.gov.hmrc.agentmapping.stubs.{ AuthStubs, DataStreamStub, DesStubs }
 import uk.gov.hmrc.agentmapping.support.{ MongoApp, Resource, WireMockSupport }
 import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, Utr }
@@ -20,6 +19,7 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import uk.gov.hmrc.agentmapping.model.Names._
+import uk.gov.hmrc.agentmapping.repository.{ HMCEVATAGNTMappingRepository, IRSAAGENTMappingRepository, NewAgentCodeMappingRepository }
 
 class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport with DesStubs with AuthStubs with DataStreamStub {
   implicit val actorSystem = ActorSystem()
@@ -62,9 +62,9 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
   implicit val hc = HeaderCarrier()
   implicit val fakeRequest = FakeRequest("GET", "/agent-mapping/add-code")
 
-  private val saRepo: SaAgentReferenceMappingRepository = app.injector.instanceOf[SaAgentReferenceMappingRepository]
-  private val vatRepo: VatAgentReferenceMappingRepository = app.injector.instanceOf[VatAgentReferenceMappingRepository]
-  private val agentCodeRepo: AgentCodeMappingRepository = app.injector.instanceOf[AgentCodeMappingRepository]
+  private val saRepo: IRSAAGENTMappingRepository = app.injector.instanceOf[IRSAAGENTMappingRepository]
+  private val vatRepo: HMCEVATAGNTMappingRepository = app.injector.instanceOf[HMCEVATAGNTMappingRepository]
+  private val agentCodeRepo: NewAgentCodeMappingRepository = app.injector.instanceOf[NewAgentCodeMappingRepository]
 
   override implicit lazy val app: Application = appBuilder.build()
 
@@ -538,7 +538,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
       response.status shouldBe 200
       val body = response.body
-      body shouldBe """{"mappings":[{"arn":"AARN0000002","saAgentReference":"A1111A"},{"arn":"AARN0000002","saAgentReference":"A1111B"}]}"""
+      body shouldBe """{"mappings":[{"arn":"AARN0000002","identifier":"A1111A"},{"arn":"AARN0000002","identifier":"A1111B"}]}"""
     }
 
     "return 200 status with a json body representing the mappings that match the supplied arn for sa" in {
@@ -549,7 +549,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
       response.status shouldBe 200
       val body = response.body
-      body shouldBe """{"mappings":[{"arn":"AARN0000002","saAgentReference":"A1111A"},{"arn":"AARN0000002","saAgentReference":"A1111B"}]}"""
+      body shouldBe """{"mappings":[{"arn":"AARN0000002","identifier":"A1111A"},{"arn":"AARN0000002","identifier":"A1111B"}]}"""
     }
 
     "return 200 status with a json body representing the mappings that match the supplied arn for vat" in {
@@ -561,8 +561,8 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
       response.status shouldBe 200
       val body = response.body
 
-      body should include("""{"arn":"AARN0000002","vrn":"101747696"}""")
-      body should include("""{"arn":"AARN0000002","vrn":"101747641"}""")
+      body should include("""{"arn":"AARN0000002","identifier":"101747696"}""")
+      body should include("""{"arn":"AARN0000002","identifier":"101747641"}""")
     }
 
     "return 200 status with a json body representing the mappings that match the supplied arn for agent code" in {
@@ -574,8 +574,8 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
       response.status shouldBe 200
       val body = response.body
 
-      body should include("""{"arn":"AARN0000002","agentCode":"ABCDE1"}""")
-      body should include("""{"arn":"AARN0000002","agentCode":"ABCDE2"}""")
+      body should include("""{"arn":"AARN0000002","identifier":"ABCDE1"}""")
+      body should include("""{"arn":"AARN0000002","identifier":"ABCDE2"}""")
     }
 
     "return 404 when there are no mappings that match the supplied arn" in {

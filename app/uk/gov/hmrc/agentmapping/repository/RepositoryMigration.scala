@@ -32,6 +32,8 @@ import uk.gov.hmrc.mongo.json.ReactiveMongoFormats.localDateTimeFormats
 
 import scala.concurrent.{ ExecutionContext, Future }
 
+// REMOVE DB AFTER MIGRATION
+
 @Singleton
 class SARepositoryMigration @Inject() (
   configuration: Configuration,

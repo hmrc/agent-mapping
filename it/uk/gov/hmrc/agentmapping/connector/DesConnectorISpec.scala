@@ -31,7 +31,8 @@ class DesConnectorISpec extends UnitSpec with OneAppPerSuite with WireMockSuppor
       Map(
         "microservice.services.des.port" -> wireMockPort,
         "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort))
+        "auditing.consumer.baseUri.port" -> wireMockPort,
+        "migrate-repositories" -> "false"))
   }
 
   private lazy val connector: DesConnector =

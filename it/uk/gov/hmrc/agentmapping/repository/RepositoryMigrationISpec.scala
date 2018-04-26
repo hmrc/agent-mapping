@@ -11,6 +11,8 @@ import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
+// REMOVE AFTER DB MIGRATION
+
 class RepositoryMigrationISpec extends UnitSpec with MongoApp {
 
   import ImplicitBSONHandlers._

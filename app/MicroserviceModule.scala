@@ -55,10 +55,12 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
     bindServiceConfigProperty[String]("des.authorization-token")
     bindServiceConfigProperty[String]("des.environment")
 
+    // REMOVE AFTER DB MIGRATION - start
     bind(classOf[LockRepository]).to(classOf[MongoLockRepository])
     bind(classOf[SARepositoryMigration]).asEagerSingleton()
     bind(classOf[AgentCodeRepositoryMigration]).asEagerSingleton()
     bind(classOf[VATRepositoryMigration]).asEagerSingleton()
+    // REMOVE AFTER DB MIGRATION - end
   }
 
   private def bindBaseUrl(serviceName: String) =
