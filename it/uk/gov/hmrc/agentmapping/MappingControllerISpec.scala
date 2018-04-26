@@ -76,7 +76,8 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "microservice.services.des.port" -> wireMockPort,
           "auditing.consumer.baseUri.host" -> wireMockHost,
           "auditing.consumer.baseUri.port" -> wireMockPort,
-          "application.router" -> "testOnlyDoNotUseInAppConf.Routes")).overrides(new TestGuiceModule)
+          "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
+          "migrate-repositories" -> "false")).overrides(new TestGuiceModule)
   }
 
   private class TestGuiceModule extends AbstractModule {

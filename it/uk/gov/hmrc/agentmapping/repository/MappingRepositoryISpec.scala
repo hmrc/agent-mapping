@@ -25,6 +25,7 @@ abstract class BaseRepositoryISpec[T <: ArnToIdentifierMapping, R <: MappingRepo
   override implicit lazy val app: Application = appBuilder.build()
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
+      .configure(Map("migrate-repositories" -> "false"))
       .configure(mongoConfiguration)
 
   val arn1 = Arn("ARN00001")
