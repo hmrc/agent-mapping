@@ -16,14 +16,13 @@
 
 package uk.gov.hmrc.agentmapping.audit
 
-import javax.inject.Inject
-
 import com.google.inject.Singleton
+import javax.inject.Inject
 import play.api.mvc.Request
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.AgentMappingEvent
-import uk.gov.hmrc.agentmapping.model.Identifier
+import uk.gov.hmrc.agentmapping.model.{ Identifier, Service }
 import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, Utr }
-import uk.gov.hmrc.domain.SaAgentReference
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
@@ -31,8 +30,6 @@ import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
 import scala.concurrent.Future
 import scala.util.Try
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.agentmapping.model.Names._
 
 object AgentMappingEvent extends Enumeration {
 
@@ -49,14 +46,7 @@ class AuditService @Inject() (val auditConnector: AuditConnector) {
   }
 
   def sendCreateMappingAuditEvent(arn: Arn, identifier: Identifier, authProviderId: String, duplicate: Boolean = false)(implicit hc: HeaderCarrier, request: Request[Any]): Unit = {
-    identifier.key match {
-      case IRAgentReference =>
-        auditEvent(AgentMappingEvent.CreateMapping, "create-mapping", Seq("authProviderId" -> authProviderId, "saAgentRef" -> identifier.value, "agentReferenceNumber" -> arn.value, "duplicate" -> duplicate))
-      case AgentRefNo =>
-        auditEvent(AgentMappingEvent.CreateMapping, "create-mapping", Seq("authProviderId" -> authProviderId, "vatAgentRef" -> identifier.value, "agentReferenceNumber" -> arn.value, "duplicate" -> duplicate))
-      case AgentCode =>
-        auditEvent(AgentMappingEvent.CreateMapping, "create-mapping", Seq("authProviderId" -> authProviderId, "agentCode" -> identifier.value, "agentReferenceNumber" -> arn.value, "duplicate" -> duplicate))
-    }
+    auditEvent(AgentMappingEvent.CreateMapping, "create-mapping", Seq("authProviderId" -> authProviderId, "identifierType" -> Service.asString(identifier.key), "identifier" -> identifier.value, "agentReferenceNumber" -> arn.value, "duplicate" -> duplicate))
   }
 
   private[audit] def auditEvent(event: AgentMappingEvent, transactionName: String, details: Seq[(String, Any)] = Seq.empty)(implicit hc: HeaderCarrier, request: Request[Any]): Future[Unit] = {

@@ -17,8 +17,6 @@
 package uk.gov.hmrc.agentmapping.controller
 
 import play.api.mvc.PathBindable
-import uk.gov.hmrc.agentmapping.binders.SimpleObjectBinder
-import uk.gov.hmrc.agentmapping.model.Identifiers
 import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, Utr }
 
 object UrlBinders {
@@ -43,5 +41,4 @@ object UrlBinders {
     override def unbind(key: String, arn: Arn): String = arn.value
   }
 
-  implicit val identifiersBinder = new SimpleObjectBinder[Identifiers](Identifiers.parse, _.toString)
 }

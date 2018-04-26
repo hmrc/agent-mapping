@@ -9,30 +9,36 @@ trait AuthStubs {
     stubFor(post(urlEqualTo("/auth/authorise"))
       .willReturn(aResponse()
         .withStatus(401)
-        .withHeader("WWW-Authenticate", s"""MDTP detail="${mdtpDetail}"""")))
+        .withHeader("WWW-Authenticate", s"""MDTP detail="$mdtpDetail"""")))
   }
 
-  def givenUserAuthorisedFor(enrolment: String, identifierName: String, identifierValue: String, ggCredId: String, affinityGroup: AffinityGroup = AffinityGroup.Agent, agentCodeOpt: Option[String]): Unit = {
+  def givenUserAuthorisedFor(serviceName: String, identifierName: String, identifierValue: String, ggCredId: String, affinityGroup: AffinityGroup = AffinityGroup.Agent, agentCodeOpt: Option[String]): Unit = {
     stubFor(post(urlEqualTo("/auth/authorise")).atPriority(1)
       .withRequestBody(
         equalToJson(
           s"""{"authorise":[
              |  {"authProviders":["GovernmentGateway"]},
-             |  {"affinityGroup":"$affinityGroup"},
-             |  {
-             |    "identifiers":[
-             |      {"key":"$identifierName","value":"$identifierValue"}
-             |    ],
-             |    "state":"Activated",
-             |    "enrolment":"$enrolment"
-             |  }
+             |  {"affinityGroup":"$affinityGroup"}
              |],
-             |"retrieve":["credentials","agentCode"]
+             |"retrieve":["credentials","agentCode","allEnrolments"]
           }""".stripMargin, true, false))
       .willReturn(aResponse()
         .withStatus(200)
         .withHeader("Content-Type", "application/json")
-        .withBody(s"""{ "credentials": {"providerId": "$ggCredId", "providerType": "GovernmmentGateway"} ${agentCodeOpt.map(ac => s""", "agentCode": "$ac" """).getOrElse("")} }""")))
+        .withBody(
+          s"""
+             |{ "credentials": {
+             |    "providerId": "$ggCredId",
+             |    "providerType": "GovernmmentGateway"
+             |  }
+             |  ${agentCodeOpt.map(ac => s""", "agentCode": "$ac" """).getOrElse("")},
+             |  "allEnrolments": [
+             |    { "key":"$serviceName", "identifiers": [
+             |      {"key":"$identifierName", "value": "$identifierValue"}
+             |    ], "state": "Activated" }
+             |  ]
+             |}
+             |""".stripMargin)))
 
     stubFor(post(urlEqualTo("/auth/authorise")).atPriority(2)
       .willReturn(aResponse()
@@ -41,28 +47,42 @@ trait AuthStubs {
   }
 
   def givenUserAuthorisedForMultiple(enrolments: Set[Enrolment], ggCredId: String, affinityGroup: AffinityGroup = AffinityGroup.Agent, agentCodeOpt: Option[String]): Unit = {
+    val responseBody = s"""
+                          |{ "credentials": {
+                          |    "providerId": "$ggCredId",
+                          |    "providerType": "GovernmmentGateway"
+                          |  }
+                          |  ${agentCodeOpt.map(ac => s""", "agentCode": "$ac" """).getOrElse("")},
+                          |  "allEnrolments": [
+                          |    ${
+      enrolments.map(e => s"""
+                                                        |{ "key":"${e.key}",
+                                                        |"identifiers": [${
+        e.identifiers.map(i =>
+          s"""{
+         |"key":"${i.key}",
+         |"value": "${i.value}"
+         |}""".stripMargin).mkString(",")
+      }],
+                                                        |"state": "Activated" } """.stripMargin).mkString(",")
+    }
+                          |                   ]
+                          |}""".stripMargin
     stubFor(post(urlEqualTo("/auth/authorise")).atPriority(1)
       .withRequestBody(
         equalToJson(
           s"""|
-              |{ "authorise":[
-              |   {"authProviders":["GovernmentGateway"]},
-              |   {"affinityGroup":"$affinityGroup"},
-              |   ${
-            enrolments.map(e => s"""{
-              |      "identifiers":[${e.identifiers.map(i => s"""{"key":"${i.key}","value":"${i.value}"}""").mkString(",")}],
-              |      "state":"${e.state}",
-              |      "enrolment":"${e.key}"
-              |      }""".stripMargin).mkString(",")
-          }
+              |{ "authorise": [
+              |     {"authProviders":["GovernmentGateway"]},
+              |     {"affinityGroup":"$affinityGroup"}
               |   ],
-              |  "retrieve":["credentials","agentCode"]
+              |  "retrieve": ["credentials","agentCode","allEnrolments"]
               |}
            """.stripMargin, true, false))
       .willReturn(aResponse()
         .withStatus(200)
         .withHeader("Content-Type", "application/json")
-        .withBody(s"""{ "credentials": {"providerId": "$ggCredId", "providerType": "GovernmmentGateway"} ${agentCodeOpt.map(ac => s""", "agentCode": "$ac" """).getOrElse("")} }""")))
+        .withBody(responseBody)))
 
     stubFor(post(urlEqualTo("/auth/authorise")).atPriority(2)
       .willReturn(aResponse()

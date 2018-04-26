@@ -17,7 +17,8 @@
 package uk.gov.hmrc.agentmapping.repository
 
 import javax.inject.{ Inject, Singleton }
-import uk.gov.hmrc.agentmapping.model.Names.{ AgentCode, AgentRefNo, IRAgentReference }
+import uk.gov.hmrc.agentmapping.model.Service
+import uk.gov.hmrc.agentmapping.model.Service._
 
 @Singleton
 class MappingRepositories @Inject() (
@@ -27,13 +28,13 @@ class MappingRepositories @Inject() (
 
   type Repository = MappingRepository with RepositoryFunctions[AgentReferenceMapping]
 
-  private val repositories: Map[String, Repository] =
+  private val repositories: Map[Service.Name, Repository] =
     Map(
-      IRAgentReference -> iRSAAGENTMappingRepository,
-      AgentRefNo -> hMCEVATAGNTMappingRepository,
+      `IR-SA-AGENT` -> iRSAAGENTMappingRepository,
+      `HMCE-VAT-AGNT` -> hMCEVATAGNTMappingRepository,
       AgentCode -> agentCodeMappingRepository)
 
-  def get(identifierKey: String): Repository = repositories(identifierKey)
+  def get(serviceName: Service.Name): Repository = repositories(serviceName)
 
   def map[T](f: Repository => T): Seq[T] = repositories.values.map(f).toSeq
 

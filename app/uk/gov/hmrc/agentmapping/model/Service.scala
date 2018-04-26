@@ -16,12 +16,18 @@
 
 package uk.gov.hmrc.agentmapping.model
 
-object Names {
+object Service extends Enumeration {
+  type Name = Value
+  val AgentCode, `IR-SA-AGENT`, `HMCE-VAT-AGNT` = Value
 
-  val IRAgentReference = "IRAgentReference"
-  val AgentRefNo = "AgentRefNo"
-  val AgentCode = "AgentCode"
+  private val names: Map[Service.Value, String] = Map(
+    `IR-SA-AGENT` -> "IR-SA-AGENT",
+    `HMCE-VAT-AGNT` -> "HMCE-VAT-AGNT",
+    `AgentCode` -> "AgentCode")
 
-  val `IR-SA-AGENT` = "IR-SA-AGENT"
-  val `HMCE-VAT-AGNT` = "HMCE-VAT-AGNT"
+  private val reverse: Map[String, Service.Value] = names.map { case (k, v) => (v, k) }
+
+  val valueOf: String => Option[Service.Name] = reverse.get
+
+  implicit def asString(service: Service.Name): String = names.getOrElse(service, "")
 }
