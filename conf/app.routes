@@ -1,5 +1,8 @@
 # microservice specific routes
 
+PUT  /mappings/:utr/:arn                   @uk.gov.hmrc.agentmapping.controller.MappingController.createMapping(utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, unused: String = "")
+
+# DEPRECATED, use /mappings/:utr/:arn
 PUT  /mappings/:utr/:arn/:identifiers      @uk.gov.hmrc.agentmapping.controller.MappingController.createMapping(utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, identifiers: String)
 
 # DEPRECATED, use /mappings/sa/:arn

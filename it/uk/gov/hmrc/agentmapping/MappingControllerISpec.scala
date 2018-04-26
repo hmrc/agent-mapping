@@ -9,7 +9,6 @@ import play.api.libs.ws.WSClient
 import play.api.libs.ws.ahc.AhcWSClient
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent
-import uk.gov.hmrc.agentmapping.model.Service
 import uk.gov.hmrc.agentmapping.model.Service._
 import uk.gov.hmrc.agentmapping.repository.{ HMCEVATAGNTMappingRepository, IRSAAGENTMappingRepository, NewAgentCodeMappingRepository }
 import uk.gov.hmrc.agentmapping.stubs.{ AuthStubs, DataStreamStub, DesStubs }
@@ -32,11 +31,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
   val AgentRefNo = "AgentRefNo"
 
   def createMappingRequest(requestUtr: Utr = utr, requestArn: Arn = registeredArn): Resource = {
-    new Resource(s"/agent-mapping/mappings/${requestUtr.value}/${requestArn.value}/foo", port)
-  }
-
-  def createFreeMappingRequest(identifiers: String, requestUtr: Utr = utr, requestArn: Arn = registeredArn): Resource = {
-    new Resource(s"/agent-mapping/mappings/${requestUtr.value}/${requestArn.value}/$identifiers", port)
+    new Resource(s"/agent-mapping/mappings/${requestUtr.value}/${requestArn.value}", port)
   }
 
   def findMappingsRequest(requestArn: Arn = registeredArn): Resource = {
@@ -140,7 +135,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "authProviderId" -> "testCredId"),
         tags = Map(
           "transactionName" -> "known-facts-check",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
 
       verifyAuditRequestSent(
         1,
@@ -153,7 +148,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "duplicate" -> "false"),
         tags = Map(
           "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
 
       verifyAuditRequestSent(
         1,
@@ -166,7 +161,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "duplicate" -> "false"),
         tags = Map(
           "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
 
     }
 
@@ -185,7 +180,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "authProviderId" -> "testCredId"),
         tags = Map(
           "transactionName" -> "known-facts-check",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
 
       verifyAuditRequestSent(
         1,
@@ -198,7 +193,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "duplicate" -> "false"),
         tags = Map(
           "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
 
       verifyAuditRequestSent(
         1,
@@ -211,7 +206,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "duplicate" -> "false"),
         tags = Map(
           "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
 
     }
 
@@ -231,7 +226,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "authProviderId" -> "testCredId"),
         tags = Map(
           "transactionName" -> "known-facts-check",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
 
       verifyAuditRequestSent(
         1,
@@ -244,7 +239,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "duplicate" -> "true"),
         tags = Map(
           "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
 
     }
 
@@ -264,7 +259,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "authProviderId" -> "testCredId"),
         tags = Map(
           "transactionName" -> "known-facts-check",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
 
       verifyAuditRequestSent(
         1,
@@ -277,7 +272,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "duplicate" -> "true"),
         tags = Map(
           "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
 
     }
 
@@ -300,7 +295,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "authProviderId" -> "testCredId"),
         tags = Map(
           "transactionName" -> "known-facts-check",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
 
       verifyAuditRequestSent(
         1,
@@ -313,7 +308,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "duplicate" -> "true"),
         tags = Map(
           "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
 
       verifyAuditRequestSent(
         1,
@@ -326,7 +321,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "duplicate" -> "false"),
         tags = Map(
           "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
 
     }
 
@@ -348,7 +343,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "authProviderId" -> "testCredId"),
         tags = Map(
           "transactionName" -> "known-facts-check",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
 
       verifyAuditRequestSent(
         1,
@@ -361,7 +356,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "duplicate" -> "false"),
         tags = Map(
           "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
 
       verifyAuditRequestSent(
         1,
@@ -374,7 +369,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "duplicate" -> "true"),
         tags = Map(
           "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
 
       verifyAuditRequestSent(
         1,
@@ -387,7 +382,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "duplicate" -> "false"),
         tags = Map(
           "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
 
       verifyAuditRequestSent(
         1,
@@ -400,7 +395,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "duplicate" -> "true"),
         tags = Map(
           "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
 
     }
 
@@ -408,7 +403,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
       givenUserAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = Some("TZRXXV"))
       givenIndividualRegistrationExists(utr)
 
-      new Resource(s"/agent-mapping/mappings/${utr.value}/TARN0000001/foo", port).putEmpty().status shouldBe 403
+      new Resource(s"/agent-mapping/mappings/${utr.value}/TARN0000001", port).putEmpty().status shouldBe 403
 
       verifyAuditRequestSent(
         1,
@@ -420,7 +415,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "authProviderId" -> "testCredId"),
         tags = Map(
           "transactionName" -> "known-facts-check",
-          "path" -> "/agent-mapping/mappings/2000000000/TARN0000001/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/TARN0000001"))
     }
 
     "return forbidden when there is no arn on the DES business partner record" in {
@@ -438,7 +433,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "authProviderId" -> "testCredId"),
         tags = Map(
           "transactionName" -> "known-facts-check",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
     }
 
     "return forbidden when the DES business partner record does not exist" in {
@@ -457,7 +452,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
           "authProviderId" -> "testCredId"),
         tags = Map(
           "transactionName" -> "known-facts-check",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002/foo"))
+          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
     }
 
     "return bad request when the UTR is invalid" in {

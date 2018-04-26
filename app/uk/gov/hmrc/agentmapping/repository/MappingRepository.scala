@@ -87,20 +87,48 @@ object AgentReferenceMapping extends ReactiveMongoFormats {
 }
 
 abstract class NewMappingRepository @Inject() (serviceName: String)(implicit mongoComponent: ReactiveMongoComponent)
-  extends BaseMappingRepository(s"agent-mapping-$serviceName", "identifier", AgentReferenceMapping.apply)
+  extends BaseMappingRepository(s"agent-mapping-${serviceName.toLowerCase}", "identifier", AgentReferenceMapping.apply)
   with RepositoryFunctions[AgentReferenceMapping]
 
 @Singleton
 class IRSAAGENTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
-  extends NewMappingRepository("ir-sa-agent")
+  extends NewMappingRepository("IR-SA-AGENT")
 
 @Singleton
 class NewAgentCodeMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
-  extends NewMappingRepository("agentcode")
+  extends NewMappingRepository("AgentCode")
 
 @Singleton
 class HMCEVATAGNTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
-  extends NewMappingRepository("hmce-vat-agnt")
+  extends NewMappingRepository("HMCE-VAT-AGNT")
+
+@Singleton
+class HMRCCHARAGENTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
+  extends NewMappingRepository("HMRC-CHAR-AGENT")
+
+@Singleton
+class HMRCGTSAGNTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
+  extends NewMappingRepository("HMRC-GTS-AGNT")
+
+@Singleton
+class HMRCMGDAGNTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
+  extends NewMappingRepository("HMRC-MGD-AGNT")
+
+@Singleton
+class HMRCNOVRNAGNTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
+  extends NewMappingRepository("HMRC-NOVRN-AGNT")
+
+@Singleton
+class IRCTAGENTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
+  extends NewMappingRepository("IR-CT-AGENT")
+
+@Singleton
+class IRPAYEAGENTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
+  extends NewMappingRepository("IR-PAYE-AGENT")
+
+@Singleton
+class IRSDLTAGENTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
+  extends NewMappingRepository("IR-SDLT-AGENT")
 
 // REMOVE AFTER DB MIGRATION
 // Old repositories

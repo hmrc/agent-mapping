@@ -22,17 +22,31 @@ import uk.gov.hmrc.agentmapping.model.Service._
 
 @Singleton
 class MappingRepositories @Inject() (
+  agentCodeMappingRepository: NewAgentCodeMappingRepository,
   hMCEVATAGNTMappingRepository: HMCEVATAGNTMappingRepository,
   iRSAAGENTMappingRepository: IRSAAGENTMappingRepository,
-  agentCodeMappingRepository: NewAgentCodeMappingRepository) {
+  hMRCCHARAGENTMappingRepository: HMRCCHARAGENTMappingRepository,
+  hMRCGTSAGNTMappingRepository: HMRCGTSAGNTMappingRepository,
+  hMRCMGDAGNTMappingRepository: HMRCMGDAGNTMappingRepository,
+  hMRCNOVRNAGNTMappingRepository: HMRCNOVRNAGNTMappingRepository,
+  iRCTAGENTMappingRepository: IRCTAGENTMappingRepository,
+  iRPAYEAGENTMappingRepository: IRPAYEAGENTMappingRepository,
+  iRSDLTAGENTMappingRepository: IRSDLTAGENTMappingRepository) {
 
   type Repository = MappingRepository with RepositoryFunctions[AgentReferenceMapping]
 
   private val repositories: Map[Service.Name, Repository] =
     Map(
+      AgentCode -> agentCodeMappingRepository,
       `IR-SA-AGENT` -> iRSAAGENTMappingRepository,
       `HMCE-VAT-AGNT` -> hMCEVATAGNTMappingRepository,
-      AgentCode -> agentCodeMappingRepository)
+      `HMRC-CHAR-AGENT` -> hMRCCHARAGENTMappingRepository,
+      `HMRC-GTS-AGNT` -> hMRCGTSAGNTMappingRepository,
+      `HMRC-MGD-AGNT` -> hMRCMGDAGNTMappingRepository,
+      `HMRC-NOVRN-AGNT` -> hMRCNOVRNAGNTMappingRepository,
+      `IR-CT-AGENT` -> iRCTAGENTMappingRepository,
+      `IR-PAYE-AGENT` -> iRPAYEAGENTMappingRepository,
+      `IR-SDLT-AGENT` -> iRSDLTAGENTMappingRepository)
 
   def get(serviceName: Service.Name): Repository = repositories(serviceName)
 

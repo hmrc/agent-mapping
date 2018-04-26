@@ -13,31 +13,25 @@ A prerequisite for this check is knowing the CESA Agent Ref, this is captured an
 
 ## API
 
-### create mapping between ARN and an identifier (or identifiers)
+### create mapping between ARN and available identifiers
 
-    PUT  /mappings/:utr/:arn/:identifiers
+    PUT  /mappings/:utr/:arn
    
 path parameters:   
     
     :utr - SA UTR to validate ARN
     :arn - AgentReferenceNumber
-    :identifiers - one or more identifiers in KEY~VALUE format, separated by ~
-                   supported identifier keys: 
-                   - `IRAgentReference` from IR-SA-AGENT enrolment
-                   - `VATRegNo` from HMCE-VATDEC-ORG enrolment
                    
 examples:
     
-    PUT /agent-mapping/mappings/2000000000/AARN0000002/IRAgentReference~A1111A
-    PUT /agent-mapping/mappings/2000000000/AARN0000002/VATRegNo~101747696
-    PUT /agent-mapping/mappings/2000000000/AARN0000002/IRAgentReference~A1111A~VATRegNo~101747696
+    PUT /agent-mapping/mappings/2000000000/AARN0000002
     
 responses:
 
     201 CREATED
     401 UNAUTHORIZED    if user is not authenticated (missing bearer token or no active session)
-    403 FORBIDDEN       if provided identifiers key an/or values do not match user's enrolments
-    409 CONFLICT        if all provided identifiers has been already mapped
+    403 FORBIDDEN       if provided ARN and UTR doesn't match Business Parter Record from ETMP
+    409 CONFLICT        if all available identifiers has been already mapped
                    
 ### find SA mappings for the given ARN
 
