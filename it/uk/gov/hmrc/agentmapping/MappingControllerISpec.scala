@@ -513,7 +513,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
       response.status shouldBe 200
       val body = response.body
-      body shouldBe """{"mappings":[{"arn":"AARN0000002","identifier":"A1111A"},{"arn":"AARN0000002","identifier":"A1111B"}]}"""
+      body shouldBe """{"mappings":[{"arn":"AARN0000002","saAgentReference":"A1111A"},{"arn":"AARN0000002","saAgentReference":"A1111B"}]}"""
     }
 
     "return 200 status with a json body representing the mappings that match the supplied arn for sa" in {
@@ -524,7 +524,7 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
 
       response.status shouldBe 200
       val body = response.body
-      body shouldBe """{"mappings":[{"arn":"AARN0000002","identifier":"A1111A"},{"arn":"AARN0000002","identifier":"A1111B"}]}"""
+      body shouldBe """{"mappings":[{"arn":"AARN0000002","saAgentReference":"A1111A"},{"arn":"AARN0000002","saAgentReference":"A1111B"}]}"""
     }
 
     "return 200 status with a json body representing the mappings that match the supplied arn for vat" in {
@@ -536,8 +536,8 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
       response.status shouldBe 200
       val body = response.body
 
-      body should include("""{"arn":"AARN0000002","identifier":"101747696"}""")
-      body should include("""{"arn":"AARN0000002","identifier":"101747641"}""")
+      body should include("""{"arn":"AARN0000002","vrn":"101747696"}""")
+      body should include("""{"arn":"AARN0000002","vrn":"101747641"}""")
     }
 
     "return 200 status with a json body representing the mappings that match the supplied arn for agent code" in {
@@ -549,8 +549,8 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
       response.status shouldBe 200
       val body = response.body
 
-      body should include("""{"arn":"AARN0000002","identifier":"ABCDE1"}""")
-      body should include("""{"arn":"AARN0000002","identifier":"ABCDE2"}""")
+      body should include("""{"arn":"AARN0000002","agentCode":"ABCDE1"}""")
+      body should include("""{"arn":"AARN0000002","agentCode":"ABCDE2"}""")
     }
 
     "return 404 when there are no mappings that match the supplied arn" in {

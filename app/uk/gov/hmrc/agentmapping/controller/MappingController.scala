@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentmapping.controller
 import javax.inject.{ Inject, Singleton }
 import play.api.Logger
 import play.api.libs.json.Json.toJson
+import play.api.libs.json._
 import play.api.mvc.{ Action, AnyContent, Request }
 import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.audit.AuditService
@@ -112,19 +113,22 @@ class MappingController @Inject() (
 
   def findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
     repositories.get(`IR-SA-AGENT`).findBy(arn) map { matches =>
-      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))) else NotFound
+      implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("saAgentReference")
+      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings])) else NotFound
     }
   }
 
   def findVatMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
     repositories.get(`HMCE-VAT-AGNT`).findBy(arn) map { matches =>
-      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))) else NotFound
+      implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("vrn")
+      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings])) else NotFound
     }
   }
 
   def findAgentCodeMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
     repositories.get(AgentCode).findBy(arn) map { matches =>
-      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))) else NotFound
+      implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("agentCode")
+      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings])) else NotFound
     }
   }
 
@@ -132,4 +136,7 @@ class MappingController @Inject() (
     Future.sequence(repositories.map(_.delete(arn)))
       .map { _ => NoContent }
   }
+
+  private def writeAgentReferenceMappingWith(identifierFieldName: String): Writes[AgentReferenceMapping] =
+    Writes[AgentReferenceMapping](m => Json.obj("arn" -> JsString(m.arn), identifierFieldName -> JsString(m.identifier)))
 }
