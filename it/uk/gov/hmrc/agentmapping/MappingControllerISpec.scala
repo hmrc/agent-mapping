@@ -61,13 +61,21 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
   case class TestFixture(service: Service.Name, identifierKey: String, identifierValue: String)
 
   val AgentCodeTestFixture = TestFixture(AgentCode, "AgentCode", agentCode)
+
   val IRSAAGENTTestFixture = TestFixture(`IR-SA-AGENT`, IRAgentReference, "A1111A")
   val HMCEVATAGNTTestFixture = TestFixture(`HMCE-VAT-AGNT`, AgentRefNo, "101747696")
   val IRCTAGENTTestFixture = TestFixture(`IR-CT-AGENT`, IRAgentReference, "B2121C")
   val HMRCGTSAGNTTestFixture = TestFixture(`HMRC-GTS-AGNT`, "HMRCGTSAGENTREF", "AB8964622K")
   val HMRCNOVRNAGNTTestFixture = TestFixture(`HMRC-NOVRN-AGNT`, "VATAgentRefNo", "FGH79/96KUJ")
+  val HMRCCHARAGENTTestFixture = TestFixture(`HMRC-CHAR-AGENT`, "AGENTCHARID", "FGH79/96KUJ")
+  val HMRCMGDAGNTTestFixture = TestFixture(`HMRC-MGD-AGNT`, "HMRCMGDAGENTREF", "737B.89")
+  val IRPAYEAGENTTestFixture = TestFixture(`IR-PAYE-AGENT`, IRAgentReference, "F9876J")
+  val IRSDLTAGENTTestFixture = TestFixture(`IR-SDLT-AGENT`, "STORN", "AAA0008")
 
-  private def mappingCreateEndpoint(fixtures: TestFixture*) = {
+  val fixtures = Seq(IRSAAGENTTestFixture, HMCEVATAGNTTestFixture, IRCTAGENTTestFixture, HMRCGTSAGNTTestFixture, HMRCNOVRNAGNTTestFixture,
+    HMRCCHARAGENTTestFixture, HMRCMGDAGNTTestFixture, IRPAYEAGENTTestFixture, IRSDLTAGENTTestFixture)
+
+  "MappingController" should {
 
     // Test each fixture in isolation first
     fixtures.foreach { f =>
@@ -125,7 +133,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     if (fixtures.size > 1) {
       // Then test different split sets of fixtures
       val splitFixtures: Seq[(Seq[TestFixture], Seq[TestFixture])] =
-        (1 until fixtures.size).map(fixtures.splitAt) ++ (1 until fixtures.size).map(fixtures.reverse.splitAt)
+        (1 until Math.max(5,fixtures.size)).map(fixtures.splitAt) ++ (1 until Math.max(4,fixtures.size)).map(fixtures.reverse.splitAt)
 
       splitFixtures.foreach {
         case (left, right) =>
@@ -160,12 +168,6 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
           }
       }
     }
-
-  }
-
-  "MappingController" should {
-
-    behave like mappingCreateEndpoint(IRSAAGENTTestFixture, HMCEVATAGNTTestFixture, IRCTAGENTTestFixture, HMRCGTSAGNTTestFixture, HMRCNOVRNAGNTTestFixture)
 
     "return forbidden when the supplied arn does not match the DES business partner record arn" in {
       givenUserIsAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = Some(agentCode))
