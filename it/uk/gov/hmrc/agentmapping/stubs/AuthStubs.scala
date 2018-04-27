@@ -12,7 +12,7 @@ trait AuthStubs {
         .withHeader("WWW-Authenticate", s"""MDTP detail="$mdtpDetail"""")))
   }
 
-  def givenUserAuthorisedFor(serviceName: String, identifierName: String, identifierValue: String, ggCredId: String, affinityGroup: AffinityGroup = AffinityGroup.Agent, agentCodeOpt: Option[String]): Unit = {
+  def givenUserIsAuthorisedFor(serviceName: String, identifierName: String, identifierValue: String, ggCredId: String, affinityGroup: AffinityGroup = AffinityGroup.Agent, agentCodeOpt: Option[String]): Unit = {
     stubFor(post(urlEqualTo("/auth/authorise")).atPriority(1)
       .withRequestBody(
         equalToJson(
@@ -46,7 +46,7 @@ trait AuthStubs {
         .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")))
   }
 
-  def givenUserAuthorisedForMultiple(enrolments: Set[Enrolment], ggCredId: String, affinityGroup: AffinityGroup = AffinityGroup.Agent, agentCodeOpt: Option[String]): Unit = {
+  def givenUserIsAuthorisedForMultiple(enrolments: Set[Enrolment], ggCredId: String, affinityGroup: AffinityGroup = AffinityGroup.Agent, agentCodeOpt: Option[String]): Unit = {
     val responseBody = s"""
                           |{ "credentials": {
                           |    "providerId": "$ggCredId",

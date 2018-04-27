@@ -9,8 +9,9 @@ import play.api.libs.ws.WSClient
 import play.api.libs.ws.ahc.AhcWSClient
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent
+import uk.gov.hmrc.agentmapping.model.Service
 import uk.gov.hmrc.agentmapping.model.Service._
-import uk.gov.hmrc.agentmapping.repository.{ HMCEVATAGNTMappingRepository, IRSAAGENTMappingRepository, NewAgentCodeMappingRepository }
+import uk.gov.hmrc.agentmapping.repository.MappingRepositories
 import uk.gov.hmrc.agentmapping.stubs.{ AuthStubs, DataStreamStub, DesStubs }
 import uk.gov.hmrc.agentmapping.support.{ MongoApp, Resource, WireMockSupport }
 import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, Utr }
@@ -19,13 +20,12 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.concurrent.Future
 
-class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport with DesStubs with AuthStubs with DataStreamStub {
-  implicit val actorSystem = ActorSystem()
-  implicit val materializer = ActorMaterializer()
-  implicit val client: WSClient = AhcWSClient()
+class MappingControllerISpec extends MappingControllerISpecSetup {
 
   private val utr = Utr("2000000000")
+  private val agentCode = "TZRXXV"
 
   val IRAgentReference = "IRAgentReference"
   val AgentRefNo = "AgentRefNo"
@@ -58,411 +58,139 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     new Resource(s"/agent-mapping/test-only/mappings/${requestArn.value}", port)
   }
 
-  implicit val hc = HeaderCarrier()
-  implicit val fakeRequest = FakeRequest("GET", "/agent-mapping/add-code")
+  case class TestFixture(service: Service.Name, identifierKey: String, identifierValue: String)
 
-  private val saRepo: IRSAAGENTMappingRepository = app.injector.instanceOf[IRSAAGENTMappingRepository]
-  private val vatRepo: HMCEVATAGNTMappingRepository = app.injector.instanceOf[HMCEVATAGNTMappingRepository]
-  private val agentCodeRepo: NewAgentCodeMappingRepository = app.injector.instanceOf[NewAgentCodeMappingRepository]
+  val AgentCodeTestFixture = TestFixture(AgentCode, "AgentCode", agentCode)
+  val IRSAAGENTTestFixture = TestFixture(`IR-SA-AGENT`, IRAgentReference, "A1111A")
+  val HMCEVATAGNTTestFixture = TestFixture(`HMCE-VAT-AGNT`, AgentRefNo, "101747696")
+  val IRCTAGENTTestFixture = TestFixture(`IR-CT-AGENT`, IRAgentReference, "B2121C")
+  val HMRCGTSAGNTTestFixture = TestFixture(`HMRC-GTS-AGNT`, "HMRCGTSAGENTREF", "AB8964622K")
+  val HMRCNOVRNAGNTTestFixture = TestFixture(`HMRC-NOVRN-AGNT`, "VATAgentRefNo", "FGH79/96KUJ")
 
-  override implicit lazy val app: Application = appBuilder.build()
+  private def mappingCreateEndpoint(fixtures: TestFixture*) = {
 
-  protected def appBuilder: GuiceApplicationBuilder = {
-    new GuiceApplicationBuilder().configure(
-      mongoConfiguration ++
-        Map(
-          "microservice.services.auth.port" -> wireMockPort,
-          "microservice.services.des.port" -> wireMockPort,
-          "auditing.consumer.baseUri.host" -> wireMockHost,
-          "auditing.consumer.baseUri.port" -> wireMockPort,
-          "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
-          "migrate-repositories" -> "false")).overrides(new TestGuiceModule)
+    // Test each fixture in isolation first
+    fixtures.foreach { f =>
+      s"capture ${Service.asString(f.service)} enrolment" when {
+        "return created upon success" in {
+          givenUserIsAuthorisedFor(f)
+          givenIndividualRegistrationExists(utr)
+          createMappingRequest().putEmpty().status shouldBe 201
+        }
+
+        "return created upon success using deprecated route" in {
+          givenUserIsAuthorisedFor(f)
+          givenIndividualRegistrationExists(utr)
+          createMappingRequestDeprecatedRoute().putEmpty().status shouldBe 201
+        }
+
+        "return created upon success w/o agent code" in {
+          givenUserIsAuthorisedFor(f.service, f.identifierKey, f.identifierValue, "testCredId", agentCodeOpt = None)
+          givenIndividualRegistrationExists(utr)
+          createMappingRequest().putEmpty().status shouldBe 201
+        }
+
+        "return a successful audit event with known facts set to true" in {
+          givenUserIsAuthorisedFor(f)
+          givenIndividualRegistrationExists(utr)
+          createMappingRequest().putEmpty().status shouldBe 201
+
+          verifyKnownFactsCheckAuditEventSent(1)
+          verifyCreateMappingAuditEventSent(f)
+          verifyCreateMappingAuditEventSent(AgentCodeTestFixture)
+        }
+
+        "return conflict when the mapping already exists" in {
+          givenUserIsAuthorisedFor(f)
+          givenIndividualRegistrationExists(utr)
+          createMappingRequest().putEmpty().status shouldBe 201
+          createMappingRequest().putEmpty().status shouldBe 409
+
+          verifyKnownFactsCheckAuditEventSent(2)
+          verifyCreateMappingAuditEventSent(f)
+        }
+
+      }
+    }
+
+    // Then test all fixtures at once
+    s"capture all ${fixtures.size} enrolments" when {
+      s"return created upon success" in {
+        givenUserIsAuthorisedForMultiple(fixtures)
+        givenIndividualRegistrationExists(utr)
+        createMappingRequest().putEmpty().status shouldBe 201
+      }
+    }
+
+    if (fixtures.size > 1) {
+      // Then test different split sets of fixtures
+      val splitFixtures: Seq[(Seq[TestFixture], Seq[TestFixture])] =
+        (1 until fixtures.size).map(fixtures.splitAt) ++ (1 until fixtures.size).map(fixtures.reverse.splitAt)
+
+      splitFixtures.foreach {
+        case (left, right) =>
+
+          s"return created when we add all, but the mappings already exists for some [${left.map(f => Service.asString(f.service)).mkString(",")}]" in {
+            givenIndividualRegistrationExists(utr)
+            givenUserIsAuthorisedForMultiple(left)
+            createMappingRequest().putEmpty().status shouldBe 201
+
+            givenUserIsAuthorisedForMultiple(fixtures)
+            createMappingRequest().putEmpty().status shouldBe 201
+
+            verifyKnownFactsCheckAuditEventSent(2)
+            fixtures.foreach(f => verifyCreateMappingAuditEventSent(f))
+            verifyCreateMappingAuditEventSent(AgentCodeTestFixture)
+          }
+
+          s"return conflict when all mappings already exists, but we try to add [${left.map(f => Service.asString(f.service)).mkString(",")}]" in {
+            givenIndividualRegistrationExists(utr)
+            givenUserIsAuthorisedForMultiple(fixtures)
+            createMappingRequest().putEmpty().status shouldBe 201
+
+            givenUserIsAuthorisedForMultiple(left)
+            createMappingRequest().putEmpty().status shouldBe 409
+
+            givenUserIsAuthorisedForMultiple(right)
+            createMappingRequest().putEmpty().status shouldBe 409
+
+            verifyKnownFactsCheckAuditEventSent(3)
+            fixtures.foreach(f => verifyCreateMappingAuditEventSent(f))
+            verifyCreateMappingAuditEventSent(AgentCodeTestFixture)
+          }
+      }
+    }
+
   }
 
-  private class TestGuiceModule extends AbstractModule {
-    override def configure(): Unit = {}
-  }
+  "MappingController" should {
 
-  override def beforeEach() {
-    super.beforeEach()
-    await(saRepo.ensureIndexes)
-    await(vatRepo.ensureIndexes)
-    await(agentCodeRepo.ensureIndexes)
-    givenAuditConnector()
-  }
-
-  "mapping creation requests" should {
-    "return created upon success for SA" in {
-      givenUserAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = Some("TZRXXV"))
-      givenIndividualRegistrationExists(utr)
-      createMappingRequest().putEmpty().status shouldBe 201
-    }
-
-    "return created upon success for SA using deprecated route" in {
-      givenUserAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = Some("TZRXXV"))
-      givenIndividualRegistrationExists(utr)
-      createMappingRequestDeprecatedRoute().putEmpty().status shouldBe 201
-    }
-
-    "return created upon success for SA w/o agent code" in {
-      givenUserAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = None)
-      givenIndividualRegistrationExists(utr)
-      createMappingRequest().putEmpty().status shouldBe 201
-    }
-
-    "return created upon success for VAT" in {
-      givenUserAuthorisedFor(`HMCE-VAT-AGNT`, AgentRefNo, "101747696", "testCredId", agentCodeOpt = Some("TZRXXV"))
-      givenIndividualRegistrationExists(utr)
-      createMappingRequest().putEmpty().status shouldBe 201
-    }
-
-    "return created upon success for VAT w/o agent code" in {
-      givenUserAuthorisedFor(`HMCE-VAT-AGNT`, AgentRefNo, "101747696", "testCredId", agentCodeOpt = None)
-      givenIndividualRegistrationExists(utr)
-      createMappingRequest().putEmpty().status shouldBe 201
-    }
-
-    "return created upon success for SA and VAT" in {
-      givenUserAuthorisedForMultiple(Set(
-        Enrolment(`IR-SA-AGENT`, Seq(EnrolmentIdentifier(IRAgentReference, "A1111A")), "Activated"),
-        Enrolment(`HMCE-VAT-AGNT`, Seq(EnrolmentIdentifier(AgentRefNo, "101747696")), "Activated")), "testCredId", agentCodeOpt = Some("TZRXXV"))
-      givenIndividualRegistrationExists(utr)
-      createMappingRequest().putEmpty().status shouldBe 201
-    }
-
-    "return a successful audit event with known facts set to true for SA" in {
-      givenUserAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = Some("TZRXXV"))
-      givenIndividualRegistrationExists(utr)
-      createMappingRequest().putEmpty().status shouldBe 201
-
-      verifyAuditRequestSent(
-        1,
-        event = AgentMappingEvent.KnownFactsCheck,
-        detail = Map(
-          "knownFactsMatched" -> "true",
-          "utr" -> "2000000000",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId"),
-        tags = Map(
-          "transactionName" -> "known-facts-check",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-
-      verifyAuditRequestSent(
-        1,
-        event = AgentMappingEvent.CreateMapping,
-        detail = Map(
-          "identifier" -> "A1111A",
-          "identifierType" -> "IR-SA-AGENT",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId",
-          "duplicate" -> "false"),
-        tags = Map(
-          "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-
-      verifyAuditRequestSent(
-        1,
-        event = AgentMappingEvent.CreateMapping,
-        detail = Map(
-          "identifier" -> "TZRXXV",
-          "identifierType" -> "AgentCode",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId",
-          "duplicate" -> "false"),
-        tags = Map(
-          "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-
-    }
-
-    "return a successful audit event with known facts set to true for VAT" in {
-      givenUserAuthorisedFor(`HMCE-VAT-AGNT`, AgentRefNo, "101747696", "testCredId", agentCodeOpt = Some("TZRXXA"))
-      givenIndividualRegistrationExists(utr)
-      createMappingRequest().putEmpty().status shouldBe 201
-
-      verifyAuditRequestSent(
-        1,
-        event = AgentMappingEvent.KnownFactsCheck,
-        detail = Map(
-          "knownFactsMatched" -> "true",
-          "utr" -> "2000000000",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId"),
-        tags = Map(
-          "transactionName" -> "known-facts-check",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-
-      verifyAuditRequestSent(
-        1,
-        event = AgentMappingEvent.CreateMapping,
-        detail = Map(
-          "identifier" -> "101747696",
-          "identifierType" -> "HMCE-VAT-AGNT",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId",
-          "duplicate" -> "false"),
-        tags = Map(
-          "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-
-      verifyAuditRequestSent(
-        1,
-        event = AgentMappingEvent.CreateMapping,
-        detail = Map(
-          "identifier" -> "TZRXXA",
-          "identifierType" -> "AgentCode",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId",
-          "duplicate" -> "false"),
-        tags = Map(
-          "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-
-    }
-
-    "return conflict when the mapping already exists for sa" in {
-      givenUserAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = Some("TZRXXV"))
-      givenIndividualRegistrationExists(utr)
-      createMappingRequest().putEmpty().status shouldBe 201
-      createMappingRequest().putEmpty().status shouldBe 409
-
-      verifyAuditRequestSent(
-        2,
-        event = AgentMappingEvent.KnownFactsCheck,
-        detail = Map(
-          "knownFactsMatched" -> "true",
-          "utr" -> "2000000000",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId"),
-        tags = Map(
-          "transactionName" -> "known-facts-check",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-
-      verifyAuditRequestSent(
-        1,
-        event = AgentMappingEvent.CreateMapping,
-        detail = Map(
-          "identifier" -> "A1111A",
-          "identifierType" -> "IR-SA-AGENT",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId",
-          "duplicate" -> "true"),
-        tags = Map(
-          "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-
-    }
-
-    "return conflict when the mapping already exists for vat" in {
-      givenUserAuthorisedFor(`HMCE-VAT-AGNT`, AgentRefNo, "101747696", "testCredId", agentCodeOpt = Some("TZRXXV"))
-      givenIndividualRegistrationExists(utr)
-      createMappingRequest().putEmpty().status shouldBe 201
-      createMappingRequest().putEmpty().status shouldBe 409
-
-      verifyAuditRequestSent(
-        2,
-        event = AgentMappingEvent.KnownFactsCheck,
-        detail = Map(
-          "knownFactsMatched" -> "true",
-          "utr" -> "2000000000",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId"),
-        tags = Map(
-          "transactionName" -> "known-facts-check",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-
-      verifyAuditRequestSent(
-        1,
-        event = AgentMappingEvent.CreateMapping,
-        detail = Map(
-          "identifier" -> "101747696",
-          "identifierType" -> "HMCE-VAT-AGNT",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId",
-          "duplicate" -> "true"),
-        tags = Map(
-          "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-
-    }
-
-    "return conflict when the mapping already exists for SA but not for VAT" in {
-      givenUserAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = Some("TZRXXV"))
-      givenUserAuthorisedForMultiple(Set(
-        Enrolment(`IR-SA-AGENT`, Seq(EnrolmentIdentifier(IRAgentReference, "A1111A")), "Activated"),
-        Enrolment(`HMCE-VAT-AGNT`, Seq(EnrolmentIdentifier(AgentRefNo, "101747696")), "Activated")), "testCredId", agentCodeOpt = Some("TZRXXV"))
-      givenIndividualRegistrationExists(utr)
-      createMappingRequest().putEmpty().status shouldBe 201
-      createMappingRequest().putEmpty().status shouldBe 409
-
-      verifyAuditRequestSent(
-        2,
-        event = AgentMappingEvent.KnownFactsCheck,
-        detail = Map(
-          "knownFactsMatched" -> "true",
-          "utr" -> "2000000000",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId"),
-        tags = Map(
-          "transactionName" -> "known-facts-check",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-
-      verifyAuditRequestSent(
-        1,
-        event = AgentMappingEvent.CreateMapping,
-        detail = Map(
-          "identifier" -> "A1111A",
-          "identifierType" -> "IR-SA-AGENT",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId",
-          "duplicate" -> "true"),
-        tags = Map(
-          "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-
-      verifyAuditRequestSent(
-        1,
-        event = AgentMappingEvent.CreateMapping,
-        detail = Map(
-          "identifier" -> "101747696",
-          "identifierType" -> "HMCE-VAT-AGNT",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId",
-          "duplicate" -> "false"),
-        tags = Map(
-          "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-
-    }
-
-    "return conflict when the mapping already exists for both SA and VAT" in {
-      givenUserAuthorisedForMultiple(Set(
-        Enrolment(`IR-SA-AGENT`, Seq(EnrolmentIdentifier(IRAgentReference, "A1111A")), "Activated"),
-        Enrolment(`HMCE-VAT-AGNT`, Seq(EnrolmentIdentifier(AgentRefNo, "101747696")), "Activated")), "testCredId", agentCodeOpt = Some("TZRXXV"))
-      givenIndividualRegistrationExists(utr)
-      createMappingRequest().putEmpty().status shouldBe 201
-      createMappingRequest().putEmpty().status shouldBe 409
-
-      verifyAuditRequestSent(
-        2,
-        event = AgentMappingEvent.KnownFactsCheck,
-        detail = Map(
-          "knownFactsMatched" -> "true",
-          "utr" -> "2000000000",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId"),
-        tags = Map(
-          "transactionName" -> "known-facts-check",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-
-      verifyAuditRequestSent(
-        1,
-        event = AgentMappingEvent.CreateMapping,
-        detail = Map(
-          "identifier" -> "A1111A",
-          "identifierType" -> "IR-SA-AGENT",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId",
-          "duplicate" -> "false"),
-        tags = Map(
-          "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-
-      verifyAuditRequestSent(
-        1,
-        event = AgentMappingEvent.CreateMapping,
-        detail = Map(
-          "identifier" -> "A1111A",
-          "identifierType" -> "IR-SA-AGENT",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId",
-          "duplicate" -> "true"),
-        tags = Map(
-          "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-
-      verifyAuditRequestSent(
-        1,
-        event = AgentMappingEvent.CreateMapping,
-        detail = Map(
-          "identifier" -> "101747696",
-          "identifierType" -> "HMCE-VAT-AGNT",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId",
-          "duplicate" -> "false"),
-        tags = Map(
-          "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-
-      verifyAuditRequestSent(
-        1,
-        event = AgentMappingEvent.CreateMapping,
-        detail = Map(
-          "identifier" -> "101747696",
-          "identifierType" -> "HMCE-VAT-AGNT",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId",
-          "duplicate" -> "true"),
-        tags = Map(
-          "transactionName" -> "create-mapping",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-
-    }
+    behave like mappingCreateEndpoint(IRSAAGENTTestFixture, HMCEVATAGNTTestFixture, IRCTAGENTTestFixture, HMRCGTSAGNTTestFixture, HMRCNOVRNAGNTTestFixture)
 
     "return forbidden when the supplied arn does not match the DES business partner record arn" in {
-      givenUserAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = Some("TZRXXV"))
+      givenUserIsAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = Some(agentCode))
       givenIndividualRegistrationExists(utr)
 
       new Resource(s"/agent-mapping/mappings/${utr.value}/TARN0000001", port).putEmpty().status shouldBe 403
 
-      verifyAuditRequestSent(
-        1,
-        event = AgentMappingEvent.KnownFactsCheck,
-        detail = Map(
-          "knownFactsMatched" -> "false",
-          "utr" -> "2000000000",
-          "agentReferenceNumber" -> "TARN0000001",
-          "authProviderId" -> "testCredId"),
-        tags = Map(
-          "transactionName" -> "known-facts-check",
-          "path" -> "/agent-mapping/mappings/2000000000/TARN0000001"))
+      verifyKnownFactsCheckAuditEventSent(1, matched = false, arn = "TARN0000001")
     }
 
     "return forbidden when there is no arn on the DES business partner record" in {
-      givenUserAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = Some("TZRXXV"))
+      givenUserIsAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = Some(agentCode))
       givenIndividualRegistrationExistsWithoutArn(utr)
       createMappingRequest().putEmpty().status shouldBe 403
 
-      verifyAuditRequestSent(
-        1,
-        event = AgentMappingEvent.KnownFactsCheck,
-        detail = Map(
-          "knownFactsMatched" -> "false",
-          "utr" -> "2000000000",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId"),
-        tags = Map(
-          "transactionName" -> "known-facts-check",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
+      verifyKnownFactsCheckAuditEventSent(1, matched = false)
     }
 
     "return forbidden when the DES business partner record does not exist" in {
-      givenUserAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = Some("TZRXXV"))
+      givenUserIsAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = Some(agentCode))
       givenRegistrationDoesNotExist(utr)
 
       createMappingRequest().putEmpty().status shouldBe 403
 
-      verifyAuditRequestSent(
-        1,
-        event = AgentMappingEvent.KnownFactsCheck,
-        detail = Map(
-          "knownFactsMatched" -> "false",
-          "utr" -> "2000000000",
-          "agentReferenceNumber" -> "AARN0000002",
-          "authProviderId" -> "testCredId"),
-        tags = Map(
-          "transactionName" -> "known-facts-check",
-          "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
+      verifyKnownFactsCheckAuditEventSent(1, matched = false)
     }
 
     "return bad request when the UTR is invalid" in {
@@ -491,13 +219,13 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     "return forbidden" when {
       "user with Agent affinity group and HMRC-AS-AGENT enrolment attempts to create mapping" in {
 
-        givenUserAuthorisedFor("HMRC-AS-AGENT", "AgentReferenceNumber", "TARN000003", "testCredId", agentCodeOpt = Some("TZRXXV"))
+        givenUserIsAuthorisedFor("HMRC-AS-AGENT", "AgentReferenceNumber", "TARN000003", "testCredId", agentCodeOpt = Some(agentCode))
         givenIndividualRegistrationExists(utr)
         createMappingRequest().putEmpty().status shouldBe 403
       }
       "authenticated user with IR-SA-AGENT enrolment but without Agent Affinity group attempts to create mapping" in {
 
-        givenUserAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "2000000000", "testCredId", AffinityGroup.Individual, Some("TZRXXV"))
+        givenUserIsAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "2000000000", "testCredId", AffinityGroup.Individual, Some(agentCode))
         givenIndividualRegistrationExists(utr)
         createMappingRequest().putEmpty().status shouldBe 403
       }
@@ -586,5 +314,86 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
       val deleteResponse = deleteMappingsRequest().delete()
       deleteResponse.status shouldBe 204
     }
+  }
+
+  private def givenUserIsAuthorisedFor(f: TestFixture): Unit = {
+    givenUserIsAuthorisedFor(f.service, f.identifierKey, f.identifierValue, "testCredId", agentCodeOpt = Some(agentCode))
+  }
+
+  private def givenUserIsAuthorisedForMultiple(fixtures: Seq[TestFixture]): Unit = {
+    givenUserIsAuthorisedForMultiple(asEnrolments(fixtures), "testCredId", agentCodeOpt = Some(agentCode))
+  }
+
+  private def asEnrolments(fixtures: Seq[TestFixture]): Set[Enrolment] = fixtures
+    .map(f => Enrolment(Service.asString(f.service), Seq(EnrolmentIdentifier(f.identifierKey, f.identifierValue)), "Activated"))
+    .toSet
+
+  private def verifyCreateMappingAuditEventSent(f: TestFixture, duplicate: Boolean = false): Unit = {
+    verifyAuditRequestSent(
+      1,
+      event = AgentMappingEvent.CreateMapping,
+      detail = Map(
+        "identifier" -> f.identifierValue,
+        "identifierType" -> Service.asString(f.service),
+        "agentReferenceNumber" -> "AARN0000002",
+        "authProviderId" -> "testCredId",
+        "duplicate" -> s"$duplicate"),
+      tags = Map(
+        "transactionName" -> "create-mapping",
+        "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
+  }
+
+  private def verifyKnownFactsCheckAuditEventSent(times: Int, matched: Boolean = true, arn: String = "AARN0000002", utr: String = "2000000000") = {
+    verifyAuditRequestSent(
+      times,
+      event = AgentMappingEvent.KnownFactsCheck,
+      detail = Map(
+        "knownFactsMatched" -> s"$matched",
+        "utr" -> utr,
+        "agentReferenceNumber" -> arn,
+        "authProviderId" -> "testCredId"),
+      tags = Map(
+        "transactionName" -> "known-facts-check",
+        "path" -> s"/agent-mapping/mappings/$utr/$arn"))
+  }
+
+}
+
+sealed trait MappingControllerISpecSetup extends UnitSpec with MongoApp with WireMockSupport with DesStubs with AuthStubs with DataStreamStub {
+
+  implicit val actorSystem = ActorSystem()
+  implicit val materializer = ActorMaterializer()
+  implicit val client: WSClient = AhcWSClient()
+  implicit val hc = HeaderCarrier()
+  implicit val fakeRequest = FakeRequest("GET", "/agent-mapping/add-code")
+
+  protected val repositories = app.injector.instanceOf[MappingRepositories]
+
+  val saRepo = repositories.get(`IR-SA-AGENT`)
+  val vatRepo = repositories.get(`HMCE-VAT-AGNT`)
+  val agentCodeRepo = repositories.get(AgentCode)
+
+  override implicit lazy val app: Application = appBuilder.build()
+
+  protected def appBuilder: GuiceApplicationBuilder = {
+    new GuiceApplicationBuilder().configure(
+      mongoConfiguration ++
+        Map(
+          "microservice.services.auth.port" -> wireMockPort,
+          "microservice.services.des.port" -> wireMockPort,
+          "auditing.consumer.baseUri.host" -> wireMockHost,
+          "auditing.consumer.baseUri.port" -> wireMockPort,
+          "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
+          "migrate-repositories" -> "false")).overrides(new TestGuiceModule)
+  }
+
+  private class TestGuiceModule extends AbstractModule {
+    override def configure(): Unit = {}
+  }
+
+  override def beforeEach() {
+    super.beforeEach()
+    await(Future.sequence(repositories.map(_.ensureIndexes)))
+    givenAuditConnector()
   }
 }
