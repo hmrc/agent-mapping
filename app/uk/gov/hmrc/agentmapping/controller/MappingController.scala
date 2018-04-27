@@ -43,7 +43,8 @@ class MappingController @Inject()(
   desConnector: DesConnector,
   auditService: AuditService,
   val authConnector: AuthConnector)
-    extends BaseController with AuthorisedFunctions {
+    extends BaseController
+    with AuthorisedFunctions {
 
   import auditService._
   import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._

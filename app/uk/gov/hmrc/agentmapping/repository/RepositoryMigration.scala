@@ -26,6 +26,7 @@ import reactivemongo.api.ReadPreference
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.ImplicitBSONHandlers
 import reactivemongo.play.json.collection.JSONCollection
+import uk.gov.hmrc.agentmapping.model.{AgentReferenceMapping, ArnToIdentifierMapping}
 import uk.gov.hmrc.lock.{LockKeeper, LockRepository}
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats.localDateTimeFormats

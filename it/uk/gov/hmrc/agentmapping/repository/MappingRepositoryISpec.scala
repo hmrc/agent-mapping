@@ -4,6 +4,7 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.core.errors.DatabaseException
+import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.support.MongoApp
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.play.test.UnitSpec

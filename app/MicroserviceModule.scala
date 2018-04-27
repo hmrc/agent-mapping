@@ -32,7 +32,8 @@ import uk.gov.hmrc.play.config.ServicesConfig
 import uk.gov.hmrc.play.http.ws.WSHttp
 
 class MicroserviceModule(val environment: Environment, val configuration: Configuration)
-    extends AbstractModule with ServicesConfig {
+    extends AbstractModule
+    with ServicesConfig {
 
   override val runModeConfiguration: Configuration = configuration
   override protected def mode = environment.mode
@@ -139,6 +140,12 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
 
 @Singleton
 class HttpVerbs @Inject()(val auditConnector: AuditConnector, @Named("appName") val appName: String)
-    extends HttpGet with HttpPost with HttpPut with HttpPatch with HttpDelete with WSHttp with HttpAuditing {
+    extends HttpGet
+    with HttpPost
+    with HttpPut
+    with HttpPatch
+    with HttpDelete
+    with WSHttp
+    with HttpAuditing {
   override val hooks = Seq(AuditingHook)
 }

@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentmapping.model
 
 import play.api.libs.json.Format
 import play.api.libs.json.Json.format
-import uk.gov.hmrc.agentmapping.repository.AgentReferenceMapping
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 case class Mapping(arn: String, identifiers: Seq[Identifier])
@@ -31,4 +30,41 @@ case class AgentReferenceMappings(mappings: List[AgentReferenceMapping])
 
 object AgentReferenceMappings extends ReactiveMongoFormats {
   implicit val formats: Format[AgentReferenceMappings] = format[AgentReferenceMappings]
+}
+
+trait ArnToIdentifierMapping {
+  def arn: String
+  def identifier: String
+}
+
+case class AgentReferenceMapping(arn: String, identifier: String) extends ArnToIdentifierMapping
+
+object AgentReferenceMapping extends ReactiveMongoFormats {
+  implicit val formats: Format[AgentReferenceMapping] = format[AgentReferenceMapping]
+}
+
+// REMOVE AFTER DB MIGRATION
+
+case class SaAgentReferenceMapping(arn: String, saAgentReference: String) extends ArnToIdentifierMapping {
+  override def identifier: String = saAgentReference
+}
+
+object SaAgentReferenceMapping extends ReactiveMongoFormats {
+  implicit val formats: Format[SaAgentReferenceMapping] = format[SaAgentReferenceMapping]
+}
+
+case class AgentCodeMapping(arn: String, agentCode: String) extends ArnToIdentifierMapping {
+  override def identifier: String = agentCode
+}
+
+object AgentCodeMapping extends ReactiveMongoFormats {
+  implicit val formats: Format[AgentCodeMapping] = format[AgentCodeMapping]
+}
+
+case class VatAgentReferenceMapping(arn: String, vrn: String) extends ArnToIdentifierMapping {
+  override def identifier: String = vrn
+}
+
+object VatAgentReferenceMapping extends ReactiveMongoFormats {
+  implicit val formats: Format[VatAgentReferenceMapping] = format[VatAgentReferenceMapping]
 }

@@ -61,7 +61,8 @@ object KeyToPatternMappingFromRoutes {
 }
 
 abstract class MonitoringFilter(kenshooRegistry: MetricRegistry)(implicit ec: ExecutionContext)
-    extends Filter with MonitoringKeyMatcher {
+    extends Filter
+    with MonitoringKeyMatcher {
 
   override def apply(nextFilter: (RequestHeader) => Future[Result])(requestHeader: RequestHeader): Future[Result] = {
 

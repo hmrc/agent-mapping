@@ -147,7 +147,8 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
       splitFixtures.foreach {
         case (left, right) =>
-          s"return created when we add all, but the mappings already exists for some [${left.map(f => Service.asString(f.service)).mkString(",")}]" in {
+          val leftTag = left.map(f => Service.asString(f.service)).mkString(",")
+          s"return created when we add all, but some mappings already exist: $leftTag" in {
             givenIndividualRegistrationExists(utr)
             givenUserIsAuthorisedForMultiple(left)
             createMappingRequest().putEmpty().status shouldBe 201
@@ -160,7 +161,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
             verifyCreateMappingAuditEventSent(AgentCodeTestFixture)
           }
 
-          s"return conflict when all mappings already exists, but we try to add [${left.map(f => Service.asString(f.service)).mkString(",")}]" in {
+          s"return conflict when all mappings already exist, but we try to add again: $leftTag" in {
             givenIndividualRegistrationExists(utr)
             givenUserIsAuthorisedForMultiple(fixtures)
             createMappingRequest().putEmpty().status shouldBe 201

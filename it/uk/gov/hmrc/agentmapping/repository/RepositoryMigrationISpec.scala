@@ -6,6 +6,7 @@ import play.api.libs.json.Json
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.play.json.ImplicitBSONHandlers
 import reactivemongo.play.json.collection.JSONCollection
+import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmapping.support.MongoApp
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -44,11 +45,13 @@ class RepositoryMigrationISpec extends UnitSpec with MongoApp {
       "agent-mapping",
       "agent-mapping-ir-sa-agent",
       "saAgentReference")
+
     behave like migrateRepository(
       app.injector.instanceOf[AgentCodeRepositoryMigration],
       "agent-mapping-agent-code",
       "agent-mapping-agentcode",
       "agentCode")
+
     behave like migrateRepository(
       app.injector.instanceOf[VATRepositoryMigration],
       "agent-mapping-vat",
