@@ -34,6 +34,10 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
     new Resource(s"/agent-mapping/mappings/${requestUtr.value}/${requestArn.value}", port)
   }
 
+  def createMappingRequestDeprecatedRoute(requestUtr: Utr = utr, requestArn: Arn = registeredArn): Resource = {
+    new Resource(s"/agent-mapping/mappings/${requestUtr.value}/${requestArn.value}/IRAgentReference~A1111A~AgentRefNo~101747696", port)
+  }
+
   def findMappingsRequest(requestArn: Arn = registeredArn): Resource = {
     new Resource(s"/agent-mapping/mappings/${requestArn.value}", port)
   }
@@ -92,6 +96,12 @@ class MappingControllerISpec extends UnitSpec with MongoApp with WireMockSupport
       givenUserAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = Some("TZRXXV"))
       givenIndividualRegistrationExists(utr)
       createMappingRequest().putEmpty().status shouldBe 201
+    }
+
+    "return created upon success for SA using deprecated route" in {
+      givenUserAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = Some("TZRXXV"))
+      givenIndividualRegistrationExists(utr)
+      createMappingRequestDeprecatedRoute().putEmpty().status shouldBe 201
     }
 
     "return created upon success for SA w/o agent code" in {
