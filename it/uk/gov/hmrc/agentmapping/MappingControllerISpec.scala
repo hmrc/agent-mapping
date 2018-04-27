@@ -12,10 +12,10 @@ import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent
 import uk.gov.hmrc.agentmapping.model.Service
 import uk.gov.hmrc.agentmapping.model.Service._
 import uk.gov.hmrc.agentmapping.repository.MappingRepositories
-import uk.gov.hmrc.agentmapping.stubs.{ AuthStubs, DataStreamStub, DesStubs }
-import uk.gov.hmrc.agentmapping.support.{ MongoApp, Resource, WireMockSupport }
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, Utr }
-import uk.gov.hmrc.auth.core.{ AffinityGroup, Enrolment, EnrolmentIdentifier }
+import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DataStreamStub, DesStubs}
+import uk.gov.hmrc.agentmapping.support.{MongoApp, Resource, WireMockSupport}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
+import uk.gov.hmrc.auth.core.{AffinityGroup, Enrolment, EnrolmentIdentifier}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -30,37 +30,31 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
   val IRAgentReference = "IRAgentReference"
   val AgentRefNo = "AgentRefNo"
 
-  def createMappingRequest(requestUtr: Utr = utr, requestArn: Arn = registeredArn): Resource = {
+  def createMappingRequest(requestUtr: Utr = utr, requestArn: Arn = registeredArn): Resource =
     new Resource(s"/agent-mapping/mappings/${requestUtr.value}/${requestArn.value}", port)
-  }
 
-  def createMappingRequestDeprecatedRoute(requestUtr: Utr = utr, requestArn: Arn = registeredArn): Resource = {
-    new Resource(s"/agent-mapping/mappings/${requestUtr.value}/${requestArn.value}/IRAgentReference~A1111A~AgentRefNo~101747696", port)
-  }
+  def createMappingRequestDeprecatedRoute(requestUtr: Utr = utr, requestArn: Arn = registeredArn): Resource =
+    new Resource(
+      s"/agent-mapping/mappings/${requestUtr.value}/${requestArn.value}/IRAgentReference~A1111A~AgentRefNo~101747696",
+      port)
 
-  def findMappingsRequest(requestArn: Arn = registeredArn): Resource = {
+  def findMappingsRequest(requestArn: Arn = registeredArn): Resource =
     new Resource(s"/agent-mapping/mappings/${requestArn.value}", port)
-  }
 
-  def findSAMappingsRequest(requestArn: Arn = registeredArn): Resource = {
+  def findSAMappingsRequest(requestArn: Arn = registeredArn): Resource =
     new Resource(s"/agent-mapping/mappings/sa/${requestArn.value}", port)
-  }
 
-  def findVATMappingsRequest(requestArn: Arn = registeredArn): Resource = {
+  def findVATMappingsRequest(requestArn: Arn = registeredArn): Resource =
     new Resource(s"/agent-mapping/mappings/vat/${requestArn.value}", port)
-  }
 
-  def findAgentCodeMappingsRequest(requestArn: Arn = registeredArn): Resource = {
+  def findAgentCodeMappingsRequest(requestArn: Arn = registeredArn): Resource =
     new Resource(s"/agent-mapping/mappings/agentcode/${requestArn.value}", port)
-  }
 
-  def findMappingsRequestByKey(key: String)(requestArn: Arn = registeredArn): Resource = {
+  def findMappingsRequestByKey(key: String)(requestArn: Arn = registeredArn): Resource =
     new Resource(s"/agent-mapping/mappings/key/$key/arn/${requestArn.value}", port)
-  }
 
-  def deleteMappingsRequest(requestArn: Arn = registeredArn): Resource = {
+  def deleteMappingsRequest(requestArn: Arn = registeredArn): Resource =
     new Resource(s"/agent-mapping/test-only/mappings/${requestArn.value}", port)
-  }
 
   case class TestFixture(service: Service.Name, identifierKey: String, identifierValue: String) {
     val key = Service.keyFor(service)
@@ -78,8 +72,17 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
   val IRPAYEAGENTTestFixture = TestFixture(`IR-PAYE-AGENT`, IRAgentReference, "F9876J")
   val IRSDLTAGENTTestFixture = TestFixture(`IR-SDLT-AGENT`, "STORN", "AAA0008")
 
-  val fixtures = Seq(IRSAAGENTTestFixture, HMCEVATAGNTTestFixture, IRCTAGENTTestFixture, HMRCGTSAGNTTestFixture, HMRCNOVRNAGNTTestFixture,
-    HMRCCHARAGENTTestFixture, HMRCMGDAGNTTestFixture, IRPAYEAGENTTestFixture, IRSDLTAGENTTestFixture)
+  val fixtures = Seq(
+    IRSAAGENTTestFixture,
+    HMCEVATAGNTTestFixture,
+    IRCTAGENTTestFixture,
+    HMRCGTSAGNTTestFixture,
+    HMRCNOVRNAGNTTestFixture,
+    HMRCCHARAGENTTestFixture,
+    HMRCMGDAGNTTestFixture,
+    IRPAYEAGENTTestFixture,
+    IRSDLTAGENTTestFixture
+  )
 
   "MappingController" should {
 
@@ -139,11 +142,11 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     if (fixtures.size > 1) {
       // Then test different split sets of fixtures
       val splitFixtures: Seq[(Seq[TestFixture], Seq[TestFixture])] =
-        (1 until Math.max(5, fixtures.size)).map(fixtures.splitAt) ++ (1 until Math.max(4, fixtures.size)).map(fixtures.reverse.splitAt)
+        (1 until Math.max(5, fixtures.size)).map(fixtures.splitAt) ++ (1 until Math.max(4, fixtures.size))
+          .map(fixtures.reverse.splitAt)
 
       splitFixtures.foreach {
         case (left, right) =>
-
           s"return created when we add all, but the mappings already exists for some [${left.map(f => Service.asString(f.service)).mkString(",")}]" in {
             givenIndividualRegistrationExists(utr)
             givenUserIsAuthorisedForMultiple(left)
@@ -227,13 +230,24 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     "return forbidden" when {
       "user with Agent affinity group and HMRC-AS-AGENT enrolment attempts to create mapping" in {
 
-        givenUserIsAuthorisedFor("HMRC-AS-AGENT", "AgentReferenceNumber", "TARN000003", "testCredId", agentCodeOpt = Some(agentCode))
+        givenUserIsAuthorisedFor(
+          "HMRC-AS-AGENT",
+          "AgentReferenceNumber",
+          "TARN000003",
+          "testCredId",
+          agentCodeOpt = Some(agentCode))
         givenIndividualRegistrationExists(utr)
         createMappingRequest().putEmpty().status shouldBe 403
       }
       "authenticated user with IR-SA-AGENT enrolment but without Agent Affinity group attempts to create mapping" in {
 
-        givenUserIsAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "2000000000", "testCredId", AffinityGroup.Individual, Some(agentCode))
+        givenUserIsAuthorisedFor(
+          `IR-SA-AGENT`,
+          IRAgentReference,
+          "2000000000",
+          "testCredId",
+          AffinityGroup.Individual,
+          Some(agentCode))
         givenIndividualRegistrationExists(utr)
         createMappingRequest().putEmpty().status shouldBe 403
       }
@@ -289,9 +303,15 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
       body should include("""{"arn":"AARN0000002","agentCode":"ABCDE2"}""")
     }
 
-    Seq(IRCTAGENTTestFixture, HMRCGTSAGNTTestFixture, HMRCNOVRNAGNTTestFixture,
-      HMRCCHARAGENTTestFixture, HMRCMGDAGNTTestFixture, IRPAYEAGENTTestFixture, IRSDLTAGENTTestFixture).foreach { f =>
-
+    Seq(
+      IRCTAGENTTestFixture,
+      HMRCGTSAGNTTestFixture,
+      HMRCNOVRNAGNTTestFixture,
+      HMRCCHARAGENTTestFixture,
+      HMRCMGDAGNTTestFixture,
+      IRPAYEAGENTTestFixture,
+      IRSDLTAGENTTestFixture
+    ).foreach { f =>
       s"return 200 status with a json body representing the mappings that match the supplied arn for ${f.key}" in {
         val repo = repositories.get(f.service)
         await(repo.store(registeredArn, "ABCDE123456"))
@@ -346,50 +366,61 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     }
   }
 
-  private def givenUserIsAuthorisedFor(f: TestFixture): Unit = {
-    givenUserIsAuthorisedFor(f.service, f.identifierKey, f.identifierValue, "testCredId", agentCodeOpt = Some(agentCode))
-  }
+  private def givenUserIsAuthorisedFor(f: TestFixture): Unit =
+    givenUserIsAuthorisedFor(
+      f.service,
+      f.identifierKey,
+      f.identifierValue,
+      "testCredId",
+      agentCodeOpt = Some(agentCode))
 
-  private def givenUserIsAuthorisedForMultiple(fixtures: Seq[TestFixture]): Unit = {
+  private def givenUserIsAuthorisedForMultiple(fixtures: Seq[TestFixture]): Unit =
     givenUserIsAuthorisedForMultiple(asEnrolments(fixtures), "testCredId", agentCodeOpt = Some(agentCode))
-  }
 
-  private def asEnrolments(fixtures: Seq[TestFixture]): Set[Enrolment] = fixtures
-    .map(f => Enrolment(Service.asString(f.service), Seq(EnrolmentIdentifier(f.identifierKey, f.identifierValue)), "Activated"))
-    .toSet
+  private def asEnrolments(fixtures: Seq[TestFixture]): Set[Enrolment] =
+    fixtures
+      .map(
+        f =>
+          Enrolment(
+            Service.asString(f.service),
+            Seq(EnrolmentIdentifier(f.identifierKey, f.identifierValue)),
+            "Activated"))
+      .toSet
 
-  private def verifyCreateMappingAuditEventSent(f: TestFixture, duplicate: Boolean = false): Unit = {
+  private def verifyCreateMappingAuditEventSent(f: TestFixture, duplicate: Boolean = false): Unit =
     verifyAuditRequestSent(
       1,
       event = AgentMappingEvent.CreateMapping,
       detail = Map(
-        "identifier" -> f.identifierValue,
-        "identifierType" -> Service.asString(f.service),
+        "identifier"           -> f.identifierValue,
+        "identifierType"       -> Service.asString(f.service),
         "agentReferenceNumber" -> "AARN0000002",
-        "authProviderId" -> "testCredId",
-        "duplicate" -> s"$duplicate"),
-      tags = Map(
-        "transactionName" -> "create-mapping",
-        "path" -> "/agent-mapping/mappings/2000000000/AARN0000002"))
-  }
+        "authProviderId"       -> "testCredId",
+        "duplicate"            -> s"$duplicate"
+      ),
+      tags = Map("transactionName" -> "create-mapping", "path" -> "/agent-mapping/mappings/2000000000/AARN0000002")
+    )
 
-  private def verifyKnownFactsCheckAuditEventSent(times: Int, matched: Boolean = true, arn: String = "AARN0000002", utr: String = "2000000000") = {
+  private def verifyKnownFactsCheckAuditEventSent(
+    times: Int,
+    matched: Boolean = true,
+    arn: String = "AARN0000002",
+    utr: String = "2000000000") =
     verifyAuditRequestSent(
       times,
       event = AgentMappingEvent.KnownFactsCheck,
       detail = Map(
-        "knownFactsMatched" -> s"$matched",
-        "utr" -> utr,
-        "agentReferenceNumber" -> arn,
-        "authProviderId" -> "testCredId"),
-      tags = Map(
-        "transactionName" -> "known-facts-check",
-        "path" -> s"/agent-mapping/mappings/$utr/$arn"))
-  }
+        "knownFactsMatched"        -> s"$matched",
+        "utr"                      -> utr,
+        "agentReferenceNumber"     -> arn,
+        "authProviderId"           -> "testCredId"),
+      tags = Map("transactionName" -> "known-facts-check", "path" -> s"/agent-mapping/mappings/$utr/$arn")
+    )
 
 }
 
-sealed trait MappingControllerISpecSetup extends UnitSpec with MongoApp with WireMockSupport with DesStubs with AuthStubs with DataStreamStub {
+sealed trait MappingControllerISpecSetup
+    extends UnitSpec with MongoApp with WireMockSupport with DesStubs with AuthStubs with DataStreamStub {
 
   implicit val actorSystem = ActorSystem()
   implicit val materializer = ActorMaterializer()
@@ -405,17 +436,19 @@ sealed trait MappingControllerISpecSetup extends UnitSpec with MongoApp with Wir
 
   override implicit lazy val app: Application = appBuilder.build()
 
-  protected def appBuilder: GuiceApplicationBuilder = {
-    new GuiceApplicationBuilder().configure(
-      mongoConfiguration ++
-        Map(
-          "microservice.services.auth.port" -> wireMockPort,
-          "microservice.services.des.port" -> wireMockPort,
-          "auditing.consumer.baseUri.host" -> wireMockHost,
-          "auditing.consumer.baseUri.port" -> wireMockPort,
-          "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
-          "migrate-repositories" -> "false")).overrides(new TestGuiceModule)
-  }
+  protected def appBuilder: GuiceApplicationBuilder =
+    new GuiceApplicationBuilder()
+      .configure(
+        mongoConfiguration ++
+          Map(
+            "microservice.services.auth.port" -> wireMockPort,
+            "microservice.services.des.port"  -> wireMockPort,
+            "auditing.consumer.baseUri.host"  -> wireMockHost,
+            "auditing.consumer.baseUri.port"  -> wireMockPort,
+            "application.router"              -> "testOnlyDoNotUseInAppConf.Routes",
+            "migrate-repositories"            -> "false"
+          ))
+      .overrides(new TestGuiceModule)
 
   private class TestGuiceModule extends AbstractModule {
     override def configure(): Unit = {}

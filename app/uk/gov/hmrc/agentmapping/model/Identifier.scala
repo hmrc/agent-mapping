@@ -26,9 +26,9 @@ object Identifier {
   implicit val serviceNameFormat: Format[Name] = Format(
     Reads {
       case JsString(s) => Service.valueOf(s).map(JsSuccess(_)).getOrElse(JsError("Unknown service name"))
-      case _ => JsError("String value expected")
+      case _           => JsError("String value expected")
     },
-    Writes(e => JsString(e.toString)))
+    Writes(e => JsString(e.toString))
+  )
   implicit val formats: Format[Identifier] = format[Identifier]
 }
-

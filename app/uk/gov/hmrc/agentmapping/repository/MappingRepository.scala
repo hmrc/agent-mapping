@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.agentmapping.repository
 
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Format
-import play.api.libs.json.Json.{ JsValueWrapper, format, toJsFieldJsValueWrapper }
+import play.api.libs.json.Json.{JsValueWrapper, format, toJsFieldJsValueWrapper}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.ReadPreference
 import reactivemongo.api.commands.WriteResult
@@ -30,7 +30,7 @@ import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 import scala.collection.Seq
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 trait MappingRepository {
   def store(arn: Arn, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit]
@@ -39,7 +39,8 @@ trait MappingRepository {
 trait RepositoryFunctions[T] {
   def find(query: (String, JsValueWrapper)*)(implicit ec: ExecutionContext): Future[List[T]]
   def findBy(arn: Arn)(implicit ec: ExecutionContext): Future[List[T]]
-  def findAll(readPreference: ReadPreference = ReadPreference.primaryPreferred)(implicit ec: ExecutionContext): Future[List[T]]
+  def findAll(readPreference: ReadPreference = ReadPreference.primaryPreferred)(
+    implicit ec: ExecutionContext): Future[List[T]]
   def delete(arn: Arn)(implicit ec: ExecutionContext): Future[WriteResult]
   def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]]
 }
@@ -48,28 +49,25 @@ abstract class BaseMappingRepository[T: Format: Manifest](
   collectionName: String,
   identifierKey: String,
   wrap: (String, String) => T)(implicit mongoComponent: ReactiveMongoComponent)
-  extends ReactiveRepository[T, BSONObjectID](
-    collectionName,
-    mongoComponent.mongoConnector.db,
-    implicitly[Format[T]],
-    ReactiveMongoFormats.objectIdFormats)
-  with MappingRepository with StrictlyEnsureIndexes[T, BSONObjectID] {
+    extends ReactiveRepository[T, BSONObjectID](
+      collectionName,
+      mongoComponent.mongoConnector.db,
+      implicitly[Format[T]],
+      ReactiveMongoFormats.objectIdFormats) with MappingRepository with StrictlyEnsureIndexes[T, BSONObjectID] {
 
-  def findBy(arn: Arn)(implicit ec: ExecutionContext): Future[List[T]] = {
+  def findBy(arn: Arn)(implicit ec: ExecutionContext): Future[List[T]] =
     find(Seq("arn" -> Some(arn)).map(option => option._1 -> toJsFieldJsValueWrapper(option._2.get)): _*)
-  }
 
-  override def indexes = Seq(
-    Index(Seq("arn" -> Ascending, identifierKey -> Ascending), Some("arnAndIdentifier"), unique = true),
-    Index(Seq("arn" -> Ascending), Some("AgentReferenceNumber")))
+  override def indexes =
+    Seq(
+      Index(Seq("arn" -> Ascending, identifierKey -> Ascending), Some("arnAndIdentifier"), unique = true),
+      Index(Seq("arn" -> Ascending), Some("AgentReferenceNumber")))
 
-  def store(arn: Arn, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit] = {
+  def store(arn: Arn, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit] =
     insert(wrap(arn.value, identifierValue)).map(_ => ())
-  }
 
-  def delete(arn: Arn)(implicit ec: ExecutionContext): Future[WriteResult] = {
+  def delete(arn: Arn)(implicit ec: ExecutionContext): Future[WriteResult] =
     remove("arn" -> arn.value)
-  }
 
 }
 
@@ -86,49 +84,51 @@ object AgentReferenceMapping extends ReactiveMongoFormats {
   implicit val formats: Format[AgentReferenceMapping] = format[AgentReferenceMapping]
 }
 
-abstract class NewMappingRepository @Inject() (serviceName: String)(implicit mongoComponent: ReactiveMongoComponent)
-  extends BaseMappingRepository(s"agent-mapping-${serviceName.toLowerCase}", "identifier", AgentReferenceMapping.apply)
-  with RepositoryFunctions[AgentReferenceMapping]
+abstract class NewMappingRepository @Inject()(serviceName: String)(implicit mongoComponent: ReactiveMongoComponent)
+    extends BaseMappingRepository(
+      s"agent-mapping-${serviceName.toLowerCase}",
+      "identifier",
+      AgentReferenceMapping.apply) with RepositoryFunctions[AgentReferenceMapping]
 
 @Singleton
-class IRSAAGENTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
-  extends NewMappingRepository("IR-SA-AGENT")
+class IRSAAGENTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
+    extends NewMappingRepository("IR-SA-AGENT")
 
 @Singleton
-class NewAgentCodeMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
-  extends NewMappingRepository("AgentCode")
+class NewAgentCodeMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
+    extends NewMappingRepository("AgentCode")
 
 @Singleton
-class HMCEVATAGNTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
-  extends NewMappingRepository("HMCE-VAT-AGNT")
+class HMCEVATAGNTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
+    extends NewMappingRepository("HMCE-VAT-AGNT")
 
 @Singleton
-class HMRCCHARAGENTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
-  extends NewMappingRepository("HMRC-CHAR-AGENT")
+class HMRCCHARAGENTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
+    extends NewMappingRepository("HMRC-CHAR-AGENT")
 
 @Singleton
-class HMRCGTSAGNTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
-  extends NewMappingRepository("HMRC-GTS-AGNT")
+class HMRCGTSAGNTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
+    extends NewMappingRepository("HMRC-GTS-AGNT")
 
 @Singleton
-class HMRCMGDAGNTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
-  extends NewMappingRepository("HMRC-MGD-AGNT")
+class HMRCMGDAGNTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
+    extends NewMappingRepository("HMRC-MGD-AGNT")
 
 @Singleton
-class HMRCNOVRNAGNTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
-  extends NewMappingRepository("HMRC-NOVRN-AGNT")
+class HMRCNOVRNAGNTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
+    extends NewMappingRepository("HMRC-NOVRN-AGNT")
 
 @Singleton
-class IRCTAGENTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
-  extends NewMappingRepository("IR-CT-AGENT")
+class IRCTAGENTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
+    extends NewMappingRepository("IR-CT-AGENT")
 
 @Singleton
-class IRPAYEAGENTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
-  extends NewMappingRepository("IR-PAYE-AGENT")
+class IRPAYEAGENTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
+    extends NewMappingRepository("IR-PAYE-AGENT")
 
 @Singleton
-class IRSDLTAGENTMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
-  extends NewMappingRepository("IR-SDLT-AGENT")
+class IRSDLTAGENTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
+    extends NewMappingRepository("IR-SDLT-AGENT")
 
 // REMOVE AFTER DB MIGRATION
 // Old repositories
@@ -142,9 +142,9 @@ object SaAgentReferenceMapping extends ReactiveMongoFormats {
 }
 
 @Singleton
-class SaAgentReferenceMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
-  extends BaseMappingRepository("agent-mapping", "saAgentReference", SaAgentReferenceMapping.apply)
-  with RepositoryFunctions[SaAgentReferenceMapping]
+class SaAgentReferenceMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
+    extends BaseMappingRepository("agent-mapping", "saAgentReference", SaAgentReferenceMapping.apply)
+    with RepositoryFunctions[SaAgentReferenceMapping]
 
 case class AgentCodeMapping(arn: String, agentCode: String) extends ArnToIdentifierMapping {
   override def identifier: String = agentCode
@@ -155,9 +155,9 @@ object AgentCodeMapping extends ReactiveMongoFormats {
 }
 
 @Singleton
-class AgentCodeMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
-  extends BaseMappingRepository("agent-mapping-agent-code", "agentCode", AgentCodeMapping.apply)
-  with RepositoryFunctions[AgentCodeMapping]
+class AgentCodeMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
+    extends BaseMappingRepository("agent-mapping-agent-code", "agentCode", AgentCodeMapping.apply)
+    with RepositoryFunctions[AgentCodeMapping]
 
 case class VatAgentReferenceMapping(arn: String, vrn: String) extends ArnToIdentifierMapping {
   override def identifier: String = vrn
@@ -168,7 +168,6 @@ object VatAgentReferenceMapping extends ReactiveMongoFormats {
 }
 
 @Singleton
-class VatAgentReferenceMappingRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
-  extends BaseMappingRepository("agent-mapping-vat", "vrn", VatAgentReferenceMapping.apply)
-  with RepositoryFunctions[VatAgentReferenceMapping]
-
+class VatAgentReferenceMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
+    extends BaseMappingRepository("agent-mapping-vat", "vrn", VatAgentReferenceMapping.apply)
+    with RepositoryFunctions[VatAgentReferenceMapping]

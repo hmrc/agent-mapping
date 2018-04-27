@@ -16,12 +16,12 @@
 
 package uk.gov.hmrc.agentmapping.repository
 
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 import uk.gov.hmrc.agentmapping.model.Service
 import uk.gov.hmrc.agentmapping.model.Service._
 
 @Singleton
-class MappingRepositories @Inject() (
+class MappingRepositories @Inject()(
   agentCodeMappingRepository: NewAgentCodeMappingRepository,
   hMCEVATAGNTMappingRepository: HMCEVATAGNTMappingRepository,
   iRSAAGENTMappingRepository: IRSAAGENTMappingRepository,
@@ -37,16 +37,17 @@ class MappingRepositories @Inject() (
 
   private val repositories: Map[Service.Name, Repository] =
     Map(
-      AgentCode -> agentCodeMappingRepository,
-      `IR-SA-AGENT` -> iRSAAGENTMappingRepository,
-      `HMCE-VAT-AGNT` -> hMCEVATAGNTMappingRepository,
+      AgentCode         -> agentCodeMappingRepository,
+      `IR-SA-AGENT`     -> iRSAAGENTMappingRepository,
+      `HMCE-VAT-AGNT`   -> hMCEVATAGNTMappingRepository,
       `HMRC-CHAR-AGENT` -> hMRCCHARAGENTMappingRepository,
-      `HMRC-GTS-AGNT` -> hMRCGTSAGNTMappingRepository,
-      `HMRC-MGD-AGNT` -> hMRCMGDAGNTMappingRepository,
+      `HMRC-GTS-AGNT`   -> hMRCGTSAGNTMappingRepository,
+      `HMRC-MGD-AGNT`   -> hMRCMGDAGNTMappingRepository,
       `HMRC-NOVRN-AGNT` -> hMRCNOVRNAGNTMappingRepository,
-      `IR-CT-AGENT` -> iRCTAGENTMappingRepository,
-      `IR-PAYE-AGENT` -> iRPAYEAGENTMappingRepository,
-      `IR-SDLT-AGENT` -> iRSDLTAGENTMappingRepository)
+      `IR-CT-AGENT`     -> iRCTAGENTMappingRepository,
+      `IR-PAYE-AGENT`   -> iRPAYEAGENTMappingRepository,
+      `IR-SDLT-AGENT`   -> iRSDLTAGENTMappingRepository
+    )
 
   def get(serviceName: Service.Name): Repository = repositories(serviceName)
 

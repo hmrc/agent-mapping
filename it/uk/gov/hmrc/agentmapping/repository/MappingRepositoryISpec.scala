@@ -12,25 +12,31 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.ClassTag
 
 // REMOVE AFTER DB MIGRATION - start
-class SaAgentReferenceMappingRepositoryISpec extends BaseRepositoryISpec[SaAgentReferenceMapping, SaAgentReferenceMappingRepository]
+class SaAgentReferenceMappingRepositoryISpec
+    extends BaseRepositoryISpec[SaAgentReferenceMapping, SaAgentReferenceMappingRepository]
 class AgentCodeMappingRepositoryISpec extends BaseRepositoryISpec[AgentCodeMapping, AgentCodeMappingRepository]
-class VatAgentReferenceMappingRepositoryISpec extends BaseRepositoryISpec[VatAgentReferenceMapping, VatAgentReferenceMappingRepository]
+class VatAgentReferenceMappingRepositoryISpec
+    extends BaseRepositoryISpec[VatAgentReferenceMapping, VatAgentReferenceMappingRepository]
 // REMOVE AFTER DB MIGRATION - end
 
 class IRSAAGENTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, IRSAAGENTMappingRepository]
-class NewAgentCodeMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, NewAgentCodeMappingRepository]
+class NewAgentCodeMappingRepositoryISpec
+    extends BaseRepositoryISpec[AgentReferenceMapping, NewAgentCodeMappingRepository]
 class HMCEVATAGNTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, HMCEVATAGNTMappingRepository]
 
-class HMRCCHARAGENTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, HMRCCHARAGENTMappingRepository]
+class HMRCCHARAGENTMappingRepositoryISpec
+    extends BaseRepositoryISpec[AgentReferenceMapping, HMRCCHARAGENTMappingRepository]
 class HMRCGTSAGNTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, HMRCGTSAGNTMappingRepository]
 class HMRCMGDAGNTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, HMRCMGDAGNTMappingRepository]
-class HMRCNOVRNAGNTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, HMRCNOVRNAGNTMappingRepository]
+class HMRCNOVRNAGNTMappingRepositoryISpec
+    extends BaseRepositoryISpec[AgentReferenceMapping, HMRCNOVRNAGNTMappingRepository]
 class IRCTAGENTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, IRCTAGENTMappingRepository]
 class IRPAYEAGENTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, IRPAYEAGENTMappingRepository]
 class IRSDLTAGENTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, IRSDLTAGENTMappingRepository]
 
-abstract class BaseRepositoryISpec[T <: ArnToIdentifierMapping, R <: MappingRepository with RepositoryFunctions[T]: ClassTag]
-  extends UnitSpec with MongoApp {
+abstract class BaseRepositoryISpec[
+  T <: ArnToIdentifierMapping, R <: MappingRepository with RepositoryFunctions[T]: ClassTag]
+    extends UnitSpec with MongoApp {
 
   override implicit lazy val app: Application = appBuilder.build()
   protected def appBuilder: GuiceApplicationBuilder =

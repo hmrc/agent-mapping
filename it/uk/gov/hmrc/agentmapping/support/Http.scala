@@ -16,15 +16,15 @@
 
 package uk.gov.hmrc.agentmapping.support
 
-import play.api.http.{ HeaderNames, MimeTypes }
-import play.api.libs.ws.{ WSClient, WSRequest, WSResponse }
+import play.api.http.{HeaderNames, MimeTypes}
+import play.api.libs.ws.{WSClient, WSRequest, WSResponse}
 import play.api.mvc.Results
-import uk.gov.hmrc.http.{ HeaderCarrier, HttpResponse }
+import uk.gov.hmrc.http.{HeaderCarrier, HttpResponse}
 import uk.gov.hmrc.play.http.ws.WSHttpResponse
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
-import scala.concurrent.{ Await, Future }
+import scala.concurrent.{Await, Future}
 
 object Http {
 
@@ -32,7 +32,9 @@ object Http {
     request.get()
   }
 
-  def post(url: String, body: String, headers: Seq[(String, String)] = Seq.empty)(implicit hc: HeaderCarrier, client: WSClient): HttpResponse = perform(url) { request =>
+  def post(url: String, body: String, headers: Seq[(String, String)] = Seq.empty)(
+    implicit hc: HeaderCarrier,
+    client: WSClient): HttpResponse = perform(url) { request =>
     request.withHeaders(headers: _*).post(body)
   }
 
@@ -50,7 +52,8 @@ object Http {
     request.delete()
   }
 
-  private def perform(url: String)(fun: WSRequest => Future[WSResponse])(implicit hc: HeaderCarrier, client: WSClient): WSHttpResponse =
+  private def perform(url: String)(
+    fun: WSRequest => Future[WSResponse])(implicit hc: HeaderCarrier, client: WSClient): WSHttpResponse =
     await(fun(client.url(url).withHeaders(hc.headers: _*).withRequestTimeout(20 seconds)).map(new WSHttpResponse(_)))
 
   private def await[A](future: Future[A]) = Await.result(future, 20 seconds)
@@ -63,7 +66,8 @@ class Resource(path: String, port: Int) {
 
   def get()(implicit hc: HeaderCarrier = HeaderCarrier(), client: WSClient): HttpResponse = Http.get(url)(hc, client)
 
-  def delete()(implicit hc: HeaderCarrier = HeaderCarrier(), client: WSClient): HttpResponse = Http.delete(url)(hc, client)
+  def delete()(implicit hc: HeaderCarrier = HeaderCarrier(), client: WSClient): HttpResponse =
+    Http.delete(url)(hc, client)
 
   def postAsJson(body: String)(implicit hc: HeaderCarrier = HeaderCarrier(), client: WSClient): HttpResponse =
     Http.post(url, body, Seq(HeaderNames.CONTENT_TYPE -> MimeTypes.JSON))(hc, client)

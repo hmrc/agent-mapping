@@ -39,18 +39,35 @@ class RepositoryMigrationISpec extends UnitSpec with MongoApp {
     await(oldVatRepo.ensureIndexes)
     await(newVatRepo.ensureIndexes)
 
-    behave like migrateRepository(app.injector.instanceOf[SARepositoryMigration], "agent-mapping", "agent-mapping-ir-sa-agent", "saAgentReference")
-    behave like migrateRepository(app.injector.instanceOf[AgentCodeRepositoryMigration], "agent-mapping-agent-code", "agent-mapping-agentcode", "agentCode")
-    behave like migrateRepository(app.injector.instanceOf[VATRepositoryMigration], "agent-mapping-vat", "agent-mapping-hmce-vat-agnt", "vrn")
+    behave like migrateRepository(
+      app.injector.instanceOf[SARepositoryMigration],
+      "agent-mapping",
+      "agent-mapping-ir-sa-agent",
+      "saAgentReference")
+    behave like migrateRepository(
+      app.injector.instanceOf[AgentCodeRepositoryMigration],
+      "agent-mapping-agent-code",
+      "agent-mapping-agentcode",
+      "agentCode")
+    behave like migrateRepository(
+      app.injector.instanceOf[VATRepositoryMigration],
+      "agent-mapping-vat",
+      "agent-mapping-hmce-vat-agnt",
+      "vrn")
   }
 
-  def migrateRepository(migration: RepositoryMigration[_], oldCollection: String, newCollection: String, oldIdentifierKey: String) = {
+  def migrateRepository(
+    migration: RepositoryMigration[_],
+    oldCollection: String,
+    newCollection: String,
+    oldIdentifierKey: String) =
     s"migrate $oldCollection to $newCollection" in {
 
       val mongo = app.injector.instanceOf[ReactiveMongoComponent]
       val fromCollection = mongo.mongoConnector.db().collection[JSONCollection](oldCollection)
 
-      val docs = Stream.range(0, 1000).map(i => Json.obj("arn" -> s"ARN0$i", oldIdentifierKey -> s"${oldIdentifierKey}9$i"))
+      val docs =
+        Stream.range(0, 1000).map(i => Json.obj("arn" -> s"ARN0$i", oldIdentifierKey -> s"${oldIdentifierKey}9$i"))
       await(fromCollection.bulkInsert(docs, ordered = false))
 
       val result = await(migration.start())
@@ -68,6 +85,5 @@ class RepositoryMigrationISpec extends UnitSpec with MongoApp {
         nextMigrationResult shouldBe None
       }
     }
-  }
 
 }

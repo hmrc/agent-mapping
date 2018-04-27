@@ -2,7 +2,7 @@ package uk.gov.hmrc.agentmapping.stubs
 
 import com.github.tomakehurst.wiremock.client.MappingBuilder
 import com.github.tomakehurst.wiremock.client.WireMock._
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, Utr }
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 
 trait DesStubs {
   protected def expectedEnvironment: Option[String] = None
@@ -10,36 +10,38 @@ trait DesStubs {
 
   val registeredArn: Arn = Arn("AARN0000002")
 
-  def givenIndividualRegistrationExists(utr: Utr, isAnASAgent: Boolean = true): Unit = {
-    stubFor(maybeWithDesHeaderCheck(registrationRequest(utr, isAnAgent = false))
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(s"""{ "agentReferenceNumber": "${registeredArn.value}" }""".stripMargin)))
-  }
+  def givenIndividualRegistrationExists(utr: Utr, isAnASAgent: Boolean = true): Unit =
+    stubFor(
+      maybeWithDesHeaderCheck(registrationRequest(utr, isAnAgent = false))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""{ "agentReferenceNumber": "${registeredArn.value}" }""".stripMargin)))
 
-  def givenIndividualRegistrationExistsWithoutArn(utr: Utr, isAnASAgent: Boolean = true): Unit = {
-    stubFor(maybeWithDesHeaderCheck(registrationRequest(utr, isAnAgent = false))
-      .willReturn(aResponse()
-        .withStatus(200)
-        .withBody(s"""{}""".stripMargin)))
-  }
+  def givenIndividualRegistrationExistsWithoutArn(utr: Utr, isAnASAgent: Boolean = true): Unit =
+    stubFor(
+      maybeWithDesHeaderCheck(registrationRequest(utr, isAnAgent = false))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""{}""".stripMargin)))
 
-  def givenRegistrationDoesNotExist(utr: Utr): Unit = {
-    stubFor(maybeWithDesHeaderCheck(registrationRequest(utr, isAnAgent = false))
-      .willReturn(aResponse()
-        .withStatus(404)
-        .withBody(notFoundResponse)))
-  }
+  def givenRegistrationDoesNotExist(utr: Utr): Unit =
+    stubFor(
+      maybeWithDesHeaderCheck(registrationRequest(utr, isAnAgent = false))
+        .willReturn(
+          aResponse()
+            .withStatus(404)
+            .withBody(notFoundResponse)))
 
   private def registrationRequest(utr: Utr, isAnAgent: Boolean) =
     post(urlEqualTo(s"/registration/individual/utr/${utr.value}"))
-      .withRequestBody(equalToJson(
-        s"""
-           |{
-           |  "requiresNameMatch": false,
-           |  "regime": "ITSA",
-           |  "isAnAgent": $isAnAgent
-           |}
+      .withRequestBody(equalToJson(s"""
+                                      |{
+                                      |  "requiresNameMatch": false,
+                                      |  "regime": "ITSA",
+                                      |  "isAnAgent": $isAnAgent
+                                      |}
               """.stripMargin))
 
   private def maybeWithDesHeaderCheck(mappingBuilder: MappingBuilder): MappingBuilder =
@@ -48,16 +50,17 @@ trait DesStubs {
   private def maybeWithOptionalAuthorizationHeaderCheck(mappingBuilder: MappingBuilder): MappingBuilder =
     expectedBearerToken match {
       case Some(token) => mappingBuilder.withHeader("Authorization", equalTo(s"Bearer $token"))
-      case None => mappingBuilder
+      case None        => mappingBuilder
     }
 
   private def maybeWithEnvironmentHeaderCheck(mappingBuilder: MappingBuilder): MappingBuilder =
     expectedEnvironment match {
       case Some(environment) => mappingBuilder.withHeader("Environment", equalTo(environment))
-      case None => mappingBuilder
+      case None              => mappingBuilder
     }
 
-  private val notFoundResponse = errorResponse("NOT_FOUND", "The remote endpoint has indicated that no data can be found.")
+  private val notFoundResponse =
+    errorResponse("NOT_FOUND", "The remote endpoint has indicated that no data can be found.")
 
   private def errorResponse(code: String, reason: String) =
     s"""

@@ -16,50 +16,50 @@
 
 package uk.gov.hmrc.agentmapping.repository
 
-import javax.inject.{ Inject, Singleton }
+import javax.inject.{Inject, Singleton}
 import org.joda.time
-import org.joda.time.{ DateTimeZone, LocalDateTime }
-import play.api.libs.json.{ JsObject, Json }
-import play.api.{ Configuration, Logger }
+import org.joda.time.{DateTimeZone, LocalDateTime}
+import play.api.libs.json.{JsObject, Json}
+import play.api.{Configuration, Logger}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.ReadPreference
 import reactivemongo.bson.BSONObjectID
 import reactivemongo.play.json.ImplicitBSONHandlers
 import reactivemongo.play.json.collection.JSONCollection
-import uk.gov.hmrc.lock.{ LockKeeper, LockRepository }
+import uk.gov.hmrc.lock.{LockKeeper, LockRepository}
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats.localDateTimeFormats
 
-import scala.concurrent.{ ExecutionContext, Future }
+import scala.concurrent.{ExecutionContext, Future}
 
 // REMOVE DB AFTER MIGRATION
 
 @Singleton
-class SARepositoryMigration @Inject() (
+class SARepositoryMigration @Inject()(
   configuration: Configuration,
   fromRepository: SaAgentReferenceMappingRepository,
   toRepository: IRSAAGENTMappingRepository,
   mongoComponent: ReactiveMongoComponent,
   tryLock: MigrationLockService)(implicit ec: ExecutionContext)
-  extends RepositoryMigration(configuration, fromRepository, toRepository, mongoComponent, tryLock)
+    extends RepositoryMigration(configuration, fromRepository, toRepository, mongoComponent, tryLock)
 
 @Singleton
-class AgentCodeRepositoryMigration @Inject() (
+class AgentCodeRepositoryMigration @Inject()(
   configuration: Configuration,
   fromRepository: AgentCodeMappingRepository,
   toRepository: NewAgentCodeMappingRepository,
   mongoComponent: ReactiveMongoComponent,
   tryLock: MigrationLockService)(implicit ec: ExecutionContext)
-  extends RepositoryMigration(configuration, fromRepository, toRepository, mongoComponent, tryLock)
+    extends RepositoryMigration(configuration, fromRepository, toRepository, mongoComponent, tryLock)
 
 @Singleton
-class VATRepositoryMigration @Inject() (
+class VATRepositoryMigration @Inject()(
   configuration: Configuration,
   fromRepository: VatAgentReferenceMappingRepository,
   toRepository: HMCEVATAGNTMappingRepository,
   mongoComponent: ReactiveMongoComponent,
   tryLock: MigrationLockService)(implicit ec: ExecutionContext)
-  extends RepositoryMigration(configuration, fromRepository, toRepository, mongoComponent, tryLock)
+    extends RepositoryMigration(configuration, fromRepository, toRepository, mongoComponent, tryLock)
 
 abstract class RepositoryMigration[A <: ArnToIdentifierMapping](
   configuration: Configuration,
@@ -71,11 +71,11 @@ abstract class RepositoryMigration[A <: ArnToIdentifierMapping](
   import ImplicitBSONHandlers._
 
   val logger = Logger(this.getClass)
-  val migration: JSONCollection = mongoComponent.mongoConnector.db().collection[JSONCollection]("agent-mapping-migration-status")
+  val migration: JSONCollection =
+    mongoComponent.mongoConnector.db().collection[JSONCollection]("agent-mapping-migration-status")
   val id = s"from${fromRepository.getClass.getSimpleName}To${toRepository.getClass.getSimpleName}"
 
-  def start(): Future[Option[Int]] = {
-
+  def start(): Future[Option[Int]] =
     migration
       .find(Json.obj("id" -> id))
       .one[JsObject](ReadPreference.primaryPreferred)
@@ -87,7 +87,6 @@ abstract class RepositoryMigration[A <: ArnToIdentifierMapping](
         case None =>
           progressMigration()
       }
-  }
 
   private def progressMigration(): Future[Option[Int]] = {
 
@@ -95,23 +94,22 @@ abstract class RepositoryMigration[A <: ArnToIdentifierMapping](
 
     tryLock(id) {
       val result = for {
-        ic <- fromRepository.count
+        ic       <- fromRepository.count
         mappings <- fromRepository.findAll()
         newMappings = mappings.map(m => AgentReferenceMapping(m.arn, m.identifier))
-        _ <- toRepository.bulkInsert(newMappings)
+        _  <- toRepository.bulkInsert(newMappings)
         fc <- toRepository.count
-        _ <- migration.insert(Json.obj("id" -> id, "ic" -> ic, "fc" -> fc, "timestamp" -> LocalDateTime.now(DateTimeZone.UTC)))
+        _ <- migration.insert(
+              Json.obj("id" -> id, "ic" -> ic, "fc" -> fc, "timestamp" -> LocalDateTime.now(DateTimeZone.UTC)))
       } yield (ic, fc)
-      result.transform(
-        {
-          case (ic, fc) =>
-            logger.info(s"Migration $id is done, initial=$ic, final=$fc")
-            fc
-        },
-        ex => {
-          logger.error(s"Migration $id have failed", ex)
-          ex
-        })
+      result.transform({
+        case (ic, fc) =>
+          logger.info(s"Migration $id is done, initial=$ic, final=$fc")
+          fc
+      }, ex => {
+        logger.error(s"Migration $id have failed", ex)
+        ex
+      })
     }
 
   }
@@ -124,11 +122,11 @@ abstract class RepositoryMigration[A <: ArnToIdentifierMapping](
 }
 
 @Singleton
-class MongoLockRepository @Inject() (implicit mongoComponent: ReactiveMongoComponent)
-  extends LockRepository()(mongoComponent.mongoConnector.db)
+class MongoLockRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
+    extends LockRepository()(mongoComponent.mongoConnector.db)
 
 @Singleton
-class MigrationLockService @Inject() (lockRepository: LockRepository) {
+class MigrationLockService @Inject()(lockRepository: LockRepository) {
   def apply[T](id: String)(body: => Future[T])(implicit ec: ExecutionContext): Future[Option[T]] =
     new LockKeeper {
       override def repo = lockRepository
