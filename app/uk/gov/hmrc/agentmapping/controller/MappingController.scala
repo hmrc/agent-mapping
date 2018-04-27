@@ -132,6 +132,17 @@ class MappingController @Inject() (
     }
   }
 
+  def findMappings(key: String, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
+    Service.forKey(key) match {
+      case Some(service) =>
+        repositories.get(service).findBy(arn) map { matches =>
+          if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings])) else NotFound
+        }
+      case None =>
+        Future.successful(BadRequest(s"No service found for the key $key"))
+    }
+  }
+
   def delete(arn: Arn) = Action.async { implicit request =>
     Future.sequence(repositories.map(_.delete(arn)))
       .map { _ => NoContent }

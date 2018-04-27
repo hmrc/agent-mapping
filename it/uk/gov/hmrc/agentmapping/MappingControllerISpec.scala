@@ -54,11 +54,17 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     new Resource(s"/agent-mapping/mappings/agentcode/${requestArn.value}", port)
   }
 
+  def findMappingsRequestByKey(key: String)(requestArn: Arn = registeredArn): Resource = {
+    new Resource(s"/agent-mapping/mappings/key/$key/arn/${requestArn.value}", port)
+  }
+
   def deleteMappingsRequest(requestArn: Arn = registeredArn): Resource = {
     new Resource(s"/agent-mapping/test-only/mappings/${requestArn.value}", port)
   }
 
-  case class TestFixture(service: Service.Name, identifierKey: String, identifierValue: String)
+  case class TestFixture(service: Service.Name, identifierKey: String, identifierValue: String) {
+    val key = Service.keyFor(service)
+  }
 
   val AgentCodeTestFixture = TestFixture(AgentCode, "AgentCode", agentCode)
 
@@ -133,7 +139,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     if (fixtures.size > 1) {
       // Then test different split sets of fixtures
       val splitFixtures: Seq[(Seq[TestFixture], Seq[TestFixture])] =
-        (1 until Math.max(5,fixtures.size)).map(fixtures.splitAt) ++ (1 until Math.max(4,fixtures.size)).map(fixtures.reverse.splitAt)
+        (1 until Math.max(5, fixtures.size)).map(fixtures.splitAt) ++ (1 until Math.max(4, fixtures.size)).map(fixtures.reverse.splitAt)
 
       splitFixtures.foreach {
         case (left, right) =>
@@ -281,6 +287,28 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
       body should include("""{"arn":"AARN0000002","agentCode":"ABCDE1"}""")
       body should include("""{"arn":"AARN0000002","agentCode":"ABCDE2"}""")
+    }
+
+    Seq(IRCTAGENTTestFixture, HMRCGTSAGNTTestFixture, HMRCNOVRNAGNTTestFixture,
+      HMRCCHARAGENTTestFixture, HMRCMGDAGNTTestFixture, IRPAYEAGENTTestFixture, IRSDLTAGENTTestFixture).foreach { f =>
+
+      s"return 200 status with a json body representing the mappings that match the supplied arn for ${f.key}" in {
+        val repo = repositories.get(f.service)
+        await(repo.store(registeredArn, "ABCDE123456"))
+        await(repo.store(registeredArn, "ABCDE298980"))
+
+        val response = findMappingsRequestByKey(f.key)().get()
+
+        response.status shouldBe 200
+        val body = response.body
+
+        body should include("""{"arn":"AARN0000002","identifier":"ABCDE298980"}""")
+        body should include("""{"arn":"AARN0000002","identifier":"ABCDE123456"}""")
+      }
+
+      s"return 404 when there are no ${f.key} mappings that match the supplied arn" in {
+        findMappingsRequestByKey(f.key)().get.status shouldBe 404
+      }
     }
 
     "return 404 when there are no mappings that match the supplied arn" in {

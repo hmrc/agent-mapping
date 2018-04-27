@@ -64,6 +64,42 @@ responses:
     } 
     
     404 NOT FOUND
+    
+### find AgentCode mappings for the given ARN
+
+    GET /agent-mapping/mappings/agentcode/:arn   
+    
+responses:
+
+    200 OK 
+    {
+        "mappings":[
+            { "arn" : "AARN0000002", "agentCode" : "101747696" },
+            { "arn" : "AARN0000002", "agentCode" : "101747641" }
+        ]
+    } 
+    
+    404 NOT FOUND
+
+
+### find other identifier mappings for the given ARN
+
+    GET /agent-mapping/mappings/key/:key/arn/:arn  
+    
+supported keys: `char`,`gts`,`mgd`,`novrn`,`ct`,`paye`,`sdlt`
+    
+responses:
+
+    200 OK 
+    {
+        "mappings":[
+            { "arn" : "AARN0000002", "identifier" : "XYZ00000" },
+            { "arn" : "AARN0000002", "identifier" : "ABCD9999" }
+        ]
+    } 
+    
+    404 NOT FOUND 
+    
 
 ### License
 

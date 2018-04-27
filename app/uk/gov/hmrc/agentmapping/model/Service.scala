@@ -16,14 +16,11 @@
 
 package uk.gov.hmrc.agentmapping.model
 
-/*
- * HERE ARE DEFINED ALL SERVICES CAPTURED BY MAPPING JOURNEY
- */
 object Service extends Enumeration {
   type Name = Value
   val AgentCode, `IR-SA-AGENT`, `HMCE-VAT-AGNT`, `HMRC-CHAR-AGENT`, `HMRC-GTS-AGNT`, `HMRC-MGD-AGNT`, `HMRC-NOVRN-AGNT`, `IR-CT-AGENT`, `IR-PAYE-AGENT`, `IR-SDLT-AGENT` = Value
 
-  private val names: Map[Service.Value, String] = Map(
+  private val names: Map[Name, String] = Map(
     `IR-SA-AGENT` -> "IR-SA-AGENT",
     `HMCE-VAT-AGNT` -> "HMCE-VAT-AGNT",
     `HMRC-CHAR-AGENT` -> "HMRC-CHAR-AGENT",
@@ -35,9 +32,29 @@ object Service extends Enumeration {
     `IR-SDLT-AGENT` -> "IR-SDLT-AGENT",
     `AgentCode` -> "AgentCode")
 
-  private val reverse: Map[String, Service.Value] = names.map { case (k, v) => (v, k) }
+  private val reversedNames: Map[String, Name] = names.map { case (k, v) => (v, k) }
+  require(names.size == reversedNames.size)
 
-  val valueOf: String => Option[Service.Name] = reverse.get
+  val valueOf: String => Option[Name] = reversedNames.get
 
-  implicit def asString(service: Service.Name): String = names.getOrElse(service, "undefined")
+  implicit def asString(service: Name): String = names.getOrElse(service, "undefined")
+
+  private val keys: Map[Name, String] = Map(
+    `IR-SA-AGENT` -> "sa",
+    `HMCE-VAT-AGNT` -> "vat",
+    `HMRC-CHAR-AGENT` -> "char",
+    `HMRC-GTS-AGNT` -> "gts",
+    `HMRC-MGD-AGNT` -> "mgd",
+    `HMRC-NOVRN-AGNT` -> "novrn",
+    `IR-CT-AGENT` -> "ct",
+    `IR-PAYE-AGENT` -> "paye",
+    `IR-SDLT-AGENT` -> "sdlt",
+    `AgentCode` -> "agentcode")
+
+  private val keysReversed = keys.map { case (k, v) => (v, k) }
+  require(keys.size == keysReversed.size)
+
+  val keyFor: Name => String = keys.apply
+  val forKey: String => Option[Name] = keysReversed.get
+
 }
