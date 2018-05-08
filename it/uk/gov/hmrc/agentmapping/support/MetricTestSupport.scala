@@ -20,8 +20,7 @@ trait MetricTestSupport {
     metricsRegistry = registry
   }
 
-  def timerShouldExistsAndBeenUpdated(metric: String): Unit = {
+  def timerShouldExistsAndBeenUpdated(metric: String): Unit =
     metricsRegistry.getTimers.get(s"Timer-$metric").getCount should be >= 1L
-  }
 
 }

@@ -1,7 +1,6 @@
 import sbt.Tests.{Group, SubProcess}
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin._
 import uk.gov.hmrc.SbtAutoBuildPlugin
-import scalariform.formatter.preferences._
 
 lazy val scoverageSettings = {
   import scoverage.ScoverageKeys
@@ -22,6 +21,7 @@ lazy val compileDeps = Seq(
   "uk.gov.hmrc" %% "domain" % "5.1.0",
   "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "3.0.1",
   "uk.gov.hmrc" %% "play-reactivemongo" % "6.2.0",
+  "uk.gov.hmrc" %% "mongo-lock" % "5.1.0",
   ws
 )
 
@@ -51,7 +51,9 @@ lazy val root = (project in file("."))
     publishingSettings,
     scoverageSettings,
     unmanagedResourceDirectories in Compile += baseDirectory.value / "resources",
-    routesImport ++= Seq("uk.gov.hmrc.agentmapping.controller.UrlBinders._")
+    routesImport ++= Seq("uk.gov.hmrc.agentmapping.controller.UrlBinders._"),
+    scalafmtOnCompile in Compile := true,
+    scalafmtOnCompile in Test := true
   )
   .configs(IntegrationTest)
   .settings(
@@ -59,10 +61,12 @@ lazy val root = (project in file("."))
     Defaults.itSettings,
     unmanagedSourceDirectories in IntegrationTest += baseDirectory(_ / "it").value,
     parallelExecution in IntegrationTest := false,
-    testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value)
+    testGrouping in IntegrationTest := oneForkedJvmPerTest((definedTests in IntegrationTest).value),
+    scalafmtOnCompile in IntegrationTest := true
   )
-  .settings(scalariformItSettings)
   .enablePlugins(PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin)
+
+inConfig(IntegrationTest)(scalafmtCoreSettings)
 
 def oneForkedJvmPerTest(tests: Seq[TestDefinition]) = {
   tests.map { test =>

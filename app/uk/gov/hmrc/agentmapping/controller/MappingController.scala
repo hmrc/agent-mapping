@@ -16,95 +16,101 @@
 
 package uk.gov.hmrc.agentmapping.controller
 
-import javax.inject.{ Inject, Singleton }
-
+import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json.toJson
-import play.api.mvc.{ Action, AnyContent, Request }
+import play.api.libs.json._
+import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.connector.DesConnector
-import uk.gov.hmrc.agentmapping.model.Names._
+import uk.gov.hmrc.agentmapping.model.Service._
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository._
-import uk.gov.hmrc.agentmtdidentifiers.model.{ Arn, Utr }
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.auth.core.authorise.Predicate
-import uk.gov.hmrc.auth.core.retrieve.{ Retrievals, _ }
+import uk.gov.hmrc.auth.core.retrieve.{Retrievals, _}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.HeaderCarrierConverter.fromHeadersAndSession
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
 import scala.concurrent.Future
 
-class UnsupportedIdentifierKey(identifier: Identifier) extends Exception(s"Unsupported identifier key ${identifier.key}")
-
 @Singleton
-class MappingController @Inject() (
-  vatAgentReferenceMappingRepository: VatAgentReferenceMappingRepository,
-  saAgentReferenceMappingRepository: SaAgentReferenceMappingRepository,
-  agentCodeMappingRepository: AgentCodeMappingRepository,
+class MappingController @Inject()(
+  repositories: MappingRepositories,
   desConnector: DesConnector,
   auditService: AuditService,
   val authConnector: AuthConnector)
-  extends BaseController with AuthorisedFunctions {
+    extends BaseController
+    with AuthorisedFunctions {
 
   import auditService._
   import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
-  private val validEnrolmentIdentifierKeys: Map[String, String] = Map(
-    IRAgentReference -> `IR-SA-AGENT`,
-    AgentRefNo -> `HMCE-VAT-AGNT`)
-
-  def enrolmentsFor(identifiers: Identifiers): Predicate = {
-    identifiers.get
-      .map(i => Enrolment(
-        validEnrolmentIdentifierKeys.getOrElse(i.key, throw new UnsupportedIdentifierKey(i))).withIdentifier(i.key, i.value)).reduce[Predicate](_ and _)
-  }
-
-  def createMapping(utr: Utr, arn: Arn, identifiers: Identifiers): Action[AnyContent] = Action.async { implicit request =>
+  def createMapping(utr: Utr, arn: Arn, unused: String): Action[AnyContent] = Action.async { implicit request =>
     implicit val hc = fromHeadersAndSession(request.headers, None)
-    authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent and enrolmentsFor(identifiers))
-      .retrieve(Retrievals.credentials and Retrievals.agentCode) {
-        case credentials ~ agentCodeOpt =>
+    authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
+      .retrieve(Retrievals.credentials and Retrievals.agentCode and Retrievals.allEnrolments) {
+        case credentials ~ agentCodeOpt ~ allEnrolments =>
           desConnector.getArn(utr) flatMap {
             case Some(Arn(arn.value)) =>
               sendKnownFactsCheckAuditEvent(utr, arn, credentials.providerId, matched = true)
-              withAgentCode(identifiers, agentCodeOpt).map(
-                identifier => createMappingInRepository(arn, identifier, credentials.providerId))
-                .reduce((f1, f2) => f1.flatMap(b1 => f2.map(b2 => b1 & b2)))
-                .map(
-                  allConflicted => if (allConflicted)
-                    Conflict
-                  else
-                    Created)
+              captureIdentifiersAndAgentCodeFrom(allEnrolments, agentCodeOpt) match {
+                case Some(identifiers) =>
+                  identifiers
+                    .map(identifier => createMappingInRepository(arn, identifier, credentials.providerId))
+                    .reduce((f1, f2) => f1.flatMap(b1 => f2.map(b2 => b1 & b2)))
+                    .map(
+                      allConflicted =>
+                        if (allConflicted)
+                          Conflict
+                        else
+                        Created)
+                case None => Future.successful(Forbidden)
+              }
 
             case _ =>
               sendKnownFactsCheckAuditEvent(utr, arn, credentials.providerId, matched = false)
               Future.successful(Forbidden)
           }
-      }.recoverWith {
+      }
+      .recoverWith {
         case ex: NoActiveSession =>
           Logger.warn("No active session whilst trying to create mapping", ex)
           Future.successful(Unauthorized)
         case ex: AuthorisationException =>
           Logger.warn("Authorisation exception whilst trying to create mapping", ex)
           Future.successful(Forbidden)
-        case ex: UnsupportedIdentifierKey =>
-          Logger.warn("An attempt to do mapping with an invalid identifier", ex)
-          Future.successful(Forbidden)
       }
   }
 
-  private def withAgentCode(identifiers: Identifiers, agentCodeOpt: Option[String]) = agentCodeOpt match {
-    case None => identifiers.get
-    case Some(agentCode) => identifiers.get :+ Identifier(AgentCode, agentCode)
+  private def captureIdentifiersAndAgentCodeFrom(
+    enrolments: Enrolments,
+    agentCodeOpt: Option[String]): Option[Set[Identifier]] = {
+    val identifiers = captureIdentifiersFrom(enrolments)
+    if (identifiers.isEmpty) None
+    else
+      Some(agentCodeOpt match {
+        case None            => identifiers
+        case Some(agentCode) => identifiers + Identifier(AgentCode, agentCode)
+      })
   }
 
-  def createMappingInRepository(arn: Arn, identifier: Identifier, ggCredId: String)(implicit hc: HeaderCarrier, request: Request[Any]): Future[Boolean] = {
-    repository(identifier.key)
-      .createMapping(arn, identifier.value)
+  private def captureIdentifiersFrom(enrolments: Enrolments): Set[Identifier] =
+    enrolments.enrolments
+      .map(e => Service.valueOf(e.key).map((_, e.identifiers)))
+      .collect {
+        case Some((service, identifiers)) => Identifier(service, identifiers.map(i => i.value).mkString("/"))
+      }
+
+  def createMappingInRepository(arn: Arn, identifier: Identifier, ggCredId: String)(
+    implicit hc: HeaderCarrier,
+    request: Request[Any]): Future[Boolean] =
+    repositories
+      .get(identifier.key)
+      .store(arn, identifier.value)
       .map { _ =>
         sendCreateMappingAuditEvent(arn, identifier, ggCredId)
         false
@@ -115,39 +121,52 @@ class MappingController @Inject() (
           Logger.warn(s"Duplicated mapping attempt for ${identifier.key}")
           true
       }
-  }
-
-  val repository: Map[String, MappingRepository] = Map(
-    IRAgentReference -> saAgentReferenceMappingRepository,
-    AgentRefNo -> vatAgentReferenceMappingRepository,
-    AgentCode -> agentCodeMappingRepository)
 
   def findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
-    saAgentReferenceMappingRepository.findBy(arn) map { matches =>
-      if (matches.nonEmpty) Ok(toJson(SaAgentReferenceMappings(matches))) else NotFound
+    repositories.get(`IR-SA-AGENT`).findBy(arn) map { matches =>
+      implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("saAgentReference")
+      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+      else NotFound
     }
   }
 
   def findVatMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
-    vatAgentReferenceMappingRepository.findBy(arn) map { matches =>
-      if (matches.nonEmpty) Ok(toJson(VatAgentReferenceMappings(matches))) else NotFound
+    repositories.get(`HMCE-VAT-AGNT`).findBy(arn) map { matches =>
+      implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("vrn")
+      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+      else NotFound
     }
   }
 
   def findAgentCodeMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
-    agentCodeMappingRepository.findBy(arn) map { matches =>
-      if (matches.nonEmpty) Ok(toJson(AgentCodeMappings(matches))) else NotFound
+    repositories.get(AgentCode).findBy(arn) map { matches =>
+      implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("agentCode")
+      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+      else NotFound
+    }
+  }
+
+  def findMappings(key: String, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
+    Service.forKey(key) match {
+      case Some(service) =>
+        repositories.get(service).findBy(arn) map { matches =>
+          if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+          else NotFound
+        }
+      case None =>
+        Future.successful(BadRequest(s"No service found for the key $key"))
     }
   }
 
   def delete(arn: Arn) = Action.async { implicit request =>
-    saAgentReferenceMappingRepository.delete(arn)
-      .andThen {
-        case _ => vatAgentReferenceMappingRepository.delete(arn)
+    Future
+      .sequence(repositories.map(_.delete(arn)))
+      .map { _ =>
+        NoContent
       }
-      .andThen {
-        case _ => agentCodeMappingRepository.delete(arn)
-      }
-      .map { _ => NoContent }
   }
+
+  private def writeAgentReferenceMappingWith(identifierFieldName: String): Writes[AgentReferenceMapping] =
+    Writes[AgentReferenceMapping](m =>
+      Json.obj("arn" -> JsString(m.arn), identifierFieldName -> JsString(m.identifier)))
 }

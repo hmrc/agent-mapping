@@ -24,7 +24,7 @@ import org.scalatest.mockito.MockitoSugar
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.KnownFactsCheck
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.http.logging.{ Authorization, RequestId, SessionId }
+import uk.gov.hmrc.http.logging.{Authorization, RequestId, SessionId}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
 import uk.gov.hmrc.play.test.UnitSpec
@@ -42,12 +42,16 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
         sessionId = Some(SessionId("dummy session id")),
         requestId = Some(RequestId("dummy request id")))
 
-      await(service.auditEvent(
-        KnownFactsCheck,
-        "transaction name",
-        Seq("extra1" -> "first extra detail", "extra2" -> "second extra detail", "utr" -> "4000000009", "agentReferenceNumber" -> "GARN0000247"))(
-          hc,
-          FakeRequest("GET", "/path")))
+      await(
+        service.auditEvent(
+          KnownFactsCheck,
+          "transaction name",
+          Seq(
+            "extra1"               -> "first extra detail",
+            "extra2"               -> "second extra detail",
+            "utr"                  -> "4000000009",
+            "agentReferenceNumber" -> "GARN0000247")
+        )(hc, FakeRequest("GET", "/path")))
 
       eventually {
         val captor = ArgumentCaptor.forClass(classOf[DataEvent])
