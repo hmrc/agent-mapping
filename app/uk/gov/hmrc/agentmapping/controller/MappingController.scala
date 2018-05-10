@@ -78,10 +78,10 @@ class MappingController @Inject()(
       }
       .recoverWith {
         case ex: NoActiveSession =>
-          Logger.warn("No active session whilst trying to create mapping", ex)
+          Logger(getClass).warn("No active session whilst trying to create mapping", ex)
           Future.successful(Unauthorized)
         case ex: AuthorisationException =>
-          Logger.warn("Authorisation exception whilst trying to create mapping", ex)
+          Logger(getClass).warn("Authorisation exception whilst trying to create mapping", ex)
           Future.successful(Forbidden)
       }
   }
@@ -118,7 +118,7 @@ class MappingController @Inject()(
       .recover {
         case e: DatabaseException if e.getMessage().contains("E11000") =>
           sendCreateMappingAuditEvent(arn, identifier, ggCredId, duplicate = true)
-          Logger.warn(s"Duplicated mapping attempt for ${identifier.key}")
+          Logger(getClass).warn(s"Duplicated mapping attempt for ${Service.asString(identifier.key)}")
           true
       }
 
