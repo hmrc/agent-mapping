@@ -95,17 +95,3 @@ class IRPAYEAGENTMappingRepository @Inject()(implicit mongoComponent: ReactiveMo
 @Singleton
 class IRSDLTAGENTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
     extends NewMappingRepository("IR-SDLT-AGENT")
-
-// REMOVE AFTER DB MIGRATION - old repositories
-
-@Singleton
-class SaAgentReferenceMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
-    extends BaseMappingRepository("agent-mapping", "saAgentReference", SaAgentReferenceMapping.apply)
-
-@Singleton
-class AgentCodeMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
-    extends BaseMappingRepository("agent-mapping-agent-code", "agentCode", AgentCodeMapping.apply)
-
-@Singleton
-class VatAgentReferenceMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
-    extends BaseMappingRepository("agent-mapping-vat", "vrn", VatAgentReferenceMapping.apply)

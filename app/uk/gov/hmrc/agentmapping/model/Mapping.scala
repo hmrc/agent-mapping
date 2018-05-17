@@ -42,29 +42,3 @@ case class AgentReferenceMapping(arn: String, identifier: String) extends ArnToI
 object AgentReferenceMapping extends ReactiveMongoFormats {
   implicit val formats: Format[AgentReferenceMapping] = format[AgentReferenceMapping]
 }
-
-// REMOVE AFTER DB MIGRATION
-
-case class SaAgentReferenceMapping(arn: String, saAgentReference: String) extends ArnToIdentifierMapping {
-  override def identifier: String = saAgentReference
-}
-
-object SaAgentReferenceMapping extends ReactiveMongoFormats {
-  implicit val formats: Format[SaAgentReferenceMapping] = format[SaAgentReferenceMapping]
-}
-
-case class AgentCodeMapping(arn: String, agentCode: String) extends ArnToIdentifierMapping {
-  override def identifier: String = agentCode
-}
-
-object AgentCodeMapping extends ReactiveMongoFormats {
-  implicit val formats: Format[AgentCodeMapping] = format[AgentCodeMapping]
-}
-
-case class VatAgentReferenceMapping(arn: String, vrn: String) extends ArnToIdentifierMapping {
-  override def identifier: String = vrn
-}
-
-object VatAgentReferenceMapping extends ReactiveMongoFormats {
-  implicit val formats: Format[VatAgentReferenceMapping] = format[VatAgentReferenceMapping]
-}
