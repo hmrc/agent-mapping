@@ -49,6 +49,14 @@ class MappingController @Inject()(
   import auditService._
   import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
+  def hasEligibleEnrolments() = Action.async { implicit request =>
+    authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
+      .retrieve(Retrievals.allEnrolments) {
+        case allEnrolments =>
+          Future.successful(Ok(Json.obj("hasEligibleEnrolments" -> captureIdentifiersFrom(allEnrolments).nonEmpty)))
+      }
+  }
+
   def createMapping(utr: Utr, arn: Arn, unused: String): Action[AnyContent] = Action.async { implicit request =>
     implicit val hc = fromHeadersAndSession(request.headers, None)
     authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
@@ -105,7 +113,7 @@ class MappingController @Inject()(
         case Some((service, identifiers)) => Identifier(service, identifiers.map(i => i.value).mkString("/"))
       }
 
-  def createMappingInRepository(arn: Arn, identifier: Identifier, ggCredId: String)(
+  private def createMappingInRepository(arn: Arn, identifier: Identifier, ggCredId: String)(
     implicit hc: HeaderCarrier,
     request: Request[Any]): Future[Boolean] =
     repositories

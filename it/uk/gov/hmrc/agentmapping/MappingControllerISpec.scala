@@ -367,6 +367,39 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     }
   }
 
+  "hasEligibleEnrolments" should {
+    Seq(
+      IRCTAGENTTestFixture,
+      HMRCGTSAGNTTestFixture,
+      HMRCNOVRNAGNTTestFixture,
+      HMRCCHARAGENTTestFixture,
+      HMRCMGDAGNTTestFixture,
+      IRPAYEAGENTTestFixture,
+      IRSDLTAGENTTestFixture
+    ).foreach(behave like checkEligibility(_))
+
+    def checkEligibility(testFixture: TestFixture) = {
+      s"return 200 status with a json body with hasEligibleEnrolments=true when user has enrolment: ${testFixture.key}" in {
+        fail("TODO")
+      }
+
+      s"return 200 with hasEligibleEnrolments=false when user has only ineligible enrolment: ${testFixture.key}" in {
+        fail("TODO")
+
+      }
+
+      s"return 401 if user is not logged in for ${testFixture.key}" in {
+        fail("TODO")
+
+      }
+
+      s"return 403 if user is logged in but does not have agent affinity for ${testFixture.key}" in {
+        fail("TODO")
+
+      }
+    }
+  }
+
   private def givenUserIsAuthorisedFor(f: TestFixture): Unit =
     givenUserIsAuthorisedFor(
       f.service,
@@ -393,35 +426,35 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
       1,
       event = AgentMappingEvent.CreateMapping,
       detail = Map(
-        "identifier"           -> f.identifierValue,
-        "identifierType"       -> Service.asString(f.service),
+        "identifier" -> f.identifierValue,
+        "identifierType" -> Service.asString(f.service),
         "agentReferenceNumber" -> "AARN0000002",
-        "authProviderId"       -> "testCredId",
-        "duplicate"            -> s"$duplicate"
+        "authProviderId" -> "testCredId",
+        "duplicate" -> s"$duplicate"
       ),
       tags = Map("transactionName" -> "create-mapping", "path" -> "/agent-mapping/mappings/2000000000/AARN0000002")
     )
 
   private def verifyKnownFactsCheckAuditEventSent(
-    times: Int,
-    matched: Boolean = true,
-    arn: String = "AARN0000002",
-    utr: String = "2000000000") =
+                                                   times: Int,
+                                                   matched: Boolean = true,
+                                                   arn: String = "AARN0000002",
+                                                   utr: String = "2000000000") =
     verifyAuditRequestSent(
       times,
       event = AgentMappingEvent.KnownFactsCheck,
       detail = Map(
-        "knownFactsMatched"        -> s"$matched",
-        "utr"                      -> utr,
-        "agentReferenceNumber"     -> arn,
-        "authProviderId"           -> "testCredId"),
+        "knownFactsMatched" -> s"$matched",
+        "utr" -> utr,
+        "agentReferenceNumber" -> arn,
+        "authProviderId" -> "testCredId"),
       tags = Map("transactionName" -> "known-facts-check", "path" -> s"/agent-mapping/mappings/$utr/$arn")
     )
 
 }
 
 sealed trait MappingControllerISpecSetup
-    extends UnitSpec with MongoApp with WireMockSupport with DesStubs with AuthStubs with DataStreamStub {
+  extends UnitSpec with MongoApp with WireMockSupport with DesStubs with AuthStubs with DataStreamStub {
 
   implicit val actorSystem = ActorSystem()
   implicit val materializer = ActorMaterializer()
@@ -443,11 +476,11 @@ sealed trait MappingControllerISpecSetup
         mongoConfiguration ++
           Map(
             "microservice.services.auth.port" -> wireMockPort,
-            "microservice.services.des.port"  -> wireMockPort,
-            "auditing.consumer.baseUri.host"  -> wireMockHost,
-            "auditing.consumer.baseUri.port"  -> wireMockPort,
-            "application.router"              -> "testOnlyDoNotUseInAppConf.Routes",
-            "migrate-repositories"            -> "false"
+            "microservice.services.des.port" -> wireMockPort,
+            "auditing.consumer.baseUri.host" -> wireMockHost,
+            "auditing.consumer.baseUri.port" -> wireMockPort,
+            "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
+            "migrate-repositories" -> "false"
           ))
       .overrides(new TestGuiceModule)
 

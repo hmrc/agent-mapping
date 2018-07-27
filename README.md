@@ -15,6 +15,19 @@ A prerequisite for this check is knowing the CESA Agent Ref, this is captured an
 
 ## API
 
+### check if current logged in user has any enrolments that are eligible for mapping
+    GET  /mappings/eligibility
+
+responses:
+
+    200 OK
+    {
+        "hasEligibleEnrolments" : true | false
+    }
+
+    401 UNAUTHORIZED    if user is not authenticated (missing bearer token or no active session)
+    403 FORBIDDEN       if user is not an agent
+
 ### create mapping between ARN and available identifiers
 
     PUT  /mappings/:utr/:arn

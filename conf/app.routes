@@ -14,3 +14,5 @@ GET  /mappings/agentcode/:arn              @uk.gov.hmrc.agentmapping.controller.
 
 # supported keys: char,gts,mgd,novrn,ct,paye,sdlt
 GET  /mappings/key/:key/arn/:arn                   @uk.gov.hmrc.agentmapping.controller.MappingController.findMappings(key: String, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+
+GET  /mappings/eligibility                 @uk.gov.hmrc.agentmapping.controller.MappingController.hasEligibleEnrolments()
