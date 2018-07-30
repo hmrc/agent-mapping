@@ -393,18 +393,17 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
         (request.json \ "hasEligibleEnrolments").as[Boolean] shouldBe true
       }
 
-      /*    s"return 200 with hasEligibleEnrolments=false when user has only ineligible enrolment: ${testFixture.key}" in {
-            givenUserIsAuthorisedFor(
-              "INVALID",
-              testFixture.identifierKey,
-              testFixture.identifierValue,
-              "testCredId",
-              agentCodeOpt = Some(agentCode))
+      s"return 200 with hasEligibleEnrolments=false when user has only ineligible enrolment: ${testFixture.key}" in {
+        givenUserIsAuthorisedFor(
+          "INVALID",
+          testFixture.identifierKey,
+          testFixture.identifierValue,
+          "testCredId",
+          agentCodeOpt = Some(agentCode))
 
-            request.status shouldBe 200
-            (request.json \ "hasEligibleEnrolments").as[Boolean] shouldBe false
-
-          }*/
+        request.status shouldBe 200
+        (request.json \ "hasEligibleEnrolments").as[Boolean] shouldBe false
+      }
 
       s"return 401 if user is not logged in for ${testFixture.key}" in {
         givenUserNotAuthorisedWithError("MissingBearerToken")

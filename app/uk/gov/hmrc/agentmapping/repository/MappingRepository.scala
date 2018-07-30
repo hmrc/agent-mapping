@@ -25,8 +25,9 @@ import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmapping.model.{AgentReferenceMapping}
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
@@ -34,22 +35,24 @@ import scala.collection.Seq
 import scala.concurrent.{ExecutionContext, Future}
 
 trait MappingRepository {
-  def store(arn: Arn, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit]
+  def store(identifier: TaxIdentifier, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit]
 }
 
 trait RepositoryFunctions[T] {
   def find(query: (String, JsValueWrapper)*)(implicit ec: ExecutionContext): Future[List[T]]
   def findBy(arn: Arn)(implicit ec: ExecutionContext): Future[List[T]]
+  def findBy(utr: Utr)(implicit ec: ExecutionContext): Future[List[T]]
   def findAll(readPreference: ReadPreference = ReadPreference.primaryPreferred)(
     implicit ec: ExecutionContext): Future[List[T]]
   def delete(arn: Arn)(implicit ec: ExecutionContext): Future[WriteResult]
+  def delete(utr: Utr)(implicit ec: ExecutionContext): Future[WriteResult]
   def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]]
 }
 
 abstract class BaseMappingRepository[T: Format: Manifest](
   collectionName: String,
   identifierKey: String,
-  wrap: (String, String) => T)(implicit mongoComponent: ReactiveMongoComponent)
+  wrap: (TaxIdentifier, String) => T)(implicit mongoComponent: ReactiveMongoComponent)
     extends ReactiveRepository[T, BSONObjectID](
       collectionName,
       mongoComponent.mongoConnector.db,
@@ -62,16 +65,22 @@ abstract class BaseMappingRepository[T: Format: Manifest](
   def findBy(arn: Arn)(implicit ec: ExecutionContext): Future[List[T]] =
     find(Seq("arn" -> Some(arn)).map(option => option._1 -> toJsFieldJsValueWrapper(option._2.get)): _*)
 
+  def findBy(utr: Utr)(implicit ec: ExecutionContext): Future[List[T]] =
+    find(Seq("utr" -> Some(utr)).map(option => option._1 -> toJsFieldJsValueWrapper(option._2.get)): _*)
+
   override def indexes =
     Seq(
       Index(Seq("arn" -> Ascending, identifierKey -> Ascending), Some("arnAndIdentifier"), unique = true),
       Index(Seq("arn" -> Ascending), Some("AgentReferenceNumber")))
 
-  def store(arn: Arn, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit] =
-    insert(wrap(arn.value, identifierValue)).map(_ => ())
+  def store(identifier: TaxIdentifier, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit] =
+    insert(wrap(identifier, identifierValue)).map(_ => ())
 
   def delete(arn: Arn)(implicit ec: ExecutionContext): Future[WriteResult] =
     remove("arn" -> arn.value)
+
+  def delete(utr: Utr)(implicit ec: ExecutionContext): Future[WriteResult] =
+    remove("utr" -> utr.value)
 
 }
 

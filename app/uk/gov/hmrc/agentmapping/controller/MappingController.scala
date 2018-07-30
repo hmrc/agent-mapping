@@ -31,19 +31,21 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.{Retrievals, _}
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.HeaderCarrierConverter.fromHeadersAndSession
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
+import uk.gov.hmrc.auth.core.retrieve.Retrievals.authorisedEnrolments
 
 import scala.concurrent.Future
 
 @Singleton
 class MappingController @Inject()(
-  repositories: MappingRepositories,
-  desConnector: DesConnector,
-  auditService: AuditService,
-  val authConnector: AuthConnector)
-    extends BaseController
+                                   repositories: MappingRepositories,
+                                   desConnector: DesConnector,
+                                   auditService: AuditService,
+                                   val authConnector: AuthConnector)
+  extends BaseController
     with AuthorisedFunctions {
 
   import auditService._
@@ -75,7 +77,7 @@ class MappingController @Inject()(
                         if (allConflicted)
                           Conflict
                         else
-                        Created)
+                          Created)
                 case None => Future.successful(Forbidden)
               }
 
@@ -95,13 +97,13 @@ class MappingController @Inject()(
   }
 
   private def captureIdentifiersAndAgentCodeFrom(
-    enrolments: Enrolments,
-    agentCodeOpt: Option[String]): Option[Set[Identifier]] = {
+                                                  enrolments: Enrolments,
+                                                  agentCodeOpt: Option[String]): Option[Set[Identifier]] = {
     val identifiers = captureIdentifiersFrom(enrolments)
     if (identifiers.isEmpty) None
     else
       Some(agentCodeOpt match {
-        case None            => identifiers
+        case None => identifiers
         case Some(agentCode) => identifiers + Identifier(AgentCode, agentCode)
       })
   }
@@ -113,19 +115,27 @@ class MappingController @Inject()(
         case Some((service, identifiers)) => Identifier(service, identifiers.map(i => i.value).mkString("/"))
       }
 
-  private def createMappingInRepository(arn: Arn, identifier: Identifier, ggCredId: String)(
+  private def createMappingInRepository(businessId: TaxIdentifier, identifier: Identifier, ggCredId: String)(
     implicit hc: HeaderCarrier,
     request: Request[Any]): Future[Boolean] =
     repositories
       .get(identifier.key)
-      .store(arn, identifier.value)
+      .store(businessId, identifier.value)
       .map { _ =>
-        sendCreateMappingAuditEvent(arn, identifier, ggCredId)
+        businessId match {
+          case arn: Arn => sendCreateMappingAuditEvent(arn, identifier, ggCredId)
+          case _ => ()
+        }
+
         false
       }
       .recover {
         case e: DatabaseException if e.getMessage().contains("E11000") =>
-          sendCreateMappingAuditEvent(arn, identifier, ggCredId, duplicate = true)
+          businessId match {
+            case arn: Arn => sendCreateMappingAuditEvent(arn, identifier, ggCredId, duplicate = true)
+            case _ => ()
+          }
+
           Logger(getClass).warn(s"Duplicated mapping attempt for ${Service.asString(identifier.key)}")
           true
       }
@@ -174,7 +184,65 @@ class MappingController @Inject()(
       }
   }
 
+  def createPreSubscriptionMapping(utr: Utr) = Action.async { implicit request =>
+    implicit val hc = fromHeadersAndSession(request.headers, None)
+    authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
+      .retrieve(Retrievals.credentials and Retrievals.agentCode and Retrievals.allEnrolments) {
+        case credentials ~ agentCodeOpt ~ allEnrolments =>
+          captureIdentifiersAndAgentCodeFrom(allEnrolments, agentCodeOpt) match {
+            case Some(identifiers) =>
+              identifiers
+                .map(identifier => createMappingInRepository(utr, identifier, credentials.providerId))
+                .reduce((f1, f2) => f1.flatMap(b1 => f2.map(b2 => b1 & b2)))
+                .map(
+                  allConflicted =>
+                    if (allConflicted)
+                      Conflict
+                    else
+                      Created)
+            case None => Future.successful(Forbidden)
+          }
+      }
+      .recoverWith {
+        case ex: NoActiveSession =>
+          Logger(getClass).warn("No active session whilst trying to create mapping", ex)
+          Future.successful(Unauthorized)
+        case ex: AuthorisationException =>
+          Logger(getClass).warn("Authorisation exception whilst trying to create mapping", ex)
+          Future.successful(Forbidden)
+      }
+  }
+
+  def deletePreSubscriptionMapping(utr: Utr) = Action.async { implicit request =>
+    Future
+      .sequence(repositories.map(_.delete(utr)))
+      .map { _ =>
+        NoContent
+      }
+  }
+
+  def createPostSubscriptionMapping(utr: Utr) = Action.async { implicit request =>
+    authorised(
+      Enrolment("HMRC-AS-AGENT")
+        and AuthProviders(GovernmentGateway))
+      .retrieve(authorisedEnrolments) { enrolments =>
+        val arnOpt = getEnrolmentValue(enrolments, "HMRC-AS-AGENT", "AgentReferenceNumber")
+
+        arnOpt.map { arn =>
+          repositories.updateArn(Arn(arn), utr)
+          Future.successful(Ok)
+        }.getOrElse(throw new Exception("arn not found"))
+      }
+  }
+
+  private def getEnrolmentValue(enrolments: Enrolments, serviceName: String, identifierKey: String) =
+    for {
+      enrolment  <- enrolments.getEnrolment(serviceName)
+      identifier <- enrolment.getIdentifier(identifierKey)
+    } yield identifier.value
+
+
   private def writeAgentReferenceMappingWith(identifierFieldName: String): Writes[AgentReferenceMapping] =
     Writes[AgentReferenceMapping](m =>
-      Json.obj("arn" -> JsString(m.arn), identifierFieldName -> JsString(m.identifier)))
+      Json.obj("arn" -> JsString(m.businessId.value), identifierFieldName -> JsString(m.identifier)))
 }

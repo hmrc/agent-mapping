@@ -20,6 +20,9 @@ import javax.inject.{Inject, Singleton}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.model.Service._
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
+
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class MappingRepositories @Inject()(
@@ -54,6 +57,13 @@ class MappingRepositories @Inject()(
 
   def map[T](f: Repository => T): Seq[T] = repositories.values.map(f).toSeq
 
+  def updateArn(arn: Arn, utr: Utr)(implicit ec: ExecutionContext) = repositories.foreach { case (_, repository) =>
+    for {
+      identifiers <- repository.findBy(utr)
+      _ <- repository.delete(utr)
+      _ <- identifiers.map(x => repository.store(arn, x.identifier))
+    } yield ()
+  }
 }
 
 @Singleton

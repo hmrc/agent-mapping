@@ -4,7 +4,9 @@ PUT  /mappings/:utr/:arn                   @uk.gov.hmrc.agentmapping.controller.
 
 # DEPRECATED, use /mappings/:utr/:arn
 PUT  /mappings/:utr/:arn/:identifiers      @uk.gov.hmrc.agentmapping.controller.MappingController.createMapping(utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn, identifiers: String)
+
 GET  /mappings/eligibility                 @uk.gov.hmrc.agentmapping.controller.MappingController.hasEligibleEnrolments()
+
 # DEPRECATED, use /mappings/sa/:arn
 GET  /mappings/:arn                        @uk.gov.hmrc.agentmapping.controller.MappingController.findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
@@ -15,3 +17,6 @@ GET  /mappings/agentcode/:arn              @uk.gov.hmrc.agentmapping.controller.
 # supported keys: char,gts,mgd,novrn,ct,paye,sdlt
 GET  /mappings/key/:key/arn/:arn                   @uk.gov.hmrc.agentmapping.controller.MappingController.findMappings(key: String, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
+PUT /mappings/pre-subscription/:utr       @uk.gov.hmrc.agentmapping.controller.MappingController.createPreSubscriptionMapping(utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr)
+DELETE /mappings/pre-subscription/:utr       @uk.gov.hmrc.agentmapping.controller.MappingController.deletePreSubscriptionMapping(utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr)
+PUT /mappings/post-subscription/:utr       @uk.gov.hmrc.agentmapping.controller.MappingController.createPostSubscriptionMapping(utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr)
