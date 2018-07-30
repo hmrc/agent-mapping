@@ -19,7 +19,8 @@ trait AuthStubs {
     identifierValue: String,
     ggCredId: String,
     affinityGroup: AffinityGroup = AffinityGroup.Agent,
-    agentCodeOpt: Option[String]): Unit = {
+    agentCodeOpt: Option[String],
+    expectedRetrievals: Seq[String] = Seq("credentials","agentCode","allEnrolments")): Unit = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .atPriority(1)
@@ -28,7 +29,7 @@ trait AuthStubs {
              |  {"authProviders":["GovernmentGateway"]},
              |  {"affinityGroup":"$affinityGroup"}
              |],
-             |"retrieve":["credentials","agentCode","allEnrolments"]
+             |"retrieve":[${expectedRetrievals.mkString("\"", "\",\"", "\"")}]
           }""".stripMargin,
           true,
           false
@@ -108,5 +109,4 @@ trait AuthStubs {
           .withStatus(401)
           .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")))
   }
-
 }

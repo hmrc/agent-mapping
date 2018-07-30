@@ -25,8 +25,7 @@ responses:
         "hasEligibleEnrolments" : true | false
     }
 
-    401 UNAUTHORIZED    if user is not authenticated (missing bearer token or no active session)
-    403 FORBIDDEN       if user is not an agent
+    401 UNAUTHORIZED    if user is not authenticated (missing bearer token or no active session) or does not have agent affinity
 
 ### create mapping between ARN and available identifiers
 

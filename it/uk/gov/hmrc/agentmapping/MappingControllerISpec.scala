@@ -2,6 +2,7 @@ package uk.gov.hmrc.agentmapping
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
+import com.github.tomakehurst.wiremock.client.WireMock.{equalToJson, post, stubFor, urlEqualTo}
 import com.google.inject.AbstractModule
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -29,6 +30,9 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
   val IRAgentReference = "IRAgentReference"
   val AgentRefNo = "AgentRefNo"
+
+  def hasEligibleRequest: Resource =
+    new Resource(s"/agent-mapping/mappings/eligibility", port)
 
   def createMappingRequest(requestUtr: Utr = utr, requestArn: Arn = registeredArn): Resource =
     new Resource(s"/agent-mapping/mappings/${requestUtr.value}/${requestArn.value}", port)
@@ -368,34 +372,50 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
   }
 
   "hasEligibleEnrolments" should {
-    Seq(
-      IRCTAGENTTestFixture,
-      HMRCGTSAGNTTestFixture,
-      HMRCNOVRNAGNTTestFixture,
-      HMRCCHARAGENTTestFixture,
-      HMRCMGDAGNTTestFixture,
-      IRPAYEAGENTTestFixture,
-      IRSDLTAGENTTestFixture
-    ).foreach(behave like checkEligibility(_))
+    def request = hasEligibleRequest.get()
+
+    fixtures.foreach(behave like checkEligibility(_))
 
     def checkEligibility(testFixture: TestFixture) = {
-      s"return 200 status with a json body with hasEligibleEnrolments=true when user has enrolment: ${testFixture.key}" in {
-        fail("TODO")
+
+
+      s"return 200 status with a json body with hasEligibleEnrolments=true when user has enrolment: ${testFixture.service}" in {
+        givenUserIsAuthorisedFor(
+          testFixture.service,
+          testFixture.identifierKey,
+          testFixture.identifierValue,
+          "testCredId",
+          agentCodeOpt = Some(agentCode),
+          expectedRetrievals = Seq("allEnrolments")
+        )
+
+        request.status shouldBe 200
+        (request.json \ "hasEligibleEnrolments").as[Boolean] shouldBe true
       }
 
-      s"return 200 with hasEligibleEnrolments=false when user has only ineligible enrolment: ${testFixture.key}" in {
-        fail("TODO")
+      /*    s"return 200 with hasEligibleEnrolments=false when user has only ineligible enrolment: ${testFixture.key}" in {
+            givenUserIsAuthorisedFor(
+              "INVALID",
+              testFixture.identifierKey,
+              testFixture.identifierValue,
+              "testCredId",
+              agentCodeOpt = Some(agentCode))
 
-      }
+            request.status shouldBe 200
+            (request.json \ "hasEligibleEnrolments").as[Boolean] shouldBe false
+
+          }*/
 
       s"return 401 if user is not logged in for ${testFixture.key}" in {
-        fail("TODO")
+        givenUserNotAuthorisedWithError("MissingBearerToken")
 
+        request.status shouldBe 401
       }
 
-      s"return 403 if user is logged in but does not have agent affinity for ${testFixture.key}" in {
-        fail("TODO")
+      s"return 401 if user is logged in but does not have agent affinity for ${testFixture.key}" in {
+        givenUserNotAuthorisedWithError("UnsupportedAffinityGroup")
 
+        request.status shouldBe 401
       }
     }
   }
