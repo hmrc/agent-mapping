@@ -22,7 +22,7 @@ import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MappingRepositories @Inject()(
@@ -57,13 +57,14 @@ class MappingRepositories @Inject()(
 
   def map[T](f: Repository => T): Seq[T] = repositories.values.map(f).toSeq
 
-  def updateArn(arn: Arn, utr: Utr)(implicit ec: ExecutionContext) = repositories.foreach { case (_, repository) =>
-    for {
-      identifiers <- repository.findBy(utr)
-      _ <- repository.delete(utr)
-      _ <- identifiers.map(x => repository.store(arn, x.identifier))
-    } yield ()
-  }
+  def updateUtrToArn(arn: Arn, utr: Utr)(implicit ec: ExecutionContext): Future[Unit] =
+    Future
+      .sequence(repositories.map {
+        case (_, repository) =>
+          repository
+            .updateUtrToArn(utr, arn)
+      })
+      .map(_ => ())
 }
 
 @Singleton

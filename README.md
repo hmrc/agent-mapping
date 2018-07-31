@@ -46,7 +46,59 @@ responses:
     401 UNAUTHORIZED    if user is not authenticated (missing bearer token or no active session)
     403 FORBIDDEN       if provided ARN and UTR doesn't match Business Parter Record from ETMP
     409 CONFLICT        if all available identifiers has been already mapped
+    
+### create mapping between UTR and eligible enrolments before agent subscription
+
+    PUT  /mappings/pre-subscription/:utr
+   
+path parameters:   
+    
+    :utr - SA UTR to validate ARN
                    
+examples:
+    
+    PUT /agent-mapping/mappings/pre-subscription/2000000000
+    
+responses:
+
+    201 CREATED
+    401 UNAUTHORIZED    if user is not authenticated (missing bearer token or no active session)
+    409 CONFLICT        if all available identifiers has been already mapped    
+                   
+### update mapping between UTR and eligible enrolments to a valid ARN after agent subscription
+
+    PUT  /mappings/post-subscription/:utr
+   
+path parameters:   
+    
+    :utr - SA UTR to validate ARN
+                   
+examples:
+    
+    PUT /agent-mapping/mappings/post-subscription/2000000000
+    
+responses:
+
+    200 OK
+    401 UNAUTHORIZED    if user is not authenticated (missing bearer token or no active session)
+
+### delete mapping between UTR and eligible enrolments before agent subscription
+    
+    DELETE  /mappings/pre-subscription/:utr
+    
+path parameters:   
+    
+    :utr - SA UTR to validate ARN
+                   
+examples:
+    
+    DELETE /agent-mapping/mappings/pre-subscription/2000000000
+    
+responses:
+
+    204 NO_CONTENT
+    401 UNAUTHORIZED    if user is not authenticated (missing bearer token or no active session)    
+                       
 ### find SA mappings for the given ARN
 
     GET /agent-mapping/mappings/sa/:arn

@@ -174,5 +174,20 @@ abstract class BaseRepositoryISpec[
       val result: WriteResult = await(repository.delete(utr1))
       result.code shouldBe None
     }
+
+    "update records with utr to arn" in {
+      await(repository.store(utr1, reference1))
+
+      val mappings: List[ArnToIdentifierMapping] = await(repository.findAll())
+      mappings.size shouldBe 1
+
+      await(repository.updateUtrToArn(utr1, arn1))
+
+      val updatedMappings: List[ArnToIdentifierMapping] = await(repository.findAll())
+      updatedMappings.size shouldBe 1
+
+      updatedMappings.head.businessId shouldBe arn1
+      updatedMappings.head.identifier shouldBe reference1
+    }
   }
 }

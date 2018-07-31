@@ -37,6 +37,12 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
   def createMappingRequest(requestUtr: Utr = utr, requestArn: Arn = registeredArn): Resource =
     new Resource(s"/agent-mapping/mappings/${requestUtr.value}/${requestArn.value}", port)
 
+  def createPreSubscriptionMappingRequest(requestUtr: Utr = utr): Resource =
+    new Resource(s"/agent-mapping/mappings/pre-subscription/${requestUtr.value}", port)
+
+  def updatePostSubscriptionMappingRequest(requestUtr: Utr = utr): Resource =
+    new Resource(s"/agent-mapping/mappings/post-subscription/${requestUtr.value}", port)
+
   def createMappingRequestDeprecatedRoute(requestUtr: Utr = utr, requestArn: Arn = registeredArn): Resource =
     new Resource(
       s"/agent-mapping/mappings/${requestUtr.value}/${requestArn.value}/IRAgentReference~A1111A~AgentRefNo~101747696",
@@ -59,6 +65,9 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
   def deleteMappingsRequest(requestArn: Arn = registeredArn): Resource =
     new Resource(s"/agent-mapping/test-only/mappings/${requestArn.value}", port)
+
+  def deletePreSubscriptionMappingsRequest(requestUtr: Utr = utr): Resource =
+    new Resource(s"/agent-mapping/mappings/pre-subscription/${requestUtr.value}", port)
 
   case class TestFixture(service: Service.Name, identifierKey: String, identifierValue: String) {
     val key = Service.keyFor(service)
@@ -131,6 +140,29 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
           verifyCreateMappingAuditEventSent(f)
         }
 
+      }
+    }
+
+    fixtures.foreach { f =>
+      s"capture ${Service.asString(f.service)} enrolment for pre-subscription" when {
+        "return created upon success" in {
+          givenUserIsAuthorisedFor(f)
+
+          createPreSubscriptionMappingRequest().putEmpty().status shouldBe 201
+        }
+
+        "return created upon success w/o agent code" in {
+          givenUserIsAuthorisedFor(f.service, f.identifierKey, f.identifierValue, "testCredId", agentCodeOpt = None)
+
+          createPreSubscriptionMappingRequest().putEmpty().status shouldBe 201
+        }
+
+        "return conflict when the mapping already exists" in {
+          givenUserIsAuthorisedFor(f)
+
+          createPreSubscriptionMappingRequest().putEmpty().status shouldBe 201
+          createPreSubscriptionMappingRequest().putEmpty().status shouldBe 409
+        }
       }
     }
 
@@ -259,6 +291,33 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     }
   }
 
+  "update enrolment for post-subscription" should {
+    "return 200 when succeeds" in {
+      await(saRepo.store(utr, "A1111A"))
+      givenUserIsAuthorisedAsAgent(registeredArn.value)
+
+      updatePostSubscriptionMappingRequest(utr).putEmpty().status shouldBe 200
+
+      val updatedMapping = await(saRepo.findAll())
+      updatedMapping.size shouldBe 1
+      updatedMapping.head.businessId.value shouldBe registeredArn.value
+    }
+
+    "return 200 when user does not have mappings" in {
+      givenUserIsAuthorisedAsAgent(registeredArn.value)
+
+      await(saRepo.findAll()).size shouldBe 0
+
+      updatePostSubscriptionMappingRequest(utr).putEmpty().status shouldBe 200
+    }
+
+    "return 401 when user is not authenticated" in {
+      givenUserNotAuthorisedWithError("MissingBearerToken")
+
+      updatePostSubscriptionMappingRequest(utr).putEmpty().status shouldBe 401
+    }
+  }
+
   "find mapping requests" should {
     "return 200 status with a json body representing the mappings that match the supplied arn" in {
       await(saRepo.store(registeredArn, "A1111A"))
@@ -371,13 +430,32 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     }
   }
 
+  "delete records with utr for pre-subscription" should {
+    "return no content when a record is deleted" in {
+      await(saRepo.store(utr, "foo"))
+
+      val foundResponse = await(saRepo.findAll())
+      foundResponse.size shouldBe 1
+
+      val deleteResponse = deletePreSubscriptionMappingsRequest().delete()
+      deleteResponse.status shouldBe 204
+
+      val notFoundResponse = await(saRepo.findAll())
+      notFoundResponse.size shouldBe 0
+    }
+
+    "return no content when no record is deleted" in {
+      val deleteResponse = deleteMappingsRequest().delete()
+      deleteResponse.status shouldBe 204
+    }
+  }
+
   "hasEligibleEnrolments" should {
     def request = hasEligibleRequest.get()
 
     fixtures.foreach(behave like checkEligibility(_))
 
     def checkEligibility(testFixture: TestFixture) = {
-
 
       s"return 200 status with a json body with hasEligibleEnrolments=true when user has enrolment: ${testFixture.service}" in {
         givenUserIsAuthorisedFor(
@@ -391,18 +469,6 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
         request.status shouldBe 200
         (request.json \ "hasEligibleEnrolments").as[Boolean] shouldBe true
-      }
-
-      s"return 200 with hasEligibleEnrolments=false when user has only ineligible enrolment: ${testFixture.key}" in {
-        givenUserIsAuthorisedFor(
-          "INVALID",
-          testFixture.identifierKey,
-          testFixture.identifierValue,
-          "testCredId",
-          agentCodeOpt = Some(agentCode))
-
-        request.status shouldBe 200
-        (request.json \ "hasEligibleEnrolments").as[Boolean] shouldBe false
       }
 
       s"return 401 if user is not logged in for ${testFixture.key}" in {

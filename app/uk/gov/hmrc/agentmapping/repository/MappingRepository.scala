@@ -17,25 +17,27 @@
 package uk.gov.hmrc.agentmapping.repository
 
 import javax.inject.Inject
-import play.api.libs.json.Format
+import play.api.libs.json.{Format, Json}
 import play.api.libs.json.Json.{JsValueWrapper, toJsFieldJsValueWrapper}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.ReadPreference
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
-import reactivemongo.bson.BSONObjectID
-import uk.gov.hmrc.agentmapping.model.{AgentReferenceMapping}
+import reactivemongo.bson.{BSONDocument, BSONObjectID}
+import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.mongo.ReactiveRepository
+import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import reactivemongo.play.json.ImplicitBSONHandlers._
 
 import scala.collection.Seq
 import scala.concurrent.{ExecutionContext, Future}
 
 trait MappingRepository {
   def store(identifier: TaxIdentifier, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit]
+  def updateUtrToArn(utr: Utr, arn: Arn)(implicit ec: ExecutionContext): Future[Unit]
 }
 
 trait RepositoryFunctions[T] {
@@ -76,12 +78,22 @@ abstract class BaseMappingRepository[T: Format: Manifest](
   def store(identifier: TaxIdentifier, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit] =
     insert(wrap(identifier, identifierValue)).map(_ => ())
 
+  def updateUtrToArn(utr: Utr, arn: Arn)(implicit ec: ExecutionContext): Future[Unit] = {
+    val selector = Json.obj("utr" -> utr.value)
+    val update = Json.obj(
+      "$set" -> Json.obj("arn" -> arn.value)
+    )
+
+    collection
+      .update(selector, update, upsert = false)
+      .map(_ => ())
+  }
+
   def delete(arn: Arn)(implicit ec: ExecutionContext): Future[WriteResult] =
     remove("arn" -> arn.value)
 
   def delete(utr: Utr)(implicit ec: ExecutionContext): Future[WriteResult] =
     remove("utr" -> utr.value)
-
 }
 
 abstract class NewMappingRepository @Inject()(serviceName: String)(implicit mongoComponent: ReactiveMongoComponent)

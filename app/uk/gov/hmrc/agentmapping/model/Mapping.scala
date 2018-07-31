@@ -63,6 +63,6 @@ object AgentReferenceMapping extends ReactiveMongoFormats {
       } else JsError("invalid json")
   }
 
- implicit val formats: Format[AgentReferenceMapping] = Format(reads, writes)
+  implicit val formats: Format[AgentReferenceMapping] = Format(reads, writes)
 
 }

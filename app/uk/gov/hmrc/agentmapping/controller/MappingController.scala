@@ -41,11 +41,11 @@ import scala.concurrent.Future
 
 @Singleton
 class MappingController @Inject()(
-                                   repositories: MappingRepositories,
-                                   desConnector: DesConnector,
-                                   auditService: AuditService,
-                                   val authConnector: AuthConnector)
-  extends BaseController
+  repositories: MappingRepositories,
+  desConnector: DesConnector,
+  auditService: AuditService,
+  val authConnector: AuthConnector)
+    extends BaseController
     with AuthorisedFunctions {
 
   import auditService._
@@ -77,7 +77,7 @@ class MappingController @Inject()(
                         if (allConflicted)
                           Conflict
                         else
-                          Created)
+                        Created)
                 case None => Future.successful(Forbidden)
               }
 
@@ -97,13 +97,13 @@ class MappingController @Inject()(
   }
 
   private def captureIdentifiersAndAgentCodeFrom(
-                                                  enrolments: Enrolments,
-                                                  agentCodeOpt: Option[String]): Option[Set[Identifier]] = {
+    enrolments: Enrolments,
+    agentCodeOpt: Option[String]): Option[Set[Identifier]] = {
     val identifiers = captureIdentifiersFrom(enrolments)
     if (identifiers.isEmpty) None
     else
       Some(agentCodeOpt match {
-        case None => identifiers
+        case None            => identifiers
         case Some(agentCode) => identifiers + Identifier(AgentCode, agentCode)
       })
   }
@@ -124,7 +124,7 @@ class MappingController @Inject()(
       .map { _ =>
         businessId match {
           case arn: Arn => sendCreateMappingAuditEvent(arn, identifier, ggCredId)
-          case _ => ()
+          case _        => ()
         }
 
         false
@@ -133,7 +133,7 @@ class MappingController @Inject()(
         case e: DatabaseException if e.getMessage().contains("E11000") =>
           businessId match {
             case arn: Arn => sendCreateMappingAuditEvent(arn, identifier, ggCredId, duplicate = true)
-            case _ => ()
+            case _        => ()
           }
 
           Logger(getClass).warn(s"Duplicated mapping attempt for ${Service.asString(identifier.key)}")
@@ -199,7 +199,7 @@ class MappingController @Inject()(
                     if (allConflicted)
                       Conflict
                     else
-                      Created)
+                    Created)
             case None => Future.successful(Forbidden)
           }
       }
@@ -228,10 +228,11 @@ class MappingController @Inject()(
       .retrieve(authorisedEnrolments) { enrolments =>
         val arnOpt = getEnrolmentValue(enrolments, "HMRC-AS-AGENT", "AgentReferenceNumber")
 
-        arnOpt.map { arn =>
-          repositories.updateArn(Arn(arn), utr)
-          Future.successful(Ok)
-        }.getOrElse(throw new Exception("arn not found"))
+        arnOpt match {
+          case Some(arn) =>
+            repositories.updateUtrToArn(Arn(arn), utr).map(_ => Ok)
+          case None => Future.successful(Forbidden)
+        }
       }
   }
 
@@ -240,7 +241,6 @@ class MappingController @Inject()(
       enrolment  <- enrolments.getEnrolment(serviceName)
       identifier <- enrolment.getIdentifier(identifierKey)
     } yield identifier.value
-
 
   private def writeAgentReferenceMappingWith(identifierFieldName: String): Writes[AgentReferenceMapping] =
     Writes[AgentReferenceMapping](m =>
