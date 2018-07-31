@@ -73,7 +73,10 @@ abstract class BaseMappingRepository[T: Format: Manifest](
   override def indexes =
     Seq(
       Index(Seq("arn" -> Ascending, identifierKey -> Ascending), Some("arnAndIdentifier"), unique = true),
-      Index(Seq("arn" -> Ascending), Some("AgentReferenceNumber")))
+      Index(Seq("utr" -> Ascending, identifierKey -> Ascending), Some("utrAndIdentifier"), unique = true),
+      Index(Seq("arn" -> Ascending), Some("AgentReferenceNumber")),
+      Index(Seq("utr" -> Ascending), Some("Utr"))
+    )
 
   def store(identifier: TaxIdentifier, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit] =
     insert(wrap(identifier, identifierValue)).map(_ => ())

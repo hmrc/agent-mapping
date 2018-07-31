@@ -42,7 +42,7 @@ abstract class BaseRepositoryISpec[
   val arn2 = Arn("ARN00002")
 
   val utr1 = Utr("4000000009")
-  val utr2 = Arn("7000000002")
+  val utr2 = Utr("7000000002")
 
   val reference1 = "Ref0001"
   val reference2 = "Ref0002"

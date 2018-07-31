@@ -47,7 +47,6 @@ object AgentReferenceMapping extends ReactiveMongoFormats {
       case AgentReferenceMapping(Arn(arn), identifier) => Json.obj("arn" -> arn, "identifier" -> identifier)
       case AgentReferenceMapping(Utr(utr), identifier) => Json.obj("utr" -> utr, "identifier" -> identifier)
     }
-
   }
 
   implicit val reads: Reads[AgentReferenceMapping] = new Reads[AgentReferenceMapping] {
@@ -64,5 +63,4 @@ object AgentReferenceMapping extends ReactiveMongoFormats {
   }
 
   implicit val formats: Format[AgentReferenceMapping] = Format(reads, writes)
-
 }
