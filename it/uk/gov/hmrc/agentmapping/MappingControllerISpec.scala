@@ -30,8 +30,17 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
   val IRAgentReference = "IRAgentReference"
   val AgentRefNo = "AgentRefNo"
 
+  def hasEligibleRequest: Resource =
+    new Resource(s"/agent-mapping/mappings/eligibility", port)
+
   def createMappingRequest(requestUtr: Utr = utr, requestArn: Arn = registeredArn): Resource =
     new Resource(s"/agent-mapping/mappings/${requestUtr.value}/${requestArn.value}", port)
+
+  def createPreSubscriptionMappingRequest(requestUtr: Utr = utr): Resource =
+    new Resource(s"/agent-mapping/mappings/pre-subscription/${requestUtr.value}", port)
+
+  def updatePostSubscriptionMappingRequest(requestUtr: Utr = utr): Resource =
+    new Resource(s"/agent-mapping/mappings/post-subscription/${requestUtr.value}", port)
 
   def createMappingRequestDeprecatedRoute(requestUtr: Utr = utr, requestArn: Arn = registeredArn): Resource =
     new Resource(
@@ -55,6 +64,9 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
   def deleteMappingsRequest(requestArn: Arn = registeredArn): Resource =
     new Resource(s"/agent-mapping/test-only/mappings/${requestArn.value}", port)
+
+  def deletePreSubscriptionMappingsRequest(requestUtr: Utr = utr): Resource =
+    new Resource(s"/agent-mapping/mappings/pre-subscription/${requestUtr.value}", port)
 
   case class TestFixture(service: Service.Name, identifierKey: String, identifierValue: String) {
     val key = Service.keyFor(service)
@@ -127,6 +139,35 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
           verifyCreateMappingAuditEventSent(f)
         }
 
+      }
+    }
+
+    fixtures.foreach { f =>
+      s"capture ${Service.asString(f.service)} enrolment for pre-subscription" when {
+        "return created upon success" in {
+          givenUserIsAuthorisedFor(f)
+
+          createPreSubscriptionMappingRequest().putEmpty().status shouldBe 201
+        }
+
+        "return created upon success w/o agent code" in {
+          givenUserIsAuthorisedFor(f.service, f.identifierKey, f.identifierValue, "testCredId", agentCodeOpt = None)
+
+          createPreSubscriptionMappingRequest().putEmpty().status shouldBe 201
+        }
+
+        "return conflict when the mapping already exists" in {
+          givenUserIsAuthorisedFor(f)
+
+          createPreSubscriptionMappingRequest().putEmpty().status shouldBe 201
+          createPreSubscriptionMappingRequest().putEmpty().status shouldBe 409
+        }
+
+        "return forbidden when an authorisation error occurs" in {
+          givenUserNotAuthorisedWithError("InsufficientEnrolments")
+
+          createPreSubscriptionMappingRequest().putEmpty().status shouldBe 403
+        }
       }
     }
 
@@ -255,6 +296,39 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     }
   }
 
+  "update enrolment for post-subscription" should {
+    "return 200 when succeeds" in {
+      await(saRepo.store(utr, "A1111A"))
+      givenUserIsAuthorisedAsAgent(registeredArn.value)
+
+      updatePostSubscriptionMappingRequest(utr).putEmpty().status shouldBe 200
+
+      val updatedMapping = await(saRepo.findAll())
+      updatedMapping.size shouldBe 1
+      updatedMapping.head.businessId.value shouldBe registeredArn.value
+    }
+
+    "return 200 when user does not have mappings" in {
+      givenUserIsAuthorisedAsAgent(registeredArn.value)
+
+      await(saRepo.findAll()).size shouldBe 0
+
+      updatePostSubscriptionMappingRequest(utr).putEmpty().status shouldBe 200
+    }
+
+    "return 401 when user is not authenticated" in {
+      givenUserNotAuthorisedWithError("MissingBearerToken")
+
+      updatePostSubscriptionMappingRequest(utr).putEmpty().status shouldBe 401
+    }
+
+    "return 403 when an authorisation error occurs" in {
+      givenUserNotAuthorisedWithError("InsufficientEnrolments")
+
+      updatePostSubscriptionMappingRequest(utr).putEmpty().status shouldBe 403
+    }
+  }
+
   "find mapping requests" should {
     "return 200 status with a json body representing the mappings that match the supplied arn" in {
       await(saRepo.store(registeredArn, "A1111A"))
@@ -367,6 +441,73 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     }
   }
 
+  "delete records with utr for pre-subscription" should {
+    "return no content when a record is deleted" in {
+      await(saRepo.store(utr, "foo"))
+
+      val foundResponse = await(saRepo.findAll())
+      foundResponse.size shouldBe 1
+
+      val deleteResponse = deletePreSubscriptionMappingsRequest().delete()
+      deleteResponse.status shouldBe 204
+
+      val notFoundResponse = await(saRepo.findAll())
+      notFoundResponse.size shouldBe 0
+    }
+
+    "return no content when no record is deleted" in {
+      val deleteResponse = deleteMappingsRequest().delete()
+      deleteResponse.status shouldBe 204
+    }
+  }
+
+  "hasEligibleEnrolments" should {
+    def request = hasEligibleRequest.get()
+
+    fixtures.foreach(behave like checkEligibility(_))
+
+    def checkEligibility(testFixture: TestFixture) = {
+
+      s"return 200 status with a json body with hasEligibleEnrolments=true when user has enrolment: ${testFixture.service}" in {
+        givenUserIsAuthorisedFor(
+          testFixture.service,
+          testFixture.identifierKey,
+          testFixture.identifierValue,
+          "testCredId",
+          agentCodeOpt = Some(agentCode),
+          expectedRetrievals = Seq("allEnrolments")
+        )
+
+        request.status shouldBe 200
+        (request.json \ "hasEligibleEnrolments").as[Boolean] shouldBe true
+      }
+
+      s"return 200 with hasEligibleEnrolments=false when user has only ineligible enrolment: ${testFixture.key}" in {
+        givenUserIsAuthorisedWithNoEnrolments(
+          testFixture.service,
+          testFixture.identifierKey,
+          testFixture.identifierValue,
+          "testCredId",
+          agentCodeOpt = Some(agentCode)
+        )
+        request.status shouldBe 200
+        (request.json \ "hasEligibleEnrolments").as[Boolean] shouldBe false
+      }
+
+      s"return 401 if user is not logged in for ${testFixture.key}" in {
+        givenUserNotAuthorisedWithError("MissingBearerToken")
+
+        request.status shouldBe 401
+      }
+
+      s"return 401 if user is logged in but does not have agent affinity for ${testFixture.key}" in {
+        givenUserNotAuthorisedWithError("UnsupportedAffinityGroup")
+
+        request.status shouldBe 401
+      }
+    }
+  }
+
   private def givenUserIsAuthorisedFor(f: TestFixture): Unit =
     givenUserIsAuthorisedFor(
       f.service,
@@ -393,35 +534,35 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
       1,
       event = AgentMappingEvent.CreateMapping,
       detail = Map(
-        "identifier"           -> f.identifierValue,
-        "identifierType"       -> Service.asString(f.service),
+        "identifier" -> f.identifierValue,
+        "identifierType" -> Service.asString(f.service),
         "agentReferenceNumber" -> "AARN0000002",
-        "authProviderId"       -> "testCredId",
-        "duplicate"            -> s"$duplicate"
+        "authProviderId" -> "testCredId",
+        "duplicate" -> s"$duplicate"
       ),
       tags = Map("transactionName" -> "create-mapping", "path" -> "/agent-mapping/mappings/2000000000/AARN0000002")
     )
 
   private def verifyKnownFactsCheckAuditEventSent(
-    times: Int,
-    matched: Boolean = true,
-    arn: String = "AARN0000002",
-    utr: String = "2000000000") =
+                                                   times: Int,
+                                                   matched: Boolean = true,
+                                                   arn: String = "AARN0000002",
+                                                   utr: String = "2000000000") =
     verifyAuditRequestSent(
       times,
       event = AgentMappingEvent.KnownFactsCheck,
       detail = Map(
-        "knownFactsMatched"        -> s"$matched",
-        "utr"                      -> utr,
-        "agentReferenceNumber"     -> arn,
-        "authProviderId"           -> "testCredId"),
+        "knownFactsMatched" -> s"$matched",
+        "utr" -> utr,
+        "agentReferenceNumber" -> arn,
+        "authProviderId" -> "testCredId"),
       tags = Map("transactionName" -> "known-facts-check", "path" -> s"/agent-mapping/mappings/$utr/$arn")
     )
 
 }
 
 sealed trait MappingControllerISpecSetup
-    extends UnitSpec with MongoApp with WireMockSupport with DesStubs with AuthStubs with DataStreamStub {
+  extends UnitSpec with MongoApp with WireMockSupport with DesStubs with AuthStubs with DataStreamStub {
 
   implicit val actorSystem = ActorSystem()
   implicit val materializer = ActorMaterializer()
@@ -443,11 +584,11 @@ sealed trait MappingControllerISpecSetup
         mongoConfiguration ++
           Map(
             "microservice.services.auth.port" -> wireMockPort,
-            "microservice.services.des.port"  -> wireMockPort,
-            "auditing.consumer.baseUri.host"  -> wireMockHost,
-            "auditing.consumer.baseUri.port"  -> wireMockPort,
-            "application.router"              -> "testOnlyDoNotUseInAppConf.Routes",
-            "migrate-repositories"            -> "false"
+            "microservice.services.des.port" -> wireMockPort,
+            "auditing.consumer.baseUri.host" -> wireMockHost,
+            "auditing.consumer.baseUri.port" -> wireMockPort,
+            "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
+            "migrate-repositories" -> "false"
           ))
       .overrides(new TestGuiceModule)
 

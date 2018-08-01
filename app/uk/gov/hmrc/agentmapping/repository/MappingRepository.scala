@@ -17,39 +17,44 @@
 package uk.gov.hmrc.agentmapping.repository
 
 import javax.inject.Inject
-import play.api.libs.json.Format
+import play.api.libs.json.{Format, Json}
 import play.api.libs.json.Json.{JsValueWrapper, toJsFieldJsValueWrapper}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.ReadPreference
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
-import reactivemongo.bson.BSONObjectID
+import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.mongo.ReactiveRepository
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
+import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import reactivemongo.play.json.ImplicitBSONHandlers._
 
 import scala.collection.Seq
 import scala.concurrent.{ExecutionContext, Future}
 
 trait MappingRepository {
-  def store(arn: Arn, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit]
+  def store(identifier: TaxIdentifier, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit]
+  def updateUtrToArn(utr: Utr, arn: Arn)(implicit ec: ExecutionContext): Future[Unit]
 }
 
 trait RepositoryFunctions[T] {
   def find(query: (String, JsValueWrapper)*)(implicit ec: ExecutionContext): Future[List[T]]
   def findBy(arn: Arn)(implicit ec: ExecutionContext): Future[List[T]]
+  def findBy(utr: Utr)(implicit ec: ExecutionContext): Future[List[T]]
   def findAll(readPreference: ReadPreference = ReadPreference.primaryPreferred)(
     implicit ec: ExecutionContext): Future[List[T]]
   def delete(arn: Arn)(implicit ec: ExecutionContext): Future[WriteResult]
+  def delete(utr: Utr)(implicit ec: ExecutionContext): Future[WriteResult]
   def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]]
 }
 
 abstract class BaseMappingRepository[T: Format: Manifest](
   collectionName: String,
   identifierKey: String,
-  wrap: (String, String) => T)(implicit mongoComponent: ReactiveMongoComponent)
+  wrap: (TaxIdentifier, String) => T)(implicit mongoComponent: ReactiveMongoComponent)
     extends ReactiveRepository[T, BSONObjectID](
       collectionName,
       mongoComponent.mongoConnector.db,
@@ -62,17 +67,47 @@ abstract class BaseMappingRepository[T: Format: Manifest](
   def findBy(arn: Arn)(implicit ec: ExecutionContext): Future[List[T]] =
     find(Seq("arn" -> Some(arn)).map(option => option._1 -> toJsFieldJsValueWrapper(option._2.get)): _*)
 
+  def findBy(utr: Utr)(implicit ec: ExecutionContext): Future[List[T]] =
+    find(Seq("utr" -> Some(utr)).map(option => option._1 -> toJsFieldJsValueWrapper(option._2.get)): _*)
+
   override def indexes =
     Seq(
-      Index(Seq("arn" -> Ascending, identifierKey -> Ascending), Some("arnAndIdentifier"), unique = true),
-      Index(Seq("arn" -> Ascending), Some("AgentReferenceNumber")))
+      Index(
+        Seq("arn" -> Ascending, identifierKey -> Ascending),
+        Some("arnAndIdentifier"),
+        unique = true,
+        partialFilter = Some(BSONDocument("arn" -> BSONDocument("$exists" -> true)))
+      ),
+      Index(
+        Seq("utr" -> Ascending, identifierKey -> Ascending),
+        Some("utrAndIdentifier"),
+        unique = true,
+        partialFilter = Some(BSONDocument("utr" -> BSONDocument("$exists" -> true))),
+        options = BSONDocument("expireAfterSeconds" -> 86400)
+      ),
+      Index(Seq("arn" -> Ascending), Some("AgentReferenceNumber")),
+      Index(Seq("utr" -> Ascending), Some("Utr"))
+    )
 
-  def store(arn: Arn, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit] =
-    insert(wrap(arn.value, identifierValue)).map(_ => ())
+  def store(identifier: TaxIdentifier, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit] =
+    insert(wrap(identifier, identifierValue)).map(_ => ())
+
+  def updateUtrToArn(utr: Utr, arn: Arn)(implicit ec: ExecutionContext): Future[Unit] = {
+    val selector = Json.obj("utr" -> utr.value)
+    val update = Json.obj(
+      "$set" -> Json.obj("arn" -> arn.value)
+    )
+
+    collection
+      .update(selector, update, upsert = false)
+      .map(_ => ())
+  }
 
   def delete(arn: Arn)(implicit ec: ExecutionContext): Future[WriteResult] =
     remove("arn" -> arn.value)
 
+  def delete(utr: Utr)(implicit ec: ExecutionContext): Future[WriteResult] =
+    remove("utr" -> utr.value)
 }
 
 abstract class NewMappingRepository @Inject()(serviceName: String)(implicit mongoComponent: ReactiveMongoComponent)

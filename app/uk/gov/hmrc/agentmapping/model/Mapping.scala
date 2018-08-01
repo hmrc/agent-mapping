@@ -16,8 +16,10 @@
 
 package uk.gov.hmrc.agentmapping.model
 
-import play.api.libs.json.Format
+import play.api.libs.json._
 import play.api.libs.json.Json.format
+import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
+import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
 
 case class Mapping(arn: String, identifiers: Seq[Identifier])
@@ -33,12 +35,32 @@ object AgentReferenceMappings extends ReactiveMongoFormats {
 }
 
 trait ArnToIdentifierMapping {
-  def arn: String
+  def businessId: TaxIdentifier
   def identifier: String
 }
 
-case class AgentReferenceMapping(arn: String, identifier: String) extends ArnToIdentifierMapping
+case class AgentReferenceMapping(businessId: TaxIdentifier, identifier: String) extends ArnToIdentifierMapping
 
 object AgentReferenceMapping extends ReactiveMongoFormats {
-  implicit val formats: Format[AgentReferenceMapping] = format[AgentReferenceMapping]
+  implicit val writes: Writes[AgentReferenceMapping] = new Writes[AgentReferenceMapping] {
+    override def writes(o: AgentReferenceMapping): JsValue = o match {
+      case AgentReferenceMapping(Arn(arn), identifier) => Json.obj("arn" -> arn, "identifier" -> identifier)
+      case AgentReferenceMapping(Utr(utr), identifier) => Json.obj("utr" -> utr, "identifier" -> identifier)
+    }
+  }
+
+  implicit val reads: Reads[AgentReferenceMapping] = new Reads[AgentReferenceMapping] {
+    override def reads(json: JsValue): JsResult[AgentReferenceMapping] =
+      if ((json \ "arn").toOption.isDefined) {
+        val arn = (json \ "arn").as[Arn]
+        val identifier = (json \ "identifier").as[String]
+        JsSuccess(AgentReferenceMapping(arn, identifier))
+      } else if ((json \ "utr").toOption.isDefined) {
+        val utr = (json \ "utr").as[Utr]
+        val identifier = (json \ "identifier").as[String]
+        JsSuccess(AgentReferenceMapping(utr, identifier))
+      } else JsError("invalid json")
+  }
+
+  implicit val formats: Format[AgentReferenceMapping] = Format(reads, writes)
 }
