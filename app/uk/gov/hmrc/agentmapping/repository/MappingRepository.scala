@@ -72,8 +72,19 @@ abstract class BaseMappingRepository[T: Format: Manifest](
 
   override def indexes =
     Seq(
-      Index(Seq("arn" -> Ascending, identifierKey -> Ascending), Some("arnAndIdentifier"), unique = true),
-      Index(Seq("utr" -> Ascending, identifierKey -> Ascending), Some("utrAndIdentifier"), unique = true),
+      Index(
+        Seq("arn" -> Ascending, identifierKey -> Ascending),
+        Some("arnAndIdentifier"),
+        unique = true,
+        partialFilter = Some(BSONDocument("arn" -> BSONDocument("$exists" -> true)))
+      ),
+      Index(
+        Seq("utr" -> Ascending, identifierKey -> Ascending),
+        Some("utrAndIdentifier"),
+        unique = true,
+        partialFilter = Some(BSONDocument("utr" -> BSONDocument("$exists" -> true))),
+        options = BSONDocument("expireAfterSeconds" -> 86400)
+      ),
       Index(Seq("arn" -> Ascending), Some("AgentReferenceNumber")),
       Index(Seq("utr" -> Ascending), Some("Utr"))
     )
