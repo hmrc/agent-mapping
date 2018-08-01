@@ -41,11 +41,11 @@ import scala.concurrent.Future
 
 @Singleton
 class MappingController @Inject()(
-  repositories: MappingRepositories,
-  desConnector: DesConnector,
-  auditService: AuditService,
-  val authConnector: AuthConnector)
-    extends BaseController
+                                   repositories: MappingRepositories,
+                                   desConnector: DesConnector,
+                                   auditService: AuditService,
+                                   val authConnector: AuthConnector)
+  extends BaseController
     with AuthorisedFunctions {
 
   import auditService._
@@ -77,7 +77,7 @@ class MappingController @Inject()(
                         if (allConflicted)
                           Conflict
                         else
-                        Created)
+                          Created)
                 case None => Future.successful(Forbidden)
               }
 
@@ -97,13 +97,13 @@ class MappingController @Inject()(
   }
 
   private def captureIdentifiersAndAgentCodeFrom(
-    enrolments: Enrolments,
-    agentCodeOpt: Option[String]): Option[Set[Identifier]] = {
+                                                  enrolments: Enrolments,
+                                                  agentCodeOpt: Option[String]): Option[Set[Identifier]] = {
     val identifiers = captureIdentifiersFrom(enrolments)
     if (identifiers.isEmpty) None
     else
       Some(agentCodeOpt match {
-        case None            => identifiers
+        case None => identifiers
         case Some(agentCode) => identifiers + Identifier(AgentCode, agentCode)
       })
   }
@@ -124,7 +124,7 @@ class MappingController @Inject()(
       .map { _ =>
         businessId match {
           case arn: Arn => sendCreateMappingAuditEvent(arn, identifier, ggCredId)
-          case _        => ()
+          case _ => ()
         }
 
         false
@@ -133,7 +133,7 @@ class MappingController @Inject()(
         case e: DatabaseException if e.getMessage().contains("E11000") =>
           businessId match {
             case arn: Arn => sendCreateMappingAuditEvent(arn, identifier, ggCredId, duplicate = true)
-            case _        => ()
+            case _ => ()
           }
 
           Logger(getClass).warn(s"Duplicated mapping attempt for ${Service.asString(identifier.key)}")
@@ -199,17 +199,17 @@ class MappingController @Inject()(
                     if (allConflicted)
                       Conflict
                     else
-                    Created)
+                      Created)
             case None => Future.successful(Forbidden)
           }
       }
-      .recoverWith {
+      .recover {
         case ex: NoActiveSession =>
           Logger(getClass).warn("No active session whilst trying to create mapping", ex)
-          Future.successful(Unauthorized)
+          Unauthorized
         case ex: AuthorisationException =>
           Logger(getClass).warn("Authorisation exception whilst trying to create mapping", ex)
-          Future.successful(Forbidden)
+          Forbidden
       }
   }
 
@@ -233,12 +233,19 @@ class MappingController @Inject()(
             repositories.updateUtrToArn(Arn(arn), utr).map(_ => Ok)
           case None => Future.successful(Forbidden)
         }
-      }
+      }.recover {
+      case ex: NoActiveSession =>
+        Logger(getClass).warn("No active session whilst trying to create mapping", ex)
+        Unauthorized
+      case ex: AuthorisationException =>
+        Logger(getClass).warn("Authorisation exception whilst trying to create mapping", ex)
+        Forbidden
+    }
   }
 
   private def getEnrolmentValue(enrolments: Enrolments, serviceName: String, identifierKey: String) =
     for {
-      enrolment  <- enrolments.getEnrolment(serviceName)
+      enrolment <- enrolments.getEnrolment(serviceName)
       identifier <- enrolment.getIdentifier(identifierKey)
     } yield identifier.value
 

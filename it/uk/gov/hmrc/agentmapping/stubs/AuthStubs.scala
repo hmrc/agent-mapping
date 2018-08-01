@@ -1,9 +1,7 @@
 package uk.gov.hmrc.agentmapping.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
-import play.api.test.FakeRequest
 import uk.gov.hmrc.auth.core.{AffinityGroup, Enrolment}
-import uk.gov.hmrc.http.SessionKeys
 
 trait AuthStubs {
 
@@ -147,5 +145,41 @@ trait AuthStubs {
                  |]}
           """.stripMargin)))
 
+  }
+
+  def givenUserIsAuthorisedWithNoEnrolments(
+                                serviceName: String,
+                                identifierName: String,
+                                identifierValue: String,
+                                ggCredId: String,
+                                affinityGroup: AffinityGroup = AffinityGroup.Agent,
+                                agentCodeOpt: Option[String]): Unit = {
+    stubFor(
+      post(urlEqualTo("/auth/authorise"))
+        .atPriority(1)
+        .withRequestBody(equalToJson(
+          s"""{"authorise":[
+             |  {"authProviders":["GovernmentGateway"]},
+             |  {"affinityGroup":"$affinityGroup"}
+             |],
+             |"retrieve":["allEnrolments"]
+          }""".stripMargin,
+          true,
+          false
+        ))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withHeader("Content-Type", "application/json")
+            .withBody(
+              s"""
+                 |{ "credentials": {
+                 |    "providerId": "$ggCredId",
+                 |    "providerType": "GovernmmentGateway"
+                 |  }
+                 |  ${agentCodeOpt.map(ac => s""", "agentCode": "$ac" """).getOrElse("")},
+                 |  "allEnrolments": []
+                 |}
+                 |""".stripMargin)))
   }
 }

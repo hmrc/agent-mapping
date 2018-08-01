@@ -2,7 +2,6 @@ package uk.gov.hmrc.agentmapping
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
-import com.github.tomakehurst.wiremock.client.WireMock.{equalToJson, post, stubFor, urlEqualTo}
 import com.google.inject.AbstractModule
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -163,6 +162,12 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
           createPreSubscriptionMappingRequest().putEmpty().status shouldBe 201
           createPreSubscriptionMappingRequest().putEmpty().status shouldBe 409
         }
+
+        "return forbidden when an authorisation error occurs" in {
+          givenUserNotAuthorisedWithError("InsufficientEnrolments")
+
+          createPreSubscriptionMappingRequest().putEmpty().status shouldBe 403
+        }
       }
     }
 
@@ -315,6 +320,12 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
       givenUserNotAuthorisedWithError("MissingBearerToken")
 
       updatePostSubscriptionMappingRequest(utr).putEmpty().status shouldBe 401
+    }
+
+    "return 403 when an authorisation error occurs" in {
+      givenUserNotAuthorisedWithError("InsufficientEnrolments")
+
+      updatePostSubscriptionMappingRequest(utr).putEmpty().status shouldBe 403
     }
   }
 
@@ -469,6 +480,18 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
         request.status shouldBe 200
         (request.json \ "hasEligibleEnrolments").as[Boolean] shouldBe true
+      }
+
+      s"return 200 with hasEligibleEnrolments=false when user has only ineligible enrolment: ${testFixture.key}" in {
+        givenUserIsAuthorisedWithNoEnrolments(
+          testFixture.service,
+          testFixture.identifierKey,
+          testFixture.identifierValue,
+          "testCredId",
+          agentCodeOpt = Some(agentCode)
+        )
+        request.status shouldBe 200
+        (request.json \ "hasEligibleEnrolments").as[Boolean] shouldBe false
       }
 
       s"return 401 if user is not logged in for ${testFixture.key}" in {

@@ -63,6 +63,7 @@ responses:
 
     201 CREATED
     401 UNAUTHORIZED    if user is not authenticated (missing bearer token or no active session)
+    403 FORBIDDEN       if user is not authorised to use the endpoint (eg: insufficient enrolments)
     409 CONFLICT        if all available identifiers has been already mapped    
                    
 ### update mapping between UTR and eligible enrolments to a valid ARN after agent subscription
@@ -81,6 +82,7 @@ responses:
 
     200 OK
     401 UNAUTHORIZED    if user is not authenticated (missing bearer token or no active session)
+    403 FORBIDDEN       if user is not authorised to use the endpoint (eg: insufficient enrolments)
 
 ### delete mapping between UTR and eligible enrolments before agent subscription
     
