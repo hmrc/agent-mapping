@@ -16,7 +16,7 @@ A prerequisite for this check is knowing the CESA Agent Ref, this is captured an
 ## API
 
 ### check if current logged in user has any enrolments that are eligible for mapping
-    GET  /mappings/eligibility
+    GET  /agent-mapping/mappings/eligibility
 
 responses:
 
@@ -29,7 +29,7 @@ responses:
 
 ### create mapping between ARN and available identifiers
 
-    PUT  /mappings/arn/:arn
+    PUT  /agent-mapping/mappings/arn/:arn
    
 path parameters:   
     
@@ -48,7 +48,7 @@ responses:
     
 ### create mapping between UTR and eligible enrolments before agent subscription
 
-    PUT  /mappings/pre-subscription/utr/:utr
+    PUT  /agent-mapping/mappings/pre-subscription/utr/:utr
    
 path parameters:   
     
@@ -67,7 +67,7 @@ responses:
                    
 ### update mapping between UTR and eligible enrolments to a valid ARN after agent subscription
 
-    PUT  /mappings/post-subscription/utr/:utr
+    PUT  /agent-mapping/mappings/post-subscription/utr/:utr
    
 path parameters:   
     
@@ -85,7 +85,7 @@ responses:
 
 ### delete mapping between UTR and eligible enrolments before agent subscription
     
-    DELETE  /mappings/pre-subscription/utr/:utr
+    DELETE  /agent-mapping/mappings/pre-subscription/utr/:utr
     
 path parameters:   
     
