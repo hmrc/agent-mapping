@@ -12,7 +12,7 @@ import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent
 import uk.gov.hmrc.agentmapping.model.Service
 import uk.gov.hmrc.agentmapping.model.Service._
 import uk.gov.hmrc.agentmapping.repository.MappingRepositories
-import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DataStreamStub, DesStubs}
+import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DataStreamStub}
 import uk.gov.hmrc.agentmapping.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.auth.core.{AffinityGroup, Enrolment, EnrolmentIdentifier}
@@ -24,6 +24,8 @@ import scala.concurrent.Future
 
 class MappingControllerISpec extends MappingControllerISpecSetup {
 
+  val registeredArn: Arn = Arn("AARN0000002")
+
   private val utr = Utr("2000000000")
   private val agentCode = "TZRXXV"
 
@@ -34,18 +36,13 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     new Resource(s"/agent-mapping/mappings/eligibility", port)
 
   def createMappingRequest(requestUtr: Utr = utr, requestArn: Arn = registeredArn): Resource =
-    new Resource(s"/agent-mapping/mappings/${requestUtr.value}/${requestArn.value}", port)
+    new Resource(s"/agent-mapping/mappings/arn/${requestArn.value}", port)
 
   def createPreSubscriptionMappingRequest(requestUtr: Utr = utr): Resource =
-    new Resource(s"/agent-mapping/mappings/pre-subscription/${requestUtr.value}", port)
+    new Resource(s"/agent-mapping/mappings/pre-subscription/utr/${requestUtr.value}", port)
 
   def updatePostSubscriptionMappingRequest(requestUtr: Utr = utr): Resource =
-    new Resource(s"/agent-mapping/mappings/post-subscription/${requestUtr.value}", port)
-
-  def createMappingRequestDeprecatedRoute(requestUtr: Utr = utr, requestArn: Arn = registeredArn): Resource =
-    new Resource(
-      s"/agent-mapping/mappings/${requestUtr.value}/${requestArn.value}/IRAgentReference~A1111A~AgentRefNo~101747696",
-      port)
+    new Resource(s"/agent-mapping/mappings/post-subscription/utr/${requestUtr.value}", port)
 
   def findMappingsRequest(requestArn: Arn = registeredArn): Resource =
     new Resource(s"/agent-mapping/mappings/${requestArn.value}", port)
@@ -66,7 +63,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     new Resource(s"/agent-mapping/test-only/mappings/${requestArn.value}", port)
 
   def deletePreSubscriptionMappingsRequest(requestUtr: Utr = utr): Resource =
-    new Resource(s"/agent-mapping/mappings/pre-subscription/${requestUtr.value}", port)
+    new Resource(s"/agent-mapping/mappings/pre-subscription/utr/${requestUtr.value}", port)
 
   case class TestFixture(service: Service.Name, identifierKey: String, identifierValue: String) {
     val key = Service.keyFor(service)
@@ -103,42 +100,27 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
       s"capture ${Service.asString(f.service)} enrolment" when {
         "return created upon success" in {
           givenUserIsAuthorisedFor(f)
-          givenIndividualRegistrationExists(utr)
           createMappingRequest().putEmpty().status shouldBe 201
-        }
-
-        "return created upon success using deprecated route" in {
-          givenUserIsAuthorisedFor(f)
-          givenIndividualRegistrationExists(utr)
-          createMappingRequestDeprecatedRoute().putEmpty().status shouldBe 201
         }
 
         "return created upon success w/o agent code" in {
           givenUserIsAuthorisedFor(f.service, f.identifierKey, f.identifierValue, "testCredId", agentCodeOpt = None)
-          givenIndividualRegistrationExists(utr)
           createMappingRequest().putEmpty().status shouldBe 201
-        }
-
-        "return a successful audit event with known facts set to true" in {
-          givenUserIsAuthorisedFor(f)
-          givenIndividualRegistrationExists(utr)
-          createMappingRequest().putEmpty().status shouldBe 201
-
-          verifyKnownFactsCheckAuditEventSent(1)
-          verifyCreateMappingAuditEventSent(f)
-          verifyCreateMappingAuditEventSent(AgentCodeTestFixture)
         }
 
         "return conflict when the mapping already exists" in {
           givenUserIsAuthorisedFor(f)
-          givenIndividualRegistrationExists(utr)
           createMappingRequest().putEmpty().status shouldBe 201
           createMappingRequest().putEmpty().status shouldBe 409
 
-          verifyKnownFactsCheckAuditEventSent(2)
           verifyCreateMappingAuditEventSent(f)
         }
 
+        "return forbidden when an authorisation error occurs" in {
+          givenUserNotAuthorisedWithError("InsufficientEnrolments")
+
+          createMappingRequest().putEmpty().status shouldBe 403
+        }
       }
     }
 
@@ -175,7 +157,6 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     s"capture all ${fixtures.size} enrolments" when {
       s"return created upon success" in {
         givenUserIsAuthorisedForMultiple(fixtures)
-        givenIndividualRegistrationExists(utr)
         createMappingRequest().putEmpty().status shouldBe 201
       }
     }
@@ -190,20 +171,17 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
         case (left, right) =>
           val leftTag = left.map(f => Service.asString(f.service)).mkString(",")
           s"return created when we add all, but some mappings already exist: $leftTag" in {
-            givenIndividualRegistrationExists(utr)
             givenUserIsAuthorisedForMultiple(left)
             createMappingRequest().putEmpty().status shouldBe 201
 
             givenUserIsAuthorisedForMultiple(fixtures)
             createMappingRequest().putEmpty().status shouldBe 201
 
-            verifyKnownFactsCheckAuditEventSent(2)
             fixtures.foreach(f => verifyCreateMappingAuditEventSent(f))
             verifyCreateMappingAuditEventSent(AgentCodeTestFixture)
           }
 
           s"return conflict when all mappings already exist, but we try to add again: $leftTag" in {
-            givenIndividualRegistrationExists(utr)
             givenUserIsAuthorisedForMultiple(fixtures)
             createMappingRequest().putEmpty().status shouldBe 201
 
@@ -213,48 +191,13 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
             givenUserIsAuthorisedForMultiple(right)
             createMappingRequest().putEmpty().status shouldBe 409
 
-            verifyKnownFactsCheckAuditEventSent(3)
             fixtures.foreach(f => verifyCreateMappingAuditEventSent(f))
             verifyCreateMappingAuditEventSent(AgentCodeTestFixture)
           }
       }
     }
 
-    "return forbidden when the supplied arn does not match the DES business partner record arn" in {
-      givenUserIsAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = Some(agentCode))
-      givenIndividualRegistrationExists(utr)
-
-      new Resource(s"/agent-mapping/mappings/${utr.value}/TARN0000001", port).putEmpty().status shouldBe 403
-
-      verifyKnownFactsCheckAuditEventSent(1, matched = false, arn = "TARN0000001")
-    }
-
-    "return forbidden when there is no arn on the DES business partner record" in {
-      givenUserIsAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = Some(agentCode))
-      givenIndividualRegistrationExistsWithoutArn(utr)
-      createMappingRequest().putEmpty().status shouldBe 403
-
-      verifyKnownFactsCheckAuditEventSent(1, matched = false)
-    }
-
-    "return forbidden when the DES business partner record does not exist" in {
-      givenUserIsAuthorisedFor(`IR-SA-AGENT`, IRAgentReference, "A1111A", "testCredId", agentCodeOpt = Some(agentCode))
-      givenRegistrationDoesNotExist(utr)
-
-      createMappingRequest().putEmpty().status shouldBe 403
-
-      verifyKnownFactsCheckAuditEventSent(1, matched = false)
-    }
-
-    "return bad request when the UTR is invalid" in {
-
-      val response = createMappingRequest(requestUtr = Utr("A_BAD_UTR")).putEmpty()
-      response.status shouldBe 400
-      (response.json \ "message").as[String] shouldBe "bad request"
-    }
-
     "return bad request when the ARN is invalid" in {
-
       val response = createMappingRequest(requestArn = Arn("A_BAD_ARN")).putEmpty()
       response.status shouldBe 400
       (response.json \ "message").as[String] shouldBe "bad request"
@@ -264,7 +207,6 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
       "unauthenticated user attempts to create mapping" in {
 
         givenUserNotAuthorisedWithError("MissingBearerToken")
-        givenIndividualRegistrationExists(utr)
         createMappingRequest().putEmpty().status shouldBe 401
       }
     }
@@ -278,7 +220,6 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
           "TARN000003",
           "testCredId",
           agentCodeOpt = Some(agentCode))
-        givenIndividualRegistrationExists(utr)
         createMappingRequest().putEmpty().status shouldBe 403
       }
       "authenticated user with IR-SA-AGENT enrolment but without Agent Affinity group attempts to create mapping" in {
@@ -290,7 +231,6 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
           "testCredId",
           AffinityGroup.Individual,
           Some(agentCode))
-        givenIndividualRegistrationExists(utr)
         createMappingRequest().putEmpty().status shouldBe 403
       }
     }
@@ -540,29 +480,12 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
         "authProviderId" -> "testCredId",
         "duplicate" -> s"$duplicate"
       ),
-      tags = Map("transactionName" -> "create-mapping", "path" -> "/agent-mapping/mappings/2000000000/AARN0000002")
+      tags = Map("transactionName" -> "create-mapping", "path" -> "/agent-mapping/mappings/arn/AARN0000002")
     )
-
-  private def verifyKnownFactsCheckAuditEventSent(
-                                                   times: Int,
-                                                   matched: Boolean = true,
-                                                   arn: String = "AARN0000002",
-                                                   utr: String = "2000000000") =
-    verifyAuditRequestSent(
-      times,
-      event = AgentMappingEvent.KnownFactsCheck,
-      detail = Map(
-        "knownFactsMatched" -> s"$matched",
-        "utr" -> utr,
-        "agentReferenceNumber" -> arn,
-        "authProviderId" -> "testCredId"),
-      tags = Map("transactionName" -> "known-facts-check", "path" -> s"/agent-mapping/mappings/$utr/$arn")
-    )
-
 }
 
 sealed trait MappingControllerISpecSetup
-  extends UnitSpec with MongoApp with WireMockSupport with DesStubs with AuthStubs with DataStreamStub {
+  extends UnitSpec with MongoApp with WireMockSupport with AuthStubs with DataStreamStub {
 
   implicit val actorSystem = ActorSystem()
   implicit val materializer = ActorMaterializer()
@@ -584,7 +507,6 @@ sealed trait MappingControllerISpecSetup
         mongoConfiguration ++
           Map(
             "microservice.services.auth.port" -> wireMockPort,
-            "microservice.services.des.port" -> wireMockPort,
             "auditing.consumer.baseUri.host" -> wireMockHost,
             "auditing.consumer.baseUri.port" -> wireMockPort,
             "application.router" -> "testOnlyDoNotUseInAppConf.Routes",

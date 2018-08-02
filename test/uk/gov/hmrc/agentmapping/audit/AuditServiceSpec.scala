@@ -22,7 +22,7 @@ import org.mockito.Mockito.verify
 import org.scalatest.concurrent.Eventually
 import org.scalatest.mockito.MockitoSugar
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.KnownFactsCheck
+import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.CreateMapping
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.logging.{Authorization, RequestId, SessionId}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
@@ -44,12 +44,11 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
 
       await(
         service.auditEvent(
-          KnownFactsCheck,
+          CreateMapping,
           "transaction name",
           Seq(
             "extra1"               -> "first extra detail",
             "extra2"               -> "second extra detail",
-            "utr"                  -> "4000000009",
             "agentReferenceNumber" -> "GARN0000247")
         )(hc, FakeRequest("GET", "/path")))
 
@@ -59,8 +58,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
         captor.getValue shouldBe an[DataEvent]
         val sentEvent = captor.getValue
 
-        sentEvent.auditType shouldBe "KnownFactsCheck"
-        sentEvent.detail("utr") shouldBe "4000000009"
+        sentEvent.auditType shouldBe "CreateMapping"
         sentEvent.detail("agentReferenceNumber") shouldBe "GARN0000247"
         sentEvent.detail("extra1") shouldBe "first extra detail"
         sentEvent.detail("extra2") shouldBe "second extra detail"

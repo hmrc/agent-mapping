@@ -23,7 +23,6 @@ import play.api.libs.json._
 import play.api.mvc.{Action, AnyContent, Request}
 import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.audit.AuditService
-import uk.gov.hmrc.agentmapping.connector.DesConnector
 import uk.gov.hmrc.agentmapping.model.Service._
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository._
@@ -41,11 +40,10 @@ import scala.concurrent.Future
 
 @Singleton
 class MappingController @Inject()(
-                                   repositories: MappingRepositories,
-                                   desConnector: DesConnector,
-                                   auditService: AuditService,
-                                   val authConnector: AuthConnector)
-  extends BaseController
+  repositories: MappingRepositories,
+  auditService: AuditService,
+  val authConnector: AuthConnector)
+    extends BaseController
     with AuthorisedFunctions {
 
   import auditService._
@@ -59,51 +57,43 @@ class MappingController @Inject()(
       }
   }
 
-  def createMapping(utr: Utr, arn: Arn, unused: String): Action[AnyContent] = Action.async { implicit request =>
+  def createMapping(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     implicit val hc = fromHeadersAndSession(request.headers, None)
     authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
       .retrieve(Retrievals.credentials and Retrievals.agentCode and Retrievals.allEnrolments) {
         case credentials ~ agentCodeOpt ~ allEnrolments =>
-          desConnector.getArn(utr) flatMap {
-            case Some(Arn(arn.value)) =>
-              sendKnownFactsCheckAuditEvent(utr, arn, credentials.providerId, matched = true)
-              captureIdentifiersAndAgentCodeFrom(allEnrolments, agentCodeOpt) match {
-                case Some(identifiers) =>
-                  identifiers
-                    .map(identifier => createMappingInRepository(arn, identifier, credentials.providerId))
-                    .reduce((f1, f2) => f1.flatMap(b1 => f2.map(b2 => b1 & b2)))
-                    .map(
-                      allConflicted =>
-                        if (allConflicted)
-                          Conflict
-                        else
-                          Created)
-                case None => Future.successful(Forbidden)
-              }
-
-            case _ =>
-              sendKnownFactsCheckAuditEvent(utr, arn, credentials.providerId, matched = false)
-              Future.successful(Forbidden)
+          captureIdentifiersAndAgentCodeFrom(allEnrolments, agentCodeOpt) match {
+            case Some(identifiers) =>
+              identifiers
+                .map(identifier => createMappingInRepository(arn, identifier, credentials.providerId))
+                .reduce((f1, f2) => f1.flatMap(b1 => f2.map(b2 => b1 & b2)))
+                .map(
+                  allConflicted =>
+                    if (allConflicted)
+                      Conflict
+                    else
+                    Created)
+            case None => Future.successful(Forbidden)
           }
       }
-      .recoverWith {
+      .recover {
         case ex: NoActiveSession =>
           Logger(getClass).warn("No active session whilst trying to create mapping", ex)
-          Future.successful(Unauthorized)
+          Unauthorized
         case ex: AuthorisationException =>
           Logger(getClass).warn("Authorisation exception whilst trying to create mapping", ex)
-          Future.successful(Forbidden)
+          Forbidden
       }
   }
 
   private def captureIdentifiersAndAgentCodeFrom(
-                                                  enrolments: Enrolments,
-                                                  agentCodeOpt: Option[String]): Option[Set[Identifier]] = {
+    enrolments: Enrolments,
+    agentCodeOpt: Option[String]): Option[Set[Identifier]] = {
     val identifiers = captureIdentifiersFrom(enrolments)
     if (identifiers.isEmpty) None
     else
       Some(agentCodeOpt match {
-        case None => identifiers
+        case None            => identifiers
         case Some(agentCode) => identifiers + Identifier(AgentCode, agentCode)
       })
   }
@@ -124,7 +114,7 @@ class MappingController @Inject()(
       .map { _ =>
         businessId match {
           case arn: Arn => sendCreateMappingAuditEvent(arn, identifier, ggCredId)
-          case _ => ()
+          case _        => ()
         }
 
         false
@@ -133,7 +123,7 @@ class MappingController @Inject()(
         case e: DatabaseException if e.getMessage().contains("E11000") =>
           businessId match {
             case arn: Arn => sendCreateMappingAuditEvent(arn, identifier, ggCredId, duplicate = true)
-            case _ => ()
+            case _        => ()
           }
 
           Logger(getClass).warn(s"Duplicated mapping attempt for ${Service.asString(identifier.key)}")
@@ -199,7 +189,7 @@ class MappingController @Inject()(
                     if (allConflicted)
                       Conflict
                     else
-                      Created)
+                    Created)
             case None => Future.successful(Forbidden)
           }
       }
@@ -233,19 +223,20 @@ class MappingController @Inject()(
             repositories.updateUtrToArn(Arn(arn), utr).map(_ => Ok)
           case None => Future.successful(Forbidden)
         }
-      }.recover {
-      case ex: NoActiveSession =>
-        Logger(getClass).warn("No active session whilst trying to create mapping", ex)
-        Unauthorized
-      case ex: AuthorisationException =>
-        Logger(getClass).warn("Authorisation exception whilst trying to create mapping", ex)
-        Forbidden
-    }
+      }
+      .recover {
+        case ex: NoActiveSession =>
+          Logger(getClass).warn("No active session whilst trying to create mapping", ex)
+          Unauthorized
+        case ex: AuthorisationException =>
+          Logger(getClass).warn("Authorisation exception whilst trying to create mapping", ex)
+          Forbidden
+      }
   }
 
   private def getEnrolmentValue(enrolments: Enrolments, serviceName: String, identifierKey: String) =
     for {
-      enrolment <- enrolments.getEnrolment(serviceName)
+      enrolment  <- enrolments.getEnrolment(serviceName)
       identifier <- enrolment.getIdentifier(identifierKey)
     } yield identifier.value
 

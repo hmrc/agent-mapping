@@ -29,35 +29,34 @@ responses:
 
 ### create mapping between ARN and available identifiers
 
-    PUT  /mappings/:utr/:arn
+    PUT  /mappings/arn/:arn
    
 path parameters:   
     
-    :utr - SA UTR to validate ARN
     :arn - AgentReferenceNumber
                    
 examples:
     
-    PUT /agent-mapping/mappings/2000000000/AARN0000002
+    PUT /agent-mapping/mappings/arn/AARN0000002
     
 responses:
 
     201 CREATED
     401 UNAUTHORIZED    if user is not authenticated (missing bearer token or no active session)
-    403 FORBIDDEN       if provided ARN and UTR doesn't match Business Parter Record from ETMP
+    403 FORBIDDEN       if user is not authorised to use the endpoint (eg: insufficient enrolments)
     409 CONFLICT        if all available identifiers has been already mapped
     
 ### create mapping between UTR and eligible enrolments before agent subscription
 
-    PUT  /mappings/pre-subscription/:utr
+    PUT  /mappings/pre-subscription/utr/:utr
    
 path parameters:   
     
-    :utr - SA UTR to validate ARN
+    :utr - SA UTR
                    
 examples:
     
-    PUT /agent-mapping/mappings/pre-subscription/2000000000
+    PUT /agent-mapping/mappings/pre-subscription/utr/2000000000
     
 responses:
 
@@ -68,15 +67,15 @@ responses:
                    
 ### update mapping between UTR and eligible enrolments to a valid ARN after agent subscription
 
-    PUT  /mappings/post-subscription/:utr
+    PUT  /mappings/post-subscription/utr/:utr
    
 path parameters:   
     
-    :utr - SA UTR to validate ARN
+    :utr - SA UTR
                    
 examples:
     
-    PUT /agent-mapping/mappings/post-subscription/2000000000
+    PUT /agent-mapping/mappings/post-subscription/utr/2000000000
     
 responses:
 
@@ -86,15 +85,15 @@ responses:
 
 ### delete mapping between UTR and eligible enrolments before agent subscription
     
-    DELETE  /mappings/pre-subscription/:utr
+    DELETE  /mappings/pre-subscription/utr/:utr
     
 path parameters:   
     
-    :utr - SA UTR to validate ARN
+    :utr - SA UTR
                    
 examples:
     
-    DELETE /agent-mapping/mappings/pre-subscription/2000000000
+    DELETE /agent-mapping/mappings/pre-subscription/utr/2000000000
     
 responses:
 
