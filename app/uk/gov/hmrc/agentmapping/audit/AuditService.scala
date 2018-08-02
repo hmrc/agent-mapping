@@ -21,7 +21,7 @@ import javax.inject.Inject
 import play.api.mvc.Request
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.AgentMappingEvent
 import uk.gov.hmrc.agentmapping.model.{Identifier, Service}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
@@ -33,26 +33,13 @@ import scala.util.Try
 
 object AgentMappingEvent extends Enumeration {
 
-  val KnownFactsCheck, CreateMapping = Value
+  val CreateMapping = Value
 
   type AgentMappingEvent = AgentMappingEvent.Value
 }
 
 @Singleton
 class AuditService @Inject()(val auditConnector: AuditConnector) {
-
-  def sendKnownFactsCheckAuditEvent(utr: Utr, arn: Arn, authProviderId: String, matched: Boolean)(
-    implicit hc: HeaderCarrier,
-    request: Request[Any]): Unit =
-    auditEvent(
-      AgentMappingEvent.KnownFactsCheck,
-      "known-facts-check",
-      Seq(
-        "authProviderId"       -> authProviderId,
-        "knownFactsMatched"    -> matched,
-        "utr"                  -> utr.value,
-        "agentReferenceNumber" -> arn.value)
-    )
 
   def sendCreateMappingAuditEvent(arn: Arn, identifier: Identifier, authProviderId: String, duplicate: Boolean = false)(
     implicit hc: HeaderCarrier,
