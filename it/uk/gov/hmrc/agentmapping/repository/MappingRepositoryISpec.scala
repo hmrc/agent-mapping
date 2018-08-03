@@ -1,6 +1,5 @@
 package uk.gov.hmrc.agentmapping.repository
 
-import org.joda.time.DateTime
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import reactivemongo.api.commands.WriteResult
