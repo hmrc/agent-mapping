@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentmapping.model
 
+import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.json.Json.format
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
@@ -39,13 +40,18 @@ trait ArnToIdentifierMapping {
   def identifier: String
 }
 
-case class AgentReferenceMapping(businessId: TaxIdentifier, identifier: String) extends ArnToIdentifierMapping
+case class AgentReferenceMapping(businessId: TaxIdentifier, identifier: String, createdDate: Option[DateTime])
+    extends ArnToIdentifierMapping
 
 object AgentReferenceMapping extends ReactiveMongoFormats {
+  implicit val dateFormat = ReactiveMongoFormats.dateTimeFormats
+
   implicit val writes: Writes[AgentReferenceMapping] = new Writes[AgentReferenceMapping] {
     override def writes(o: AgentReferenceMapping): JsValue = o match {
-      case AgentReferenceMapping(Arn(arn), identifier) => Json.obj("arn" -> arn, "identifier" -> identifier)
-      case AgentReferenceMapping(Utr(utr), identifier) => Json.obj("utr" -> utr, "identifier" -> identifier)
+      case AgentReferenceMapping(Arn(arn), identifier, _) =>
+        Json.obj("arn" -> arn, "identifier" -> identifier)
+      case AgentReferenceMapping(Utr(utr), identifier, Some(createdDate)) =>
+        Json.obj("utr" -> utr, "identifier" -> identifier, "preCreatedDate" -> createdDate)
     }
   }
 
@@ -54,11 +60,12 @@ object AgentReferenceMapping extends ReactiveMongoFormats {
       if ((json \ "arn").toOption.isDefined) {
         val arn = (json \ "arn").as[Arn]
         val identifier = (json \ "identifier").as[String]
-        JsSuccess(AgentReferenceMapping(arn, identifier))
+        JsSuccess(AgentReferenceMapping(arn, identifier, None))
       } else if ((json \ "utr").toOption.isDefined) {
         val utr = (json \ "utr").as[Utr]
         val identifier = (json \ "identifier").as[String]
-        JsSuccess(AgentReferenceMapping(utr, identifier))
+        val preCreatedDate = (json \ "preCreatedDate").asOpt[DateTime]
+        JsSuccess(AgentReferenceMapping(utr, identifier, preCreatedDate))
       } else JsError("invalid json")
   }
 
