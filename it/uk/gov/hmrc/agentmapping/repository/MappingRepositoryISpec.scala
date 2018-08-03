@@ -188,6 +188,9 @@ abstract class BaseRepositoryISpec[
 
       updatedMappings.head.businessId shouldBe arn1
       updatedMappings.head.identifier shouldBe reference1
+
+      await(repository.findBy(arn1)) shouldBe List(updatedMappings.head)
+      await(repository.findBy(utr1)) shouldBe List.empty
     }
   }
 }

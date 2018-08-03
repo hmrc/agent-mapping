@@ -144,7 +144,7 @@ abstract class BaseMappingRepository[T: Format: Manifest](
     val selector = Json.obj("utr" -> utr.value)
     val update = Json.obj(
       "$set"   -> Json.obj("arn"            -> arn.value),
-      "$unset" -> Json.obj("preCreatedDate" -> "")
+      "$unset" -> Json.obj("preCreatedDate" -> "", "utr" -> "")
     )
 
     collection
