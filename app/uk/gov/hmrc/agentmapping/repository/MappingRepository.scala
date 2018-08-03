@@ -82,11 +82,10 @@ abstract class BaseMappingRepository[T: Format: Manifest](
         Seq("utr" -> Ascending, identifierKey -> Ascending),
         Some("utrAndIdentifier"),
         unique = true,
-        partialFilter = Some(BSONDocument("utr" -> BSONDocument("$exists" -> true))),
-        options = BSONDocument("expireAfterSeconds" -> 86400)
+        partialFilter = Some(BSONDocument("utr" -> BSONDocument("$exists" -> true)))
       ),
       Index(Seq("arn" -> Ascending), Some("AgentReferenceNumber")),
-      Index(Seq("utr" -> Ascending), Some("Utr"))
+      Index(Seq("utr" -> Ascending), Some("Utr"), options = BSONDocument("expireAfterSeconds" -> 86400))
     )
 
   def store(identifier: TaxIdentifier, identifierValue: String)(implicit ec: ExecutionContext): Future[Unit] =
