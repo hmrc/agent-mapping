@@ -18,8 +18,8 @@ package uk.gov.hmrc.agentmapping.repository
 
 import javax.inject.Inject
 import org.joda.time.{DateTime, DateTimeZone}
-import play.api.libs.json.{Format, Json}
 import play.api.libs.json.Json.{JsValueWrapper, toJsFieldJsValueWrapper}
+import play.api.libs.json.{Format, Json}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.ReadPreference
 import reactivemongo.api.commands.WriteResult
@@ -27,20 +27,22 @@ import reactivemongo.api.commands.bson.DefaultBSONCommandError
 import reactivemongo.api.indexes.Index
 import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
-import reactivemongo.core.errors.GenericDatabaseException
+import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.mongo.{AtomicUpdate, ReactiveRepository}
+import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import reactivemongo.play.json.ImplicitBSONHandlers._
 
 import scala.collection.Seq
 import scala.concurrent.{ExecutionContext, Future}
 
 trait MappingRepository {
-  def store(identifier: TaxIdentifier, identifierValue: String, createdTime: DateTime = DateTime.now(DateTimeZone.UTC))(
-    implicit ec: ExecutionContext): Future[Unit]
+  def store(
+    identifier: TaxIdentifier,
+    identifierValue: String,
+    createdTime: Option[DateTime] = Some(DateTime.now(DateTimeZone.UTC)))(implicit ec: ExecutionContext): Future[Unit]
+
   def updateUtrToArn(utr: Utr, arn: Arn)(implicit ec: ExecutionContext): Future[Unit]
 }
 
@@ -58,7 +60,7 @@ trait RepositoryFunctions[T] {
 abstract class BaseMappingRepository[T: Format: Manifest](
   collectionName: String,
   identifierKey: String,
-  wrap: (TaxIdentifier, String, DateTime) => T)(implicit mongoComponent: ReactiveMongoComponent)
+  wrap: (TaxIdentifier, String, Option[DateTime]) => T)(implicit mongoComponent: ReactiveMongoComponent)
     extends ReactiveRepository[T, BSONObjectID](
       collectionName,
       mongoComponent.mongoConnector.db,
@@ -132,15 +134,17 @@ abstract class BaseMappingRepository[T: Format: Manifest](
       )
     )
 
-  def store(identifier: TaxIdentifier, identifierValue: String, createdTime: DateTime = DateTime.now(DateTimeZone.UTC))(
-    implicit ec: ExecutionContext): Future[Unit] =
+  def store(
+    identifier: TaxIdentifier,
+    identifierValue: String,
+    createdTime: Option[DateTime] = Some(DateTime.now(DateTimeZone.UTC)))(implicit ec: ExecutionContext): Future[Unit] =
     insert(wrap(identifier, identifierValue, createdTime)).map(_ => ())
 
   def updateUtrToArn(utr: Utr, arn: Arn)(implicit ec: ExecutionContext): Future[Unit] = {
     val selector = Json.obj("utr" -> utr.value)
     val update = Json.obj(
-      "$set"    -> Json.obj("arn"            -> arn.value),
-      "$rename" -> Json.obj("preCreatedDate" -> "createdDate")
+      "$set"   -> Json.obj("arn"            -> arn.value),
+      "$unset" -> Json.obj("preCreatedDate" -> "")
     )
 
     collection
