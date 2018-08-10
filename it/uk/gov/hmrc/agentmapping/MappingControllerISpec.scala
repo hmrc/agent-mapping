@@ -383,6 +383,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
   "delete records with utr for pre-subscription" should {
     "return no content when a record is deleted" in {
+      isLoggedIn
       await(saRepo.store(utr, "foo"))
 
       val foundResponse = await(saRepo.findAll())
@@ -396,6 +397,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     }
 
     "return no content when no record is deleted" in {
+      isLoggedIn
       val deleteResponse = deleteMappingsRequest().delete()
       deleteResponse.status shouldBe 204
     }
