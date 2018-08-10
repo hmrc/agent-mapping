@@ -41,7 +41,7 @@ class AuthActionsISpec extends UnitSpec with MockitoSugar with BeforeAndAfterEac
   }
 
   "AuthorisedWithEnrolments" should {
-    def response = await(mockAuthActions.AuthorisedWithEnrolments(authorisedWithEnrolmentsAction)(error).apply(fakeRequestAny))
+    def response = await(mockAuthActions.AuthorisedWithEnrolments(authorisedWithEnrolmentsAction).apply(fakeRequestAny))
 
     "return 200 and true if the user has eligible enrolments" in {
       authStub[Enrolments](Future.successful(Enrolments(saEnrolment)))

@@ -36,8 +36,7 @@ class AuthActions @Inject()(val authConnector: AuthConnector) extends Authorised
   private type HasEligibleEnrolments = Boolean
   private type ProviderId = String
 
-  def AuthorisedWithEnrolments(body: Request[AnyContent] => HasEligibleEnrolments => Future[Result])(
-    handleError: PartialFunction[Throwable, Result]): Action[AnyContent] =
+  def AuthorisedWithEnrolments(body: Request[AnyContent] => HasEligibleEnrolments => Future[Result]): Action[AnyContent] =
     Action.async { implicit request =>
       implicit val hc = fromHeadersAndSession(request.headers, None)
 
@@ -45,7 +44,6 @@ class AuthActions @Inject()(val authConnector: AuthConnector) extends Authorised
         .retrieve(Retrievals.allEnrolments) {
           case allEnrolments => body(request)(captureIdentifiersFrom(allEnrolments).nonEmpty)
         }
-        .recover { handleError }
     }
 
   def AuthorisedWithAgentCode(body: Request[AnyContent] => Set[Identifier] => ProviderId => Future[Result])(

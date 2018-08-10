@@ -49,7 +49,7 @@ class MappingController @Inject()(
   def hasEligibleEnrolments() =
     AuthorisedWithEnrolments { implicit request => hasEligibleEnrolments =>
       Future.successful(Ok(Json.obj("hasEligibleEnrolments" -> hasEligibleEnrolments)))
-    } { handleMappingError }
+    }
 
   def createMapping(arn: Arn): Action[AnyContent] =
     AuthorisedWithAgentCode { implicit request => identifiers => providerId =>
