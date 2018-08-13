@@ -20,21 +20,18 @@ import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json.toJson
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, Request}
+import play.api.mvc.{Action, AnyContent, Request, Result}
 import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.audit.AuditService
+import uk.gov.hmrc.agentmapping.auth.AuthActions
 import uk.gov.hmrc.agentmapping.model.Service._
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
-import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.auth.core.retrieve.{Retrievals, _}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.HeaderCarrierConverter.fromHeadersAndSession
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
-import uk.gov.hmrc.auth.core.retrieve.Retrievals.authorisedEnrolments
 
 import scala.concurrent.Future
 
@@ -42,68 +39,22 @@ import scala.concurrent.Future
 class MappingController @Inject()(
   repositories: MappingRepositories,
   auditService: AuditService,
-  val authConnector: AuthConnector)
-    extends BaseController
-    with AuthorisedFunctions {
+  val authActions: AuthActions)
+    extends BaseController {
 
   import auditService._
   import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
+  import authActions._
 
-  def hasEligibleEnrolments() = Action.async { implicit request =>
-    authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
-      .retrieve(Retrievals.allEnrolments) {
-        case allEnrolments =>
-          Future.successful(Ok(Json.obj("hasEligibleEnrolments" -> captureIdentifiersFrom(allEnrolments).nonEmpty)))
-      }
-  }
+  def hasEligibleEnrolments() =
+    AuthorisedWithEnrolments { implicit request => hasEligibleEnrolments =>
+      Future.successful(Ok(Json.obj("hasEligibleEnrolments" -> hasEligibleEnrolments)))
+    }
 
-  def createMapping(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    implicit val hc = fromHeadersAndSession(request.headers, None)
-    authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
-      .retrieve(Retrievals.credentials and Retrievals.agentCode and Retrievals.allEnrolments) {
-        case credentials ~ agentCodeOpt ~ allEnrolments =>
-          captureIdentifiersAndAgentCodeFrom(allEnrolments, agentCodeOpt) match {
-            case Some(identifiers) =>
-              identifiers
-                .map(identifier => createMappingInRepository(arn, identifier, credentials.providerId))
-                .reduce((f1, f2) => f1.flatMap(b1 => f2.map(b2 => b1 & b2)))
-                .map(
-                  allConflicted =>
-                    if (allConflicted)
-                      Conflict
-                    else
-                    Created)
-            case None => Future.successful(Forbidden)
-          }
-      }
-      .recover {
-        case ex: NoActiveSession =>
-          Logger(getClass).warn("No active session whilst trying to create mapping", ex)
-          Unauthorized
-        case ex: AuthorisationException =>
-          Logger(getClass).warn("Authorisation exception whilst trying to create mapping", ex)
-          Forbidden
-      }
-  }
-
-  private def captureIdentifiersAndAgentCodeFrom(
-    enrolments: Enrolments,
-    agentCodeOpt: Option[String]): Option[Set[Identifier]] = {
-    val identifiers = captureIdentifiersFrom(enrolments)
-    if (identifiers.isEmpty) None
-    else
-      Some(agentCodeOpt match {
-        case None            => identifiers
-        case Some(agentCode) => identifiers + Identifier(AgentCode, agentCode)
-      })
-  }
-
-  private def captureIdentifiersFrom(enrolments: Enrolments): Set[Identifier] =
-    enrolments.enrolments
-      .map(e => Service.valueOf(e.key).map((_, e.identifiers)))
-      .collect {
-        case Some((service, identifiers)) => Identifier(service, identifiers.map(i => i.value).mkString("/"))
-      }
+  def createMapping(arn: Arn): Action[AnyContent] =
+    AuthorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
+      createMapping(arn, identifiers)
+    } { handleMappingError }
 
   private def createMappingInRepository(businessId: TaxIdentifier, identifier: Identifier, ggCredId: String)(
     implicit hc: HeaderCarrier,
@@ -174,36 +125,12 @@ class MappingController @Inject()(
       }
   }
 
-  def createPreSubscriptionMapping(utr: Utr) = Action.async { implicit request =>
-    implicit val hc = fromHeadersAndSession(request.headers, None)
-    authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
-      .retrieve(Retrievals.credentials and Retrievals.agentCode and Retrievals.allEnrolments) {
-        case credentials ~ agentCodeOpt ~ allEnrolments =>
-          captureIdentifiersAndAgentCodeFrom(allEnrolments, agentCodeOpt) match {
-            case Some(identifiers) =>
-              identifiers
-                .map(identifier => createMappingInRepository(utr, identifier, credentials.providerId))
-                .reduce((f1, f2) => f1.flatMap(b1 => f2.map(b2 => b1 & b2)))
-                .map(
-                  allConflicted =>
-                    if (allConflicted)
-                      Conflict
-                    else
-                    Created)
-            case None => Future.successful(Forbidden)
-          }
-      }
-      .recover {
-        case ex: NoActiveSession =>
-          Logger(getClass).warn("No active session whilst trying to create mapping", ex)
-          Unauthorized
-        case ex: AuthorisationException =>
-          Logger(getClass).warn("Authorisation exception whilst trying to create mapping", ex)
-          Forbidden
-      }
-  }
+  def createPreSubscriptionMapping(utr: Utr) =
+    AuthorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
+      createMapping(utr, identifiers)
+    } { handleMappingError }
 
-  def deletePreSubscriptionMapping(utr: Utr) = Action.async { implicit request =>
+  def deletePreSubscriptionMapping(utr: Utr) = BasicAuth { implicit request =>
     Future
       .sequence(repositories.map(_.delete(utr)))
       .map { _ =>
@@ -211,34 +138,28 @@ class MappingController @Inject()(
       }
   }
 
-  def createPostSubscriptionMapping(utr: Utr) = Action.async { implicit request =>
-    authorised(
-      Enrolment("HMRC-AS-AGENT")
-        and AuthProviders(GovernmentGateway))
-      .retrieve(authorisedEnrolments) { enrolments =>
-        val arnOpt = getEnrolmentValue(enrolments, "HMRC-AS-AGENT", "AgentReferenceNumber")
+  def createPostSubscriptionMapping(utr: Utr) =
+    AuthorisedAsSubscribedAgent { implicit request => arn =>
+      repositories.updateUtrToArn(arn, utr).map(_ => Ok)
+    } { handleMappingError }
 
-        arnOpt match {
-          case Some(arn) =>
-            repositories.updateUtrToArn(Arn(arn), utr).map(_ => Ok)
-          case None => Future.successful(Forbidden)
-        }
-      }
-      .recover {
-        case ex: NoActiveSession =>
-          Logger(getClass).warn("No active session whilst trying to create mapping", ex)
-          Unauthorized
-        case ex: AuthorisationException =>
-          Logger(getClass).warn("Authorisation exception whilst trying to create mapping", ex)
-          Forbidden
-      }
+  private val handleMappingError: PartialFunction[Throwable, Result] = {
+    case _: NoActiveSession        => Unauthorized
+    case _: AuthorisationException => Forbidden
   }
 
-  private def getEnrolmentValue(enrolments: Enrolments, serviceName: String, identifierKey: String) =
-    for {
-      enrolment  <- enrolments.getEnrolment(serviceName)
-      identifier <- enrolment.getIdentifier(identifierKey)
-    } yield identifier.value
+  private def createMapping[A](
+    businessId: TaxIdentifier,
+    identifiers: Set[Identifier])(implicit hc: HeaderCarrier, request: Request[A], providerId: String): Future[Result] =
+    identifiers
+      .map(identifier => createMappingInRepository(businessId, identifier, providerId))
+      .reduce((f1, f2) => f1.flatMap(b1 => f2.map(b2 => b1 & b2)))
+      .map(
+        allConflicted =>
+          if (allConflicted)
+            Conflict
+          else
+          Created)
 
   private def writeAgentReferenceMappingWith(identifierFieldName: String): Writes[AgentReferenceMapping] =
     Writes[AgentReferenceMapping](m =>

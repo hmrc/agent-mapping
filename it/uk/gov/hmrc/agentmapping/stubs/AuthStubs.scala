@@ -182,4 +182,9 @@ trait AuthStubs {
                  |}
                  |""".stripMargin)))
   }
+
+  def isLoggedIn = {
+    stubFor(post(urlPathEqualTo(s"/auth/authorise")).willReturn(aResponse().withStatus(200).withBody("{}")))
+    this
+  }
 }
