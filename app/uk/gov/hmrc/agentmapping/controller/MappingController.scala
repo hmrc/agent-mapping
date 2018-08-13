@@ -52,16 +52,8 @@ class MappingController @Inject()(
     }
 
   def createMapping(arn: Arn): Action[AnyContent] =
-    AuthorisedWithAgentCode { implicit request => identifiers => providerId =>
-      identifiers
-        .map(identifier => createMappingInRepository(arn, identifier, providerId))
-        .reduce((f1, f2) => f1.flatMap(b1 => f2.map(b2 => b1 & b2)))
-        .map(
-          allConflicted =>
-            if (allConflicted)
-              Conflict
-            else
-            Created)
+    AuthorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
+      createMapping(arn, identifiers)
     } { handleMappingError }
 
   private def createMappingInRepository(businessId: TaxIdentifier, identifier: Identifier, ggCredId: String)(
@@ -134,17 +126,8 @@ class MappingController @Inject()(
   }
 
   def createPreSubscriptionMapping(utr: Utr) =
-    AuthorisedWithAgentCode { implicit request => identifiers => providerId =>
-      identifiers
-        .map(identifier => createMappingInRepository(utr, identifier, providerId))
-        .reduce((f1, f2) => f1.flatMap(b1 => f2.map(b2 => b1 & b2)))
-        .map(
-          allConflicted =>
-            if (allConflicted)
-              Conflict
-            else
-            Created)
-
+    AuthorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
+      createMapping(utr, identifiers)
     } { handleMappingError }
 
   def deletePreSubscriptionMapping(utr: Utr) = BasicAuth { implicit request =>
@@ -156,7 +139,7 @@ class MappingController @Inject()(
   }
 
   def createPostSubscriptionMapping(utr: Utr) =
-    AuthorisedAsAgent { implicit request => arn =>
+    AuthorisedAsSubscribedAgent { implicit request => arn =>
       repositories.updateUtrToArn(arn, utr).map(_ => Ok)
     } { handleMappingError }
 
@@ -164,6 +147,19 @@ class MappingController @Inject()(
     case _: NoActiveSession        => Unauthorized
     case _: AuthorisationException => Forbidden
   }
+
+  private def createMapping[A](
+    businessId: TaxIdentifier,
+    identifiers: Set[Identifier])(implicit hc: HeaderCarrier, request: Request[A], providerId: String): Future[Result] =
+    identifiers
+      .map(identifier => createMappingInRepository(businessId, identifier, providerId))
+      .reduce((f1, f2) => f1.flatMap(b1 => f2.map(b2 => b1 & b2)))
+      .map(
+        allConflicted =>
+          if (allConflicted)
+            Conflict
+          else
+          Created)
 
   private def writeAgentReferenceMappingWith(identifierFieldName: String): Writes[AgentReferenceMapping] =
     Writes[AgentReferenceMapping](m =>

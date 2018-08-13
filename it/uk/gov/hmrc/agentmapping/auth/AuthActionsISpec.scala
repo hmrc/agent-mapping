@@ -66,7 +66,7 @@ class AuthActionsISpec extends UnitSpec with MockitoSugar with BeforeAndAfterEac
   }
 
   "AuthorisedAsAgent" should {
-    def response = await(mockAuthActions.AuthorisedAsAgent(authorisedAsAgentAction)(error).apply(fakeRequestAny))
+    def response = await(mockAuthActions.AuthorisedAsSubscribedAgent(authorisedAsAgentAction)(error).apply(fakeRequestAny))
 
     "return 200 and arn if the user has HMRC-AS-AGENT enrolment" in {
       authStub[Enrolments](Future.successful(Enrolments(agentEnrolment)))
