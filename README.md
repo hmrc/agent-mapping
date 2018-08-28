@@ -41,9 +41,9 @@ examples:
     
 responses:
 
-    201 CREATED
+    201 CREATED         if successfully captured and mapped one or more identifiers to the ARN
     401 UNAUTHORIZED    if user is not authenticated (missing bearer token or no active session)
-    403 FORBIDDEN       if user is not authorised to use the endpoint (eg: insufficient enrolments)
+    403 FORBIDDEN       if user is not authorised to use the endpoint (either has no identifiers eligible for mapping, not logged in with GG auth provider, or does not have agent affinity)
     409 CONFLICT        if all available identifiers has been already mapped
     
 ### create mapping between UTR and eligible enrolments before agent subscription
@@ -60,9 +60,9 @@ examples:
     
 responses:
 
-    201 CREATED
+    201 CREATED         if successfully captured and mapped one or more identifiers to the UTR
     401 UNAUTHORIZED    if user is not authenticated (missing bearer token or no active session)
-    403 FORBIDDEN       if user is not authorised to use the endpoint (eg: insufficient enrolments)
+    403 FORBIDDEN       if user is not authorised to use the endpoint (either has no identifiers eligible for mapping, not logged in with GG auth provider, or does not have agent affinity)
     409 CONFLICT        if all available identifiers has been already mapped    
                    
 ### update mapping between UTR and eligible enrolments to a valid ARN after agent subscription
