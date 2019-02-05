@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 HM Revenue & Customs
+ * Copyright 2019 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,17 +17,15 @@
 import java.net.URL
 
 import com.google.inject.AbstractModule
-import com.google.inject.name.{Named, Names}
-import javax.inject.{Inject, Provider, Singleton}
+import com.google.inject.name.Names
+import javax.inject.Provider
 import org.slf4j.MDC
 import play.api.{Configuration, Environment, Logger}
 import uk.gov.hmrc.agentmapping.connector.MicroserviceAuthConnector
 import uk.gov.hmrc.auth.core.AuthConnector
 import uk.gov.hmrc.http._
-import uk.gov.hmrc.play.audit.http.HttpAuditing
-import uk.gov.hmrc.play.audit.http.connector.AuditConnector
+import uk.gov.hmrc.play.bootstrap.http.{DefaultHttpClient, HttpClient}
 import uk.gov.hmrc.play.config.ServicesConfig
-import uk.gov.hmrc.play.http.ws.WSHttp
 
 class MicroserviceModule(val environment: Environment, val configuration: Configuration)
     extends AbstractModule
@@ -46,8 +44,9 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
 
     bindProperty("appName")
 
-    bind(classOf[HttpGet]).to(classOf[HttpVerbs])
-    bind(classOf[HttpPost]).to(classOf[HttpVerbs])
+    bind(classOf[HttpGet]).to(classOf[DefaultHttpClient])
+    bind(classOf[HttpPost]).to(classOf[DefaultHttpClient])
+    bind(classOf[HttpClient]).to(classOf[DefaultHttpClient])
     bind(classOf[AuthConnector]).to(classOf[MicroserviceAuthConnector])
 
     bindBaseUrl("auth")
@@ -124,16 +123,4 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
       }
   }
 
-}
-
-@Singleton
-class HttpVerbs @Inject()(val auditConnector: AuditConnector, @Named("appName") val appName: String)
-    extends HttpGet
-    with HttpPost
-    with HttpPut
-    with HttpPatch
-    with HttpDelete
-    with WSHttp
-    with HttpAuditing {
-  override val hooks = Seq(AuditingHook)
 }
