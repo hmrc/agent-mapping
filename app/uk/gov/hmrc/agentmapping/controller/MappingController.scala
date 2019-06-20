@@ -24,6 +24,7 @@ import play.api.mvc.{Action, AnyContent, Request, Result}
 import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.auth.AuthActions
+import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentmapping.model.Service._
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository._
@@ -39,6 +40,7 @@ import scala.concurrent.Future
 class MappingController @Inject()(
   repositories: MappingRepositories,
   auditService: AuditService,
+  espConnector: EnrolmentStoreProxyConnector,
   val authActions: AuthActions)
     extends BaseController {
 
@@ -55,6 +57,13 @@ class MappingController @Inject()(
     AuthorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
       createMapping(arn, identifiers)
     } { handleMappingError }
+
+  def getClientCount: Action[AnyContent] =
+    AuthorisedWithProviderId { implicit request => providerId =>
+      espConnector
+        .getClientCount(providerId)
+        .map(clientCount => Ok(Json.obj("clientCount" -> clientCount)))
+    }
 
   private def createMappingInRepository(businessId: TaxIdentifier, identifier: Identifier, ggCredId: String)(
     implicit hc: HeaderCarrier,

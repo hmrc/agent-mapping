@@ -63,6 +63,15 @@ class AuthActions @Inject()(val authConnector: AuthConnector) extends Authorised
       .recover { handleError }
   }
 
+  def AuthorisedWithProviderId(body: Request[AnyContent] => String => Future[Result]): Action[AnyContent] =
+    Action.async { implicit request =>
+      authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
+        .retrieve(Retrievals.credentials) {
+          case credentials => body(request)(credentials.providerId)
+          case _           => Future.successful(Forbidden)
+        }
+    }
+
   def AuthorisedAsSubscribedAgent(body: Request[AnyContent] => Arn => Future[Result])(
     handleError: PartialFunction[Throwable, Result]): Action[AnyContent] = Action.async { implicit request =>
     implicit val hc = fromHeadersAndSession(request.headers, None)
