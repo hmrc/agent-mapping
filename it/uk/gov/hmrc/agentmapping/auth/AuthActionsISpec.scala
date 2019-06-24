@@ -66,7 +66,7 @@ class AuthActionsISpec extends UnitSpec with MockitoSugar with BeforeAndAfterEac
   }
 
   "AuthorisedAsAgent" should {
-    def response = await(mockAuthActions.AuthorisedAsSubscribedAgent(authorisedAsAgentAction)(error).apply(fakeRequestAny))
+    def response = await(mockAuthActions.AuthorisedAsSubscribedAgent(authorisedAsAgentAction).apply(fakeRequestAny))
 
     "return 200 and arn if the user has HMRC-AS-AGENT enrolment" in {
       authStub[Enrolments](Future.successful(Enrolments(agentEnrolment)))
@@ -81,7 +81,7 @@ class AuthActionsISpec extends UnitSpec with MockitoSugar with BeforeAndAfterEac
   }
 
   "AuthorisedWithAgentCode" should {
-    def response = await(mockAuthActions.AuthorisedWithAgentCode(authorisedWithAgentCodeAction)(error).apply(fakeRequestAny))
+    def response = await(mockAuthActions.AuthorisedWithAgentCode(authorisedWithAgentCodeAction).apply(fakeRequestAny))
 
     "return 200 for users with an agent code and validenrolments" in {
       authStub[~[~[Credentials, Option[String]], Enrolments]](Future.successful(
@@ -123,5 +123,5 @@ class AuthActionsISpec extends UnitSpec with MockitoSugar with BeforeAndAfterEac
     Enrolment("IR-SA-AGENT", Seq(EnrolmentIdentifier("sa", "00001")), state = "",
       delegatedAuthRule = None))
   
-  private val error: PartialFunction[Throwable, Result] = (error)
+
 }

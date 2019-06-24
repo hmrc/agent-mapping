@@ -29,7 +29,6 @@ import uk.gov.hmrc.agentmapping.model.Service._
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
-import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
@@ -45,8 +44,8 @@ class MappingController @Inject()(
     extends BaseController {
 
   import auditService._
-  import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
   import authActions._
+  import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
   def hasEligibleEnrolments() =
     AuthorisedWithEnrolments { implicit request => hasEligibleEnrolments =>
@@ -56,7 +55,7 @@ class MappingController @Inject()(
   def createMapping(arn: Arn): Action[AnyContent] =
     AuthorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
       createMapping(arn, identifiers)
-    } { handleMappingError }
+    }
 
   def getClientCount: Action[AnyContent] =
     AuthorisedWithProviderId { implicit request => providerId =>
@@ -137,7 +136,7 @@ class MappingController @Inject()(
   def createPreSubscriptionMapping(utr: Utr) =
     AuthorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
       createMapping(utr, identifiers)
-    } { handleMappingError }
+    }
 
   def deletePreSubscriptionMapping(utr: Utr) = BasicAuth { implicit request =>
     Future
@@ -150,12 +149,7 @@ class MappingController @Inject()(
   def createPostSubscriptionMapping(utr: Utr) =
     AuthorisedAsSubscribedAgent { implicit request => arn =>
       repositories.updateUtrToArn(arn, utr).map(_ => Ok)
-    } { handleMappingError }
-
-  private val handleMappingError: PartialFunction[Throwable, Result] = {
-    case _: NoActiveSession        => Unauthorized
-    case _: AuthorisationException => Forbidden
-  }
+    }
 
   private def createMapping[A](
     businessId: TaxIdentifier,
