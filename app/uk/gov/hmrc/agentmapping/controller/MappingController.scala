@@ -48,17 +48,17 @@ class MappingController @Inject()(
   import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
   def hasEligibleEnrolments() =
-    AuthorisedWithEnrolments { implicit request => hasEligibleEnrolments =>
+    authorisedWithEnrolments { implicit request => hasEligibleEnrolments =>
       Future.successful(Ok(Json.obj("hasEligibleEnrolments" -> hasEligibleEnrolments)))
     }
 
   def createMapping(arn: Arn): Action[AnyContent] =
-    AuthorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
+    authorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
       createMapping(arn, identifiers)
     }
 
   def getClientCount: Action[AnyContent] =
-    AuthorisedWithProviderId { implicit request => providerId =>
+    authorisedWithProviderId { implicit request => providerId =>
       espConnector
         .getClientCount(providerId)
         .map(clientCount => Ok(Json.obj("clientCount" -> clientCount)))
@@ -134,11 +134,11 @@ class MappingController @Inject()(
   }
 
   def createPreSubscriptionMapping(utr: Utr) =
-    AuthorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
+    authorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
       createMapping(utr, identifiers)
     }
 
-  def deletePreSubscriptionMapping(utr: Utr) = BasicAuth { implicit request =>
+  def deletePreSubscriptionMapping(utr: Utr) = basicAuth { implicit request =>
     Future
       .sequence(repositories.map(_.delete(utr)))
       .map { _ =>
@@ -147,7 +147,7 @@ class MappingController @Inject()(
   }
 
   def createPostSubscriptionMapping(utr: Utr) =
-    AuthorisedAsSubscribedAgent { implicit request => arn =>
+    authorisedAsSubscribedAgent { implicit request => arn =>
       repositories.updateUtrToArn(arn, utr).map(_ => Ok)
     }
 

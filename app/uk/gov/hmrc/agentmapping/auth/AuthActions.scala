@@ -36,7 +36,7 @@ class AuthActions @Inject()(val authConnector: AuthConnector) extends Authorised
   private type HasEligibleEnrolments = Boolean
   private type ProviderId = String
 
-  def AuthorisedWithEnrolments(
+  def authorisedWithEnrolments(
     body: Request[AnyContent] => HasEligibleEnrolments => Future[Result]): Action[AnyContent] =
     Action.async { implicit request =>
       implicit val hc = fromHeadersAndSession(request.headers, None)
@@ -47,7 +47,7 @@ class AuthActions @Inject()(val authConnector: AuthConnector) extends Authorised
         }
     }
 
-  def AuthorisedWithAgentCode(
+  def authorisedWithAgentCode(
     body: Request[AnyContent] => Set[Identifier] => ProviderId => Future[Result]): Action[AnyContent] = Action.async {
     implicit request =>
       implicit val hc = fromHeadersAndSession(request.headers, None)
@@ -64,7 +64,7 @@ class AuthActions @Inject()(val authConnector: AuthConnector) extends Authorised
         .recover { handleException }
   }
 
-  def AuthorisedWithProviderId(body: Request[AnyContent] => String => Future[Result]): Action[AnyContent] =
+  def authorisedWithProviderId(body: Request[AnyContent] => String => Future[Result]): Action[AnyContent] =
     Action.async { implicit request =>
       authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
         .retrieve(Retrievals.credentials) {
@@ -74,7 +74,7 @@ class AuthActions @Inject()(val authConnector: AuthConnector) extends Authorised
         .recover { handleException }
     }
 
-  def AuthorisedAsSubscribedAgent(body: Request[AnyContent] => Arn => Future[Result]): Action[AnyContent] =
+  def authorisedAsSubscribedAgent(body: Request[AnyContent] => Arn => Future[Result]): Action[AnyContent] =
     Action.async { implicit request =>
       implicit val hc = fromHeadersAndSession(request.headers, None)
 
@@ -92,7 +92,7 @@ class AuthActions @Inject()(val authConnector: AuthConnector) extends Authorised
         .recover { handleException }
     }
 
-  def BasicAuth(body: Request[AnyContent] => Future[Result]): Action[AnyContent] = Action.async { implicit request =>
+  def basicAuth(body: Request[AnyContent] => Future[Result]): Action[AnyContent] = Action.async { implicit request =>
     implicit val hc = fromHeadersAndSession(request.headers, None)
 
     authorised() {

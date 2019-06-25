@@ -26,7 +26,7 @@ class AuthActionsISpec extends UnitSpec with MockitoSugar with BeforeAndAfterEac
   override def beforeEach(): Unit = reset(mockAuthConnector)
 
   "BasicAuth" should {
-    def response = await(mockAuthActions.BasicAuth(basicAction).apply(fakeRequestAny))
+    def response = await(mockAuthActions.basicAuth(basicAction).apply(fakeRequestAny))
     "return 200 if the user has a valid auth token" in {
       authStub[Unit](Future.successful(EmptyRetrieval))
 
@@ -41,7 +41,7 @@ class AuthActionsISpec extends UnitSpec with MockitoSugar with BeforeAndAfterEac
   }
 
   "AuthorisedWithEnrolments" should {
-    def response = await(mockAuthActions.AuthorisedWithEnrolments(authorisedWithEnrolmentsAction).apply(fakeRequestAny))
+    def response = await(mockAuthActions.authorisedWithEnrolments(authorisedWithEnrolmentsAction).apply(fakeRequestAny))
 
     "return 200 and true if the user has eligible enrolments" in {
       authStub[Enrolments](Future.successful(Enrolments(saEnrolment)))
@@ -66,7 +66,7 @@ class AuthActionsISpec extends UnitSpec with MockitoSugar with BeforeAndAfterEac
   }
 
   "AuthorisedAsAgent" should {
-    def response = await(mockAuthActions.AuthorisedAsSubscribedAgent(authorisedAsAgentAction).apply(fakeRequestAny))
+    def response = await(mockAuthActions.authorisedAsSubscribedAgent(authorisedAsAgentAction).apply(fakeRequestAny))
 
     "return 200 and arn if the user has HMRC-AS-AGENT enrolment" in {
       authStub[Enrolments](Future.successful(Enrolments(agentEnrolment)))
@@ -81,7 +81,7 @@ class AuthActionsISpec extends UnitSpec with MockitoSugar with BeforeAndAfterEac
   }
 
   "AuthorisedWithAgentCode" should {
-    def response = await(mockAuthActions.AuthorisedWithAgentCode(authorisedWithAgentCodeAction).apply(fakeRequestAny))
+    def response = await(mockAuthActions.authorisedWithAgentCode(authorisedWithAgentCodeAction).apply(fakeRequestAny))
 
     "return 200 for users with an agent code and validenrolments" in {
       authStub[~[~[Credentials, Option[String]], Enrolments]](Future.successful(
