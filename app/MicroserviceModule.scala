@@ -49,7 +49,11 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
     bind(classOf[HttpClient]).to(classOf[DefaultHttpClient])
     bind(classOf[AuthConnector]).to(classOf[MicroserviceAuthConnector])
 
+    bindServiceConfigProperty[Int]("mongodb.session.expireAfterSeconds")
+    bindIntProperty("clientCount.maxRecords")
+
     bindBaseUrl("auth")
+    bindBaseUrl("enrolment-store-proxy")
   }
 
   private def bindBaseUrl(serviceName: String) =
@@ -65,6 +69,15 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
   private class PropertyProvider(confKey: String) extends Provider[String] {
     override lazy val get = configuration
       .getString(confKey)
+      .getOrElse(throw new IllegalStateException(s"No value found for configuration property $confKey"))
+  }
+
+  private def bindIntProperty(propertyName: String) =
+    bind(classOf[Int]).annotatedWith(Names.named(propertyName)).toProvider(new PropertyIntProvider(propertyName))
+
+  private class PropertyIntProvider(confKey: String) extends Provider[Int] {
+    override lazy val get = configuration
+      .getInt(confKey)
       .getOrElse(throw new IllegalStateException(s"No value found for configuration property $confKey"))
   }
 

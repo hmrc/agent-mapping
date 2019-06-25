@@ -28,7 +28,7 @@ import uk.gov.hmrc.play.HeaderCarrierConverter.fromHeadersAndSession
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class AuthActions @Inject()(val authConnector: AuthConnector) extends AuthorisedFunctions with BaseController {
@@ -36,7 +36,7 @@ class AuthActions @Inject()(val authConnector: AuthConnector) extends Authorised
   private type HasEligibleEnrolments = Boolean
   private type ProviderId = String
 
-  def AuthorisedWithEnrolments(
+  def authorisedWithEnrolments(
     body: Request[AnyContent] => HasEligibleEnrolments => Future[Result]): Action[AnyContent] =
     Action.async { implicit request =>
       implicit val hc = fromHeadersAndSession(request.headers, None)
@@ -47,41 +47,52 @@ class AuthActions @Inject()(val authConnector: AuthConnector) extends Authorised
         }
     }
 
-  def AuthorisedWithAgentCode(body: Request[AnyContent] => Set[Identifier] => ProviderId => Future[Result])(
-    handleError: PartialFunction[Throwable, Result]): Action[AnyContent] = Action.async { implicit request =>
-    implicit val hc = fromHeadersAndSession(request.headers, None)
+  def authorisedWithAgentCode(
+    body: Request[AnyContent] => Set[Identifier] => ProviderId => Future[Result]): Action[AnyContent] = Action.async {
+    implicit request =>
+      implicit val hc = fromHeadersAndSession(request.headers, None)
 
-    authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
-      .retrieve(Retrievals.credentials and Retrievals.agentCode and Retrievals.allEnrolments) {
-        case credentials ~ agentCodeOpt ~ allEnrolments =>
-          captureIdentifiersAndAgentCodeFrom(allEnrolments, agentCodeOpt) match {
-            case Some(identifiers) => body(request)(identifiers)(credentials.providerId)
+      authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
+        .retrieve(Retrievals.credentials and Retrievals.agentCode and Retrievals.allEnrolments) {
+          case credentials ~ agentCodeOpt ~ allEnrolments =>
+            captureIdentifiersAndAgentCodeFrom(allEnrolments, agentCodeOpt) match {
+              case Some(identifiers) => body(request)(identifiers)(credentials.providerId)
 
-            case None => Future.successful(Forbidden)
-          }
-      }
-      .recover { handleError }
-  }
-
-  def AuthorisedAsSubscribedAgent(body: Request[AnyContent] => Arn => Future[Result])(
-    handleError: PartialFunction[Throwable, Result]): Action[AnyContent] = Action.async { implicit request =>
-    implicit val hc = fromHeadersAndSession(request.headers, None)
-
-    authorised(
-      Enrolment("HMRC-AS-AGENT")
-        and AuthProviders(GovernmentGateway))
-      .retrieve(authorisedEnrolments) { enrolments =>
-        val arnOpt = getEnrolmentInfo(enrolments.enrolments, "HMRC-AS-AGENT", "AgentReferenceNumber")
-
-        arnOpt match {
-          case Some(arn) => body(request)(Arn(arn))
-          case None      => Future.successful(Forbidden)
+              case None => Future.successful(Forbidden)
+            }
         }
-      }
-      .recover { handleError }
+        .recover { handleException }
   }
 
-  def BasicAuth(body: Request[AnyContent] => Future[Result]): Action[AnyContent] = Action.async { implicit request =>
+  def authorisedWithProviderId(body: Request[AnyContent] => String => Future[Result]): Action[AnyContent] =
+    Action.async { implicit request =>
+      authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
+        .retrieve(Retrievals.credentials) {
+          case credentials => body(request)(credentials.providerId)
+          case _           => Future.successful(Forbidden)
+        }
+        .recover { handleException }
+    }
+
+  def authorisedAsSubscribedAgent(body: Request[AnyContent] => Arn => Future[Result]): Action[AnyContent] =
+    Action.async { implicit request =>
+      implicit val hc = fromHeadersAndSession(request.headers, None)
+
+      authorised(
+        Enrolment("HMRC-AS-AGENT")
+          and AuthProviders(GovernmentGateway))
+        .retrieve(authorisedEnrolments) { enrolments =>
+          val arnOpt = getEnrolmentInfo(enrolments.enrolments, "HMRC-AS-AGENT", "AgentReferenceNumber")
+
+          arnOpt match {
+            case Some(arn) => body(request)(Arn(arn))
+            case None      => Future.successful(Forbidden)
+          }
+        }
+        .recover { handleException }
+    }
+
+  def basicAuth(body: Request[AnyContent] => Future[Result]): Action[AnyContent] = Action.async { implicit request =>
     implicit val hc = fromHeadersAndSession(request.headers, None)
 
     authorised() {
@@ -89,6 +100,11 @@ class AuthActions @Inject()(val authConnector: AuthConnector) extends Authorised
     } recover {
       case _: NoActiveSession => Unauthorized
     }
+  }
+
+  private def handleException(implicit ec: ExecutionContext, request: Request[_]): PartialFunction[Throwable, Result] = {
+    case _: NoActiveSession        => Unauthorized
+    case _: AuthorisationException => Forbidden
   }
 
   private def getEnrolmentInfo(enrolment: Set[Enrolment], enrolmentKey: String, identifier: String): Option[String] =

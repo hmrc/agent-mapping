@@ -8,6 +8,8 @@ PUT           /mappings/arn/:arn                          @uk.gov.hmrc.agentmapp
 
 GET           /mappings/eligibility                       @uk.gov.hmrc.agentmapping.controller.MappingController.hasEligibleEnrolments()
 
+GET           /client-count                               @uk.gov.hmrc.agentmapping.controller.MappingController.getClientCount
+
 # DEPRECATED, use /mappings/sa/:arn
 GET           /mappings/:arn                              @uk.gov.hmrc.agentmapping.controller.MappingController.findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 

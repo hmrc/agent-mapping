@@ -24,11 +24,11 @@ import play.api.mvc.{Action, AnyContent, Request, Result}
 import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.auth.AuthActions
+import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentmapping.model.Service._
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
-import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
@@ -39,22 +39,30 @@ import scala.concurrent.Future
 class MappingController @Inject()(
   repositories: MappingRepositories,
   auditService: AuditService,
+  espConnector: EnrolmentStoreProxyConnector,
   val authActions: AuthActions)
     extends BaseController {
 
   import auditService._
-  import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
   import authActions._
+  import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
   def hasEligibleEnrolments() =
-    AuthorisedWithEnrolments { implicit request => hasEligibleEnrolments =>
+    authorisedWithEnrolments { implicit request => hasEligibleEnrolments =>
       Future.successful(Ok(Json.obj("hasEligibleEnrolments" -> hasEligibleEnrolments)))
     }
 
   def createMapping(arn: Arn): Action[AnyContent] =
-    AuthorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
+    authorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
       createMapping(arn, identifiers)
-    } { handleMappingError }
+    }
+
+  def getClientCount: Action[AnyContent] =
+    authorisedWithProviderId { implicit request => providerId =>
+      espConnector
+        .getClientCount(providerId)
+        .map(clientCount => Ok(Json.obj("clientCount" -> clientCount)))
+    }
 
   private def createMappingInRepository(businessId: TaxIdentifier, identifier: Identifier, ggCredId: String)(
     implicit hc: HeaderCarrier,
@@ -126,11 +134,11 @@ class MappingController @Inject()(
   }
 
   def createPreSubscriptionMapping(utr: Utr) =
-    AuthorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
+    authorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
       createMapping(utr, identifiers)
-    } { handleMappingError }
+    }
 
-  def deletePreSubscriptionMapping(utr: Utr) = BasicAuth { implicit request =>
+  def deletePreSubscriptionMapping(utr: Utr) = basicAuth { implicit request =>
     Future
       .sequence(repositories.map(_.delete(utr)))
       .map { _ =>
@@ -139,14 +147,9 @@ class MappingController @Inject()(
   }
 
   def createPostSubscriptionMapping(utr: Utr) =
-    AuthorisedAsSubscribedAgent { implicit request => arn =>
+    authorisedAsSubscribedAgent { implicit request => arn =>
       repositories.updateUtrToArn(arn, utr).map(_ => Ok)
-    } { handleMappingError }
-
-  private val handleMappingError: PartialFunction[Throwable, Result] = {
-    case _: NoActiveSession        => Unauthorized
-    case _: AuthorisationException => Forbidden
-  }
+    }
 
   private def createMapping[A](
     businessId: TaxIdentifier,
