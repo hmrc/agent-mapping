@@ -22,11 +22,10 @@ import uk.gov.hmrc.agentmapping.model.{Identifier, Service}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.auth.core.retrieve.Retrievals.authorisedEnrolments
-import uk.gov.hmrc.auth.core.retrieve.{Retrievals, ~}
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{agentCode, allEnrolments, authorisedEnrolments, credentials}
+import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
 import uk.gov.hmrc.play.HeaderCarrierConverter.fromHeadersAndSession
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -36,45 +35,47 @@ class AuthActions @Inject()(val authConnector: AuthConnector) extends Authorised
   private type HasEligibleEnrolments = Boolean
   private type ProviderId = String
 
-  def authorisedWithEnrolments(
-    body: Request[AnyContent] => HasEligibleEnrolments => Future[Result]): Action[AnyContent] =
+  def authorisedWithEnrolments(body: Request[AnyContent] => HasEligibleEnrolments => Future[Result])(
+    implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
       implicit val hc = fromHeadersAndSession(request.headers, None)
 
       authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
-        .retrieve(Retrievals.allEnrolments) {
+        .retrieve(allEnrolments) {
           case allEnrolments => body(request)(captureIdentifiersFrom(allEnrolments).nonEmpty)
+
         }
     }
 
-  def authorisedWithAgentCode(
-    body: Request[AnyContent] => Set[Identifier] => ProviderId => Future[Result]): Action[AnyContent] = Action.async {
-    implicit request =>
-      implicit val hc = fromHeadersAndSession(request.headers, None)
+  def authorisedWithAgentCode(body: Request[AnyContent] => Set[Identifier] => ProviderId => Future[Result])(
+    implicit ec: ExecutionContext): Action[AnyContent] = Action.async { implicit request =>
+    implicit val hc = fromHeadersAndSession(request.headers, None)
 
-      authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
-        .retrieve(Retrievals.credentials and Retrievals.agentCode and Retrievals.allEnrolments) {
-          case credentials ~ agentCodeOpt ~ allEnrolments =>
-            captureIdentifiersAndAgentCodeFrom(allEnrolments, agentCodeOpt) match {
-              case Some(identifiers) => body(request)(identifiers)(credentials.providerId)
+    authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
+      .retrieve(credentials and agentCode and allEnrolments) {
+        case Some(Credentials(providerId, _)) ~ agentCodeOpt ~ allEnrolments =>
+          captureIdentifiersAndAgentCodeFrom(allEnrolments, agentCodeOpt) match {
+            case Some(identifiers) => body(request)(identifiers)(providerId)
 
-              case None => Future.successful(Forbidden)
-            }
-        }
-        .recover { handleException }
+            case None => Future.successful(Forbidden)
+          }
+      }
+      .recover { handleException }
   }
 
-  def authorisedWithProviderId(body: Request[AnyContent] => String => Future[Result]): Action[AnyContent] =
+  def authorisedWithProviderId(body: Request[AnyContent] => String => Future[Result])(
+    implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
       authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
-        .retrieve(Retrievals.credentials) {
-          case credentials => body(request)(credentials.providerId)
-          case _           => Future.successful(Forbidden)
+        .retrieve(credentials) {
+          case Some(Credentials(providerId, _)) => body(request)(providerId)
+          case _                                => Future.successful(Forbidden)
         }
         .recover { handleException }
     }
 
-  def authorisedAsSubscribedAgent(body: Request[AnyContent] => Arn => Future[Result]): Action[AnyContent] =
+  def authorisedAsSubscribedAgent(body: Request[AnyContent] => Arn => Future[Result])(
+    implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
       implicit val hc = fromHeadersAndSession(request.headers, None)
 
@@ -92,15 +93,16 @@ class AuthActions @Inject()(val authConnector: AuthConnector) extends Authorised
         .recover { handleException }
     }
 
-  def basicAuth(body: Request[AnyContent] => Future[Result]): Action[AnyContent] = Action.async { implicit request =>
-    implicit val hc = fromHeadersAndSession(request.headers, None)
+  def basicAuth(body: Request[AnyContent] => Future[Result])(implicit ec: ExecutionContext): Action[AnyContent] =
+    Action.async { implicit request =>
+      implicit val hc = fromHeadersAndSession(request.headers, None)
 
-    authorised() {
-      body(request)
-    } recover {
-      case _: NoActiveSession => Unauthorized
+      authorised() {
+        body(request)
+      } recover {
+        case _: NoActiveSession => Unauthorized
+      }
     }
-  }
 
   private def handleException(implicit ec: ExecutionContext, request: Request[_]): PartialFunction[Throwable, Result] = {
     case _: NoActiveSession        => Unauthorized

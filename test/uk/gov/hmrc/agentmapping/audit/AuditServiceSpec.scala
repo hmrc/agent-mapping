@@ -20,7 +20,7 @@ import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.verify
 import org.scalatest.concurrent.Eventually
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.CreateMapping
 import uk.gov.hmrc.http.HeaderCarrier
@@ -42,6 +42,8 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
         sessionId = Some(SessionId("dummy session id")),
         requestId = Some(RequestId("dummy request id")))
 
+      implicit val ec = ExecutionContext.Implicits.global
+
       await(
         service.auditEvent(
           CreateMapping,
@@ -50,7 +52,7 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
             "extra1"               -> "first extra detail",
             "extra2"               -> "second extra detail",
             "agentReferenceNumber" -> "GARN0000247")
-        )(hc, FakeRequest("GET", "/path")))
+        )(hc, ec, FakeRequest("GET", "/path")))
 
       eventually {
         val captor = ArgumentCaptor.forClass(classOf[DataEvent])

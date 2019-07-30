@@ -2,6 +2,7 @@ package uk.gov.hmrc.agentmapping
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
+import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import com.google.inject.AbstractModule
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -450,7 +451,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     }
   }
 
-  private def givenUserIsAuthorisedFor(f: TestFixture): Unit =
+  private def givenUserIsAuthorisedFor(f: TestFixture): StubMapping =
     givenUserIsAuthorisedFor(
       f.service,
       f.identifierKey,
@@ -458,7 +459,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
       "testCredId",
       agentCodeOpt = Some(agentCode))
 
-  private def givenUserIsAuthorisedForMultiple(fixtures: Seq[TestFixture]): Unit =
+  private def givenUserIsAuthorisedForMultiple(fixtures: Seq[TestFixture]): StubMapping =
     givenUserIsAuthorisedForMultiple(asEnrolments(fixtures), "testCredId", agentCodeOpt = Some(agentCode))
 
   private def asEnrolments(fixtures: Seq[TestFixture]): Set[Enrolment] =
@@ -524,5 +525,6 @@ sealed trait MappingControllerISpecSetup
     super.beforeEach()
     await(Future.sequence(repositories.map(_.ensureIndexes)))
     givenAuditConnector()
+    ()
   }
 }

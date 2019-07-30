@@ -54,6 +54,7 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
 
     bindBaseUrl("auth")
     bindBaseUrl("enrolment-store-proxy")
+    ()
   }
 
   private def bindBaseUrl(serviceName: String) =

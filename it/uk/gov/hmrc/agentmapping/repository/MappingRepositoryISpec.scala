@@ -52,6 +52,7 @@ abstract class BaseRepositoryISpec[
   override def beforeEach() {
     super.beforeEach()
     await(repository.ensureIndexes)
+    ()
   }
 
   private val repoName = repository.getClass.getSimpleName
