@@ -25,6 +25,7 @@ import uk.gov.hmrc.play.http.ws.WSHttpResponse
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
+import scala.language.postfixOps
 
 object Http {
 
@@ -75,6 +76,7 @@ class Resource(path: String, port: Int) {
   def postEmpty()(implicit hc: HeaderCarrier = HeaderCarrier(), client: WSClient): HttpResponse =
     Http.postEmpty(url)(hc, client)
 
-  def putEmpty()(implicit hc: HeaderCarrier = HeaderCarrier(), client: WSClient): HttpResponse =
+  def putEmpty()(implicit hc: HeaderCarrier = HeaderCarrier(), client: WSClient): HttpResponse = {
     Http.putEmpty(url)(hc, client)
+  }
 }

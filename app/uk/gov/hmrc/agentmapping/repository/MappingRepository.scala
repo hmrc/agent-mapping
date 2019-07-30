@@ -60,7 +60,9 @@ trait RepositoryFunctions[T] {
 abstract class BaseMappingRepository[T: Format: Manifest](
   collectionName: String,
   identifierKey: String,
-  wrap: (TaxIdentifier, String, Option[DateTime]) => T)(implicit mongoComponent: ReactiveMongoComponent)
+  wrap: (TaxIdentifier, String, Option[DateTime]) => T)(
+  implicit mongoComponent: ReactiveMongoComponent,
+  ec: ExecutionContext)
     extends ReactiveRepository[T, BSONObjectID](
       collectionName,
       mongoComponent.mongoConnector.db,
@@ -148,7 +150,8 @@ abstract class BaseMappingRepository[T: Format: Manifest](
     )
 
     collection
-      .update(selector, update, upsert = false)
+      .update(ordered = false)
+      .one(selector, update, upsert = false)
       .map(_ => ())
   }
 
@@ -159,7 +162,9 @@ abstract class BaseMappingRepository[T: Format: Manifest](
     remove("utr" -> utr.value)
 }
 
-abstract class NewMappingRepository @Inject()(serviceName: String)(implicit mongoComponent: ReactiveMongoComponent)
+abstract class NewMappingRepository @Inject()(serviceName: String)(
+  implicit mongoComponent: ReactiveMongoComponent,
+  ec: ExecutionContext)
     extends BaseMappingRepository(
       s"agent-mapping-${serviceName.toLowerCase}",
       "identifier",

@@ -26,9 +26,8 @@ import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
-import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
 object AgentMappingEvent extends Enumeration {
@@ -43,7 +42,8 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
 
   def sendCreateMappingAuditEvent(arn: Arn, identifier: Identifier, authProviderId: String, duplicate: Boolean = false)(
     implicit hc: HeaderCarrier,
-    request: Request[Any]): Unit =
+    ec: ExecutionContext,
+    request: Request[Any]): Unit = {
     auditEvent(
       AgentMappingEvent.CreateMapping,
       "create-mapping",
@@ -55,11 +55,16 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
         "duplicate"            -> duplicate
       )
     )
+    ()
+  }
 
   private[audit] def auditEvent(
     event: AgentMappingEvent,
     transactionName: String,
-    details: Seq[(String, Any)] = Seq.empty)(implicit hc: HeaderCarrier, request: Request[Any]): Future[Unit] =
+    details: Seq[(String, Any)] = Seq.empty)(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext,
+    request: Request[Any]): Future[Unit] =
     send(createEvent(event, transactionName, details: _*))
 
   private def createEvent(event: AgentMappingEvent, transactionName: String, details: (String, Any)*)(
@@ -72,7 +77,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
       detail = hc.toAuditDetails(details.map(pair => pair._1 -> pair._2.toString): _*)
     )
 
-  private def send(events: DataEvent*)(implicit hc: HeaderCarrier): Future[Unit] =
+  private def send(events: DataEvent*)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Unit] =
     Future {
       events.foreach { event =>
         Try(auditConnector.sendEvent(event))

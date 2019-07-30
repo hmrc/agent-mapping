@@ -5,13 +5,16 @@ import uk.gov.hmrc.auth.core.{AffinityGroup, Enrolment}
 
 trait AuthStubs {
 
-  def givenUserNotAuthorisedWithError(mdtpDetail: String): Unit =
+  def givenUserNotAuthorisedWithError(mdtpDetail: String): Unit = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .willReturn(
           aResponse()
             .withStatus(401)
             .withHeader("WWW-Authenticate", s"""MDTP detail="$mdtpDetail"""")))
+    ()
+  }
+
 
   def givenUserIsAuthorisedFor(
                                 serviceName: String,
@@ -20,7 +23,7 @@ trait AuthStubs {
                                 ggCredId: String,
                                 affinityGroup: AffinityGroup = AffinityGroup.Agent,
                                 agentCodeOpt: Option[String],
-                                expectedRetrievals: Seq[String] = Seq("credentials", "agentCode", "allEnrolments")): Unit = {
+                                expectedRetrievals: Seq[String] = Seq("optionalCredentials", "agentCode", "allEnrolments")): Unit = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .atPriority(1)
@@ -40,7 +43,7 @@ trait AuthStubs {
             .withHeader("Content-Type", "application/json")
             .withBody(
               s"""
-                 |{ "credentials": {
+                 |{ "optionalCredentials": {
                  |    "providerId": "$ggCredId",
                  |    "providerType": "GovernmmentGateway"
                  |  }
@@ -59,6 +62,7 @@ trait AuthStubs {
         .willReturn(aResponse()
           .withStatus(401)
           .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")))
+    ()
   }
 
   def givenUserIsAuthorisedForMultiple(
@@ -68,7 +72,7 @@ trait AuthStubs {
                                         agentCodeOpt: Option[String]): Unit = {
     val responseBody =
       s"""
-         |{ "credentials": {
+         |{ "optionalCredentials": {
          |    "providerId": "$ggCredId",
          |    "providerType": "GovernmmentGateway"
          |  }
@@ -98,7 +102,7 @@ trait AuthStubs {
               |     {"authProviders":["GovernmentGateway"]},
               |     {"affinityGroup":"$affinityGroup"}
               |   ],
-              |  "retrieve": ["credentials","agentCode","allEnrolments"]
+              |  "retrieve": ["optionalCredentials","agentCode","allEnrolments"]
               |}
            """.stripMargin,
           true,
@@ -115,7 +119,9 @@ trait AuthStubs {
         .atPriority(2)
         .willReturn(aResponse()
           .withStatus(401)
-          .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")))
+          .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\""))
+    )
+    ()
   }
 
   def givenUserIsAuthorisedAsAgent(arn: String) = {
@@ -173,7 +179,7 @@ trait AuthStubs {
             .withHeader("Content-Type", "application/json")
             .withBody(
               s"""
-                 |{ "credentials": {
+                 |{ "optionalCredentials": {
                  |    "providerId": "$ggCredId",
                  |    "providerType": "GovernmmentGateway"
                  |  }
@@ -181,6 +187,7 @@ trait AuthStubs {
                  |  "allEnrolments": []
                  |}
                  |""".stripMargin)))
+    ()
   }
 
   def isLoggedIn = {

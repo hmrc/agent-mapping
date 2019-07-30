@@ -524,5 +524,6 @@ sealed trait MappingControllerISpecSetup
     super.beforeEach()
     await(Future.sequence(repositories.map(_.ensureIndexes)))
     givenAuditConnector()
+    ()
   }
 }

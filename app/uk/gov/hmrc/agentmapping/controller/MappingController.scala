@@ -33,19 +33,18 @@ import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MappingController @Inject()(
   repositories: MappingRepositories,
   auditService: AuditService,
   espConnector: EnrolmentStoreProxyConnector,
-  val authActions: AuthActions)
+  val authActions: AuthActions)(implicit val ec: ExecutionContext)
     extends BaseController {
 
   import auditService._
   import authActions._
-  import uk.gov.hmrc.play.http.logging.MdcLoggingExecutionContext._
 
   def hasEligibleEnrolments() =
     authorisedWithEnrolments { implicit request => hasEligibleEnrolments =>
@@ -105,25 +104,27 @@ class MappingController @Inject()(
     }
   }
 
-  def findAgentCodeMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
-    repositories.get(AgentCode).findBy(arn) map { matches =>
-      implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("agentCode")
-      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
-      else NotFound
+  def findAgentCodeMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) =
+    Action.async { implicit request =>
+      repositories.get(AgentCode).findBy(arn) map { matches =>
+        implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("agentCode")
+        if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+        else NotFound
+      }
     }
-  }
 
-  def findMappings(key: String, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
-    Service.forKey(key) match {
-      case Some(service) =>
-        repositories.get(service).findBy(arn) map { matches =>
-          if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
-          else NotFound
-        }
-      case None =>
-        Future.successful(BadRequest(s"No service found for the key $key"))
+  def findMappings(key: String, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) =
+    Action.async { implicit request =>
+      Service.forKey(key) match {
+        case Some(service) =>
+          repositories.get(service).findBy(arn) map { matches =>
+            if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+            else NotFound
+          }
+        case None =>
+          Future.successful(BadRequest(s"No service found for the key $key"))
+      }
     }
-  }
 
   def delete(arn: Arn) = Action.async { implicit request =>
     Future
@@ -151,9 +152,11 @@ class MappingController @Inject()(
       repositories.updateUtrToArn(arn, utr).map(_ => Ok)
     }
 
-  private def createMapping[A](
-    businessId: TaxIdentifier,
-    identifiers: Set[Identifier])(implicit hc: HeaderCarrier, request: Request[A], providerId: String): Future[Result] =
+  private def createMapping[A](businessId: TaxIdentifier, identifiers: Set[Identifier])(
+    implicit hc: HeaderCarrier,
+    ec: ExecutionContext,
+    request: Request[A],
+    providerId: String): Future[Result] =
     identifiers
       .map(identifier => createMappingInRepository(businessId, identifier, providerId))
       .reduce((f1, f2) => f1.flatMap(b1 => f2.map(b2 => b1 & b2)))

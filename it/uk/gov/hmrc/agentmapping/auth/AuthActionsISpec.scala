@@ -4,19 +4,21 @@ import akka.stream.ActorMaterializer
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.{reset, when}
 import org.scalatest.BeforeAndAfterEach
-import org.scalatest.mockito.MockitoSugar
+import org.scalatestplus.mockito.MockitoSugar
 import play.api.mvc.Results._
 import play.api.mvc.{AnyContent, AnyContentAsEmpty, Request, Result}
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmapping.model.Identifier
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.auth.core._
+import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve._
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 
-class AuthActionsISpec extends UnitSpec with MockitoSugar with BeforeAndAfterEach {
+class AuthActionsISpec(implicit val ec: ExecutionContext) extends UnitSpec with MockitoSugar with BeforeAndAfterEach {
   implicit val actorSystem = ActorSystem()
   implicit val materializer = ActorMaterializer()
 
@@ -28,7 +30,7 @@ class AuthActionsISpec extends UnitSpec with MockitoSugar with BeforeAndAfterEac
   "BasicAuth" should {
     def response = await(mockAuthActions.basicAuth(basicAction).apply(fakeRequestAny))
     "return 200 if the user has a valid auth token" in {
-      authStub[Unit](Future.successful(EmptyRetrieval))
+      authStub[Unit](Future.successful(EmptyRetrieval).map(_ => ()))
 
       status(response) shouldBe 200
     }
@@ -111,7 +113,7 @@ class AuthActionsISpec extends UnitSpec with MockitoSugar with BeforeAndAfterEac
   private val authorisedWithAgentCodeAction: Request[AnyContent] => Set[Identifier] => String => Future[Result] = { implicit request => identifier => provider => Future.successful(Ok)}
 
   private def authStub[A](returnValue: Future[A]) =
-    when(mockAuthConnector.authorise(any[authorise.Predicate](), any[Retrieval[A]])(any(), any())).thenReturn(returnValue)
+    when(mockAuthConnector.authorise(any[Predicate](), any[Retrieval[A]])(any[HeaderCarrier], any[ExecutionContext])).thenReturn(returnValue)
 
   private val fakeRequestAny: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
 
