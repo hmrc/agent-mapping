@@ -1,18 +1,18 @@
 package uk.gov.hmrc.agentmapping.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import uk.gov.hmrc.auth.core.{AffinityGroup, Enrolment}
 
 trait AuthStubs {
 
-  def givenUserNotAuthorisedWithError(mdtpDetail: String): Unit = {
+  def givenUserNotAuthorisedWithError(mdtpDetail: String): StubMapping = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .willReturn(
           aResponse()
             .withStatus(401)
             .withHeader("WWW-Authenticate", s"""MDTP detail="$mdtpDetail"""")))
-    ()
   }
 
 
@@ -23,7 +23,7 @@ trait AuthStubs {
                                 ggCredId: String,
                                 affinityGroup: AffinityGroup = AffinityGroup.Agent,
                                 agentCodeOpt: Option[String],
-                                expectedRetrievals: Seq[String] = Seq("optionalCredentials", "agentCode", "allEnrolments")): Unit = {
+                                expectedRetrievals: Seq[String] = Seq("optionalCredentials", "agentCode", "allEnrolments")): StubMapping = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .atPriority(1)
@@ -62,14 +62,13 @@ trait AuthStubs {
         .willReturn(aResponse()
           .withStatus(401)
           .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")))
-    ()
   }
 
   def givenUserIsAuthorisedForMultiple(
                                         enrolments: Set[Enrolment],
                                         ggCredId: String,
                                         affinityGroup: AffinityGroup = AffinityGroup.Agent,
-                                        agentCodeOpt: Option[String]): Unit = {
+                                        agentCodeOpt: Option[String]): StubMapping = {
     val responseBody =
       s"""
          |{ "optionalCredentials": {
@@ -121,10 +120,9 @@ trait AuthStubs {
           .withStatus(401)
           .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\""))
     )
-    ()
   }
 
-  def givenUserIsAuthorisedAsAgent(arn: String) = {
+  def givenUserIsAuthorisedAsAgent(arn: String): StubMapping = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .withRequestBody(equalToJson(
@@ -159,7 +157,7 @@ trait AuthStubs {
                                 identifierValue: String,
                                 ggCredId: String,
                                 affinityGroup: AffinityGroup = AffinityGroup.Agent,
-                                agentCodeOpt: Option[String]): Unit = {
+                                agentCodeOpt: Option[String]): StubMapping = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .atPriority(1)
@@ -187,7 +185,6 @@ trait AuthStubs {
                  |  "allEnrolments": []
                  |}
                  |""".stripMargin)))
-    ()
   }
 
   def isLoggedIn = {
