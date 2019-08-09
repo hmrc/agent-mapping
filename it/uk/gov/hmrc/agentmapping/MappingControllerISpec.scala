@@ -10,10 +10,11 @@ import play.api.libs.ws.WSClient
 import play.api.libs.ws.ahc.AhcWSClient
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent
-import uk.gov.hmrc.agentmapping.model.Service
+import uk.gov.hmrc.agentmapping.model.{AuthProviderId, Service, UserMapping}
 import uk.gov.hmrc.agentmapping.model.Service._
+import uk.gov.hmrc.domain
 import uk.gov.hmrc.agentmapping.repository.MappingRepositories
-import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DataStreamStub}
+import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DataStreamStub, SubscriptionStub}
 import uk.gov.hmrc.agentmapping.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.auth.core.{AffinityGroup, Enrolment, EnrolmentIdentifier}
@@ -32,12 +33,16 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
   val IRAgentReference = "IRAgentReference"
   val AgentRefNo = "AgentRefNo"
+  val authProviderId = AuthProviderId("testCredId")
 
   def hasEligibleRequest: Resource =
     new Resource(s"/agent-mapping/mappings/eligibility", port)
 
-  def createMappingRequest(requestUtr: Utr = utr, requestArn: Arn = registeredArn): Resource =
+  def createMappingRequest(requestArn: Arn = registeredArn): Resource =
     new Resource(s"/agent-mapping/mappings/arn/${requestArn.value}", port)
+
+  def createMappingFromSubscriptionJourneyRecordRequest(requestArn: Arn = registeredArn): Resource =
+    new Resource(s"/agent-mapping/mappings/task-list/arn/${requestArn.value}", port)
 
   def createPreSubscriptionMappingRequest(requestUtr: Utr = utr): Resource =
     new Resource(s"/agent-mapping/mappings/pre-subscription/utr/${requestUtr.value}", port)
@@ -96,32 +101,46 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
   "MappingController" should {
 
-    // Test each fixture in isolation first
-    fixtures.foreach { f =>
-      s"capture ${Service.asString(f.service)} enrolment" when {
-        "return created upon success" in {
-          givenUserIsAuthorisedFor(f)
-          createMappingRequest().putEmpty().status shouldBe 201
+    "/mappings/arn/:arn" should {
+
+      // Test each fixture in isolation first
+      fixtures.foreach { f =>
+        s"capture ${Service.asString(f.service)} enrolment" when {
+          "return created upon success" in {
+            givenUserIsAuthorisedFor(f)
+            createMappingRequest().putEmpty().status shouldBe 201
+          }
+
+          "return created upon success w/o agent code" in {
+            givenUserIsAuthorisedFor(f.service, f.identifierKey, f.identifierValue, "testCredId", agentCodeOpt = None)
+            createMappingRequest().putEmpty().status shouldBe 201
+          }
+
+          "return conflict when the mapping already exists" in {
+            givenUserIsAuthorisedFor(f)
+            createMappingRequest().putEmpty().status shouldBe 201
+            createMappingRequest().putEmpty().status shouldBe 409
+
+            verifyCreateMappingAuditEventSent(f)
+          }
+
+          "return forbidden when an authorisation error occurs" in {
+            givenUserNotAuthorisedWithError("InsufficientEnrolments")
+
+            createMappingRequest().putEmpty().status shouldBe 403
+          }
         }
+      }
+    }
 
-        "return created upon success w/o agent code" in {
-          givenUserIsAuthorisedFor(f.service, f.identifierKey, f.identifierValue, "testCredId", agentCodeOpt = None)
-          createMappingRequest().putEmpty().status shouldBe 201
-        }
+    "/mappings/task-list/arn/:arn" should {
+      "return created upon success" in {
+        givenUserIsAuthorisedForCreds(IRSAAGENTTestFixture)
+        val agentCodeUserMapping = UserMapping(authProviderId, Some(domain.AgentCode("agent-code")), Seq.empty, 0, "")
 
-        "return conflict when the mapping already exists" in {
-          givenUserIsAuthorisedFor(f)
-          createMappingRequest().putEmpty().status shouldBe 201
-          createMappingRequest().putEmpty().status shouldBe 409
+        givenUserMappingsExistsForAuthProviderId(authProviderId, Seq(agentCodeUserMapping))
 
-          verifyCreateMappingAuditEventSent(f)
-        }
-
-        "return forbidden when an authorisation error occurs" in {
-          givenUserNotAuthorisedWithError("InsufficientEnrolments")
-
-          createMappingRequest().putEmpty().status shouldBe 403
-        }
+        createMappingFromSubscriptionJourneyRecordRequest().putEmpty().status shouldBe 201
       }
     }
 
@@ -459,6 +478,14 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
       "testCredId",
       agentCodeOpt = Some(agentCode))
 
+  private def givenUserIsAuthorisedForCreds(f: TestFixture): StubMapping =
+    givenUserIsAuthorisedForCreds(
+      f.service,
+      f.identifierKey,
+      f.identifierValue,
+      "testCredId",
+      agentCodeOpt = Some(agentCode))
+
   private def givenUserIsAuthorisedForMultiple(fixtures: Seq[TestFixture]): StubMapping =
     givenUserIsAuthorisedForMultiple(asEnrolments(fixtures), "testCredId", agentCodeOpt = Some(agentCode))
 
@@ -488,7 +515,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 }
 
 sealed trait MappingControllerISpecSetup
-  extends UnitSpec with MongoApp with WireMockSupport with AuthStubs with DataStreamStub {
+  extends UnitSpec with MongoApp with WireMockSupport with AuthStubs with DataStreamStub with SubscriptionStub {
 
   implicit val actorSystem = ActorSystem()
   implicit val materializer = ActorMaterializer()
@@ -510,6 +537,8 @@ sealed trait MappingControllerISpecSetup
         mongoConfiguration ++
           Map(
             "microservice.services.auth.port" -> wireMockPort,
+            "microservice.services.agent-subscription.port" -> wireMockPort,
+            "microservice.services.agent-subscription.host" -> wireMockHost,
             "auditing.consumer.baseUri.host" -> wireMockHost,
             "auditing.consumer.baseUri.port" -> wireMockPort,
             "application.router" -> "testOnlyDoNotUseInAppConf.Routes",

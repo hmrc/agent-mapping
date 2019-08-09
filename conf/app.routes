@@ -5,6 +5,7 @@ PUT           /mappings/post-subscription/utr/:utr        @uk.gov.hmrc.agentmapp
 DELETE        /mappings/pre-subscription/utr/:utr         @uk.gov.hmrc.agentmapping.controller.MappingController.deletePreSubscriptionMapping(utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr)
 
 PUT           /mappings/arn/:arn                          @uk.gov.hmrc.agentmapping.controller.MappingController.createMapping(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+PUT           /mappings/task-list/arn/:arn                @uk.gov.hmrc.agentmapping.controller.MappingController.createMappingsFromSubscriptionJourneyRecord(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
 GET           /mappings/eligibility                       @uk.gov.hmrc.agentmapping.controller.MappingController.hasEligibleEnrolments()
 
