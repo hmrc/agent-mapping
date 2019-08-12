@@ -10,7 +10,7 @@ import play.api.libs.ws.WSClient
 import play.api.libs.ws.ahc.AhcWSClient
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent
-import uk.gov.hmrc.agentmapping.model.{AuthProviderId, Service, UserMapping}
+import uk.gov.hmrc.agentmapping.model.{AgentCharId, AgentEnrolment, AgentRefNo, AuthProviderId, HmrcGtsAgentRef, HmrcMgdAgentRef, IRAgentReference, IRAgentReferenceCt, IRAgentReferencePaye, LegacyAgentEnrolmentType, SdltStorn, Service, UserMapping, VATAgentRefNo}
 import uk.gov.hmrc.agentmapping.model.Service._
 import uk.gov.hmrc.domain
 import uk.gov.hmrc.agentmapping.repository.MappingRepositories
@@ -31,8 +31,8 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
   private val utr = Utr("2000000000")
   private val agentCode = "TZRXXV"
 
-  val IRAgentReference = "IRAgentReference"
-  val AgentRefNo = "AgentRefNo"
+  val IRSAAgentReference = "IRAgentReference"
+  val AgentReferenceNo = "AgentRefNo"
   val authProviderId = AuthProviderId("testCredId")
 
   def hasEligibleRequest: Resource =
@@ -77,17 +77,37 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
   val AgentCodeTestFixture = TestFixture(AgentCode, "AgentCode", agentCode)
 
-  val IRSAAGENTTestFixture = TestFixture(`IR-SA-AGENT`, IRAgentReference, "A1111A")
-  val HMCEVATAGNTTestFixture = TestFixture(`HMCE-VAT-AGNT`, AgentRefNo, "101747696")
-  val IRCTAGENTTestFixture = TestFixture(`IR-CT-AGENT`, IRAgentReference, "B2121C")
+  val IRSAAGENTTestFixture = TestFixture(`IR-SA-AGENT`, IRSAAgentReference, "A1111A")
+  val HMCEVATAGNTTestFixture = TestFixture(`HMCE-VAT-AGNT`, AgentReferenceNo, "101747696")
+  val IRCTAGENTTestFixture = TestFixture(`IR-CT-AGENT`, IRSAAgentReference, "B2121C")
   val HMRCGTSAGNTTestFixture = TestFixture(`HMRC-GTS-AGNT`, "HMRCGTSAGENTREF", "AB8964622K")
   val HMRCNOVRNAGNTTestFixture = TestFixture(`HMRC-NOVRN-AGNT`, "VATAgentRefNo", "FGH79/96KUJ")
   val HMRCCHARAGENTTestFixture = TestFixture(`HMRC-CHAR-AGENT`, "AGENTCHARID", "FGH79/96KUJ")
   val HMRCMGDAGNTTestFixture = TestFixture(`HMRC-MGD-AGNT`, "HMRCMGDAGENTREF", "737B.89")
-  val IRPAYEAGENTTestFixture = TestFixture(`IR-PAYE-AGENT`, IRAgentReference, "F9876J")
+  val IRPAYEAGENTTestFixture = TestFixture(`IR-PAYE-AGENT`, IRSAAgentReference, "F9876J")
   val IRSDLTAGENTTestFixture = TestFixture(`IR-SDLT-AGENT`, "STORN", "AAA0008")
 
-  val fixtures = Seq(
+  val AgentCodeUserMapping = UserMapping(authProviderId, Some(domain.AgentCode("agent-code")), Seq.empty, 0, "")
+  val IRSAAGENTUserMapping =
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(IRAgentReference, domain.AgentCode("A1111A"))), 0, "")
+  val HMCEVATAGNTUserMapping =
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(AgentRefNo, domain.AgentCode("101747696"))), 0, "")
+  val IRCTAGENTUserMapping =
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(IRAgentReferenceCt, domain.AgentCode("B2121C"))), 0, "")
+  val HMRCGTSAGNTUserMapping =
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(HmrcGtsAgentRef, domain.AgentCode("AB8964622K"))), 0, "")
+  val HMRCNOVRNAGNTUserMapping =
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(VATAgentRefNo, domain.AgentCode("FGH79/96KUJ"))), 0, "")
+  val HMRCCHARAGENTUserMapping =
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(AgentCharId, domain.AgentCode("FGH79/96KUJ"))), 0, "")
+  val HMRCMGDAGNTUserMapping =
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(HmrcMgdAgentRef, domain.AgentCode("737B.89"))), 0, "")
+  val IRPAYEAGENTUserMapping =
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(IRAgentReferencePaye, domain.AgentCode("F9876J"))), 0, "")
+  val IRSDLTAGENTUserMapping =
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(SdltStorn, domain.AgentCode("AAA0008"))), 0, "")
+
+  val fixtures: Seq[TestFixture] = Seq(
     IRSAAGENTTestFixture,
     HMCEVATAGNTTestFixture,
     IRCTAGENTTestFixture,
@@ -97,6 +117,19 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     HMRCMGDAGNTTestFixture,
     IRPAYEAGENTTestFixture,
     IRSDLTAGENTTestFixture
+  )
+
+  val userMappings: Seq[UserMapping] = Seq(
+    AgentCodeUserMapping,
+    IRSAAGENTUserMapping,
+    HMCEVATAGNTUserMapping,
+    IRCTAGENTUserMapping,
+    HMRCGTSAGNTUserMapping,
+    HMRCNOVRNAGNTUserMapping,
+    HMRCCHARAGENTUserMapping,
+    HMRCMGDAGNTUserMapping,
+    IRPAYEAGENTUserMapping,
+    IRSDLTAGENTUserMapping
   )
 
   "MappingController" should {
@@ -134,13 +167,22 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     }
 
     "/mappings/task-list/arn/:arn" should {
-      "return created upon success" in {
+      userMappings.foreach { u =>
+        s"for agent code: ${if(u.agentCode.isDefined) "agentCode" else u.legacyEnrolments.head.enrolmentType}" when {
+          "return created upon success" in {
+            givenUserIsAuthorisedForCreds(IRSAAGENTTestFixture)
+            givenUserMappingsExistsForAuthProviderId(authProviderId, Seq(u))
+
+            createMappingFromSubscriptionJourneyRecordRequest().putEmpty().status shouldBe 201
+          }
+        }
+      }
+
+      "return NoContent when there are no user mappings found" in {
         givenUserIsAuthorisedForCreds(IRSAAGENTTestFixture)
-        val agentCodeUserMapping = UserMapping(authProviderId, Some(domain.AgentCode("agent-code")), Seq.empty, 0, "")
+        givenUserMappingsNotFoundForAuthProviderId(authProviderId)
 
-        givenUserMappingsExistsForAuthProviderId(authProviderId, Seq(agentCodeUserMapping))
-
-        createMappingFromSubscriptionJourneyRecordRequest().putEmpty().status shouldBe 201
+        createMappingFromSubscriptionJourneyRecordRequest().putEmpty().status shouldBe 204
       }
     }
 
@@ -246,7 +288,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
         givenUserIsAuthorisedFor(
           `IR-SA-AGENT`,
-          IRAgentReference,
+          IRSAAgentReference,
           "2000000000",
           "testCredId",
           AffinityGroup.Individual,
@@ -504,18 +546,23 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
       1,
       event = AgentMappingEvent.CreateMapping,
       detail = Map(
-        "identifier" -> f.identifierValue,
-        "identifierType" -> Service.asString(f.service),
+        "identifier"           -> f.identifierValue,
+        "identifierType"       -> Service.asString(f.service),
         "agentReferenceNumber" -> "AARN0000002",
-        "authProviderId" -> "testCredId",
-        "duplicate" -> s"$duplicate"
+        "authProviderId"       -> "testCredId",
+        "duplicate"            -> s"$duplicate"
       ),
       tags = Map("transactionName" -> "create-mapping", "path" -> "/agent-mapping/mappings/arn/AARN0000002")
     )
 }
 
 sealed trait MappingControllerISpecSetup
-  extends UnitSpec with MongoApp with WireMockSupport with AuthStubs with DataStreamStub with SubscriptionStub {
+    extends UnitSpec
+    with MongoApp
+    with WireMockSupport
+    with AuthStubs
+    with DataStreamStub
+    with SubscriptionStub {
 
   implicit val actorSystem = ActorSystem()
   implicit val materializer = ActorMaterializer()
@@ -536,13 +583,13 @@ sealed trait MappingControllerISpecSetup
       .configure(
         mongoConfiguration ++
           Map(
-            "microservice.services.auth.port" -> wireMockPort,
+            "microservice.services.auth.port"               -> wireMockPort,
             "microservice.services.agent-subscription.port" -> wireMockPort,
             "microservice.services.agent-subscription.host" -> wireMockHost,
-            "auditing.consumer.baseUri.host" -> wireMockHost,
-            "auditing.consumer.baseUri.port" -> wireMockPort,
-            "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
-            "migrate-repositories" -> "false"
+            "auditing.consumer.baseUri.host"                -> wireMockHost,
+            "auditing.consumer.baseUri.port"                -> wireMockPort,
+            "application.router"                            -> "testOnlyDoNotUseInAppConf.Routes",
+            "migrate-repositories"                          -> "false"
           ))
       .overrides(new TestGuiceModule)
 
