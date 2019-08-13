@@ -187,14 +187,14 @@ class MappingController @Inject()(
       .flatMap(userMapping => userMapping.agentCode.map(ac => Identifier(AgentCode, ac.value)))
       .toSet
 
-    val otherIdentifiers: Set[Identifier] = (for {
+    val legacyIdentifiers: Set[Identifier] = (for {
       userMapping <- userMappings
       enrolment   <- userMapping.legacyEnrolments
       service     <- Service.valueOf(enrolment.enrolmentType.key)
       enrolmentIdentifier = Identifier(service, enrolment.agentCode.value)
     } yield enrolmentIdentifier).toSet
 
-    agentCodeIdentifiers ++ otherIdentifiers
+    agentCodeIdentifiers ++ legacyIdentifiers
   }
 
   private def writeAgentReferenceMappingWith(identifierFieldName: String): Writes[AgentReferenceMapping] =
