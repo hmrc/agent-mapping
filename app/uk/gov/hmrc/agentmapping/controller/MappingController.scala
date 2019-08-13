@@ -65,7 +65,9 @@ class MappingController @Inject()(
                                  case Some(mappings) =>
                                    val identifiers = createIdentifiersFromUserMappings(mappings)
                                    createMapping(arn, identifiers)
-                                 case None => Future successful NoContent //no record found
+                                 case None =>
+                                   Logger.error("no subscription journey record found when attempting to create mappings")
+                                   Future successful NoContent //no record found
                                }
       } yield createMappingsResult
     }
