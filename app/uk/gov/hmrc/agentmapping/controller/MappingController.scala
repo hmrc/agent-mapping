@@ -24,7 +24,7 @@ import play.api.mvc.{Action, AnyContent, Request, Result}
 import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.auth.AuthActions
-import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector
+import uk.gov.hmrc.agentmapping.connector.{EnrolmentStoreProxyConnector, SubscriptionConnector}
 import uk.gov.hmrc.agentmapping.model.Service._
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository._
@@ -39,6 +39,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class MappingController @Inject()(
   repositories: MappingRepositories,
   auditService: AuditService,
+  subscriptionConnector: SubscriptionConnector,
   espConnector: EnrolmentStoreProxyConnector,
   val authActions: AuthActions)(implicit val ec: ExecutionContext)
     extends BaseController {
@@ -54,6 +55,21 @@ class MappingController @Inject()(
   def createMapping(arn: Arn): Action[AnyContent] =
     authorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
       createMapping(arn, identifiers)
+    }
+
+  def createMappingsFromSubscriptionJourneyRecord(arn: Arn): Action[AnyContent] =
+    authorisedWithProviderId { implicit request => implicit providerId =>
+      for {
+        userMappings <- subscriptionConnector.getUserMappings(AuthProviderId(providerId))
+        createMappingsResult <- userMappings match {
+                                 case Some(mappings) =>
+                                   val identifiers = createIdentifiersFromUserMappings(mappings)
+                                   createMapping(arn, identifiers)
+                                 case None =>
+                                   Logger.error("no subscription journey record found when attempting to create mappings")
+                                   Future successful NoContent
+                               }
+      } yield createMappingsResult
     }
 
   def getClientCount: Action[AnyContent] =
@@ -166,6 +182,22 @@ class MappingController @Inject()(
             Conflict
           else
           Created)
+
+  private def createIdentifiersFromUserMappings(userMappings: List[UserMapping]): Set[Identifier] = {
+
+    val agentCodeIdentifiers: Set[Identifier] = userMappings
+      .flatMap(userMapping => userMapping.agentCode.map(ac => Identifier(AgentCode, ac.value)))
+      .toSet
+
+    val legacyIdentifiers: Set[Identifier] = (for {
+      userMapping <- userMappings
+      enrolment   <- userMapping.legacyEnrolments
+      service     <- Service.valueOf(enrolment.enrolmentType.key)
+      enrolmentIdentifier = Identifier(service, enrolment.identifierValue.value)
+    } yield enrolmentIdentifier).toSet
+
+    agentCodeIdentifiers ++ legacyIdentifiers
+  }
 
   private def writeAgentReferenceMappingWith(identifierFieldName: String): Writes[AgentReferenceMapping] =
     Writes[AgentReferenceMapping](m =>

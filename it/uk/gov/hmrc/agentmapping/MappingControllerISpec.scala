@@ -10,10 +10,11 @@ import play.api.libs.ws.WSClient
 import play.api.libs.ws.ahc.AhcWSClient
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent
-import uk.gov.hmrc.agentmapping.model.Service
+import uk.gov.hmrc.agentmapping.model.{AgentCharId, AgentEnrolment, AgentRefNo, AuthProviderId, HmrcGtsAgentRef, HmrcMgdAgentRef, IRAgentReference, IRAgentReferenceCt, IRAgentReferencePaye, IdentifierValue, LegacyAgentEnrolmentType, SdltStorn, Service, UserMapping, VATAgentRefNo}
 import uk.gov.hmrc.agentmapping.model.Service._
+import uk.gov.hmrc.domain
 import uk.gov.hmrc.agentmapping.repository.MappingRepositories
-import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DataStreamStub}
+import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DataStreamStub, SubscriptionStub}
 import uk.gov.hmrc.agentmapping.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.auth.core.{AffinityGroup, Enrolment, EnrolmentIdentifier}
@@ -30,14 +31,18 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
   private val utr = Utr("2000000000")
   private val agentCode = "TZRXXV"
 
-  val IRAgentReference = "IRAgentReference"
-  val AgentRefNo = "AgentRefNo"
+  val IRSAAgentReference = "IRAgentReference"
+  val AgentReferenceNo = "AgentRefNo"
+  val authProviderId = AuthProviderId("testCredId")
 
   def hasEligibleRequest: Resource =
     new Resource(s"/agent-mapping/mappings/eligibility", port)
 
-  def createMappingRequest(requestUtr: Utr = utr, requestArn: Arn = registeredArn): Resource =
+  def createMappingRequest(requestArn: Arn = registeredArn): Resource =
     new Resource(s"/agent-mapping/mappings/arn/${requestArn.value}", port)
+
+  def createMappingFromSubscriptionJourneyRecordRequest(requestArn: Arn = registeredArn): Resource =
+    new Resource(s"/agent-mapping/mappings/task-list/arn/${requestArn.value}", port)
 
   def createPreSubscriptionMappingRequest(requestUtr: Utr = utr): Resource =
     new Resource(s"/agent-mapping/mappings/pre-subscription/utr/${requestUtr.value}", port)
@@ -72,17 +77,37 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
   val AgentCodeTestFixture = TestFixture(AgentCode, "AgentCode", agentCode)
 
-  val IRSAAGENTTestFixture = TestFixture(`IR-SA-AGENT`, IRAgentReference, "A1111A")
-  val HMCEVATAGNTTestFixture = TestFixture(`HMCE-VAT-AGNT`, AgentRefNo, "101747696")
-  val IRCTAGENTTestFixture = TestFixture(`IR-CT-AGENT`, IRAgentReference, "B2121C")
+  val IRSAAGENTTestFixture = TestFixture(`IR-SA-AGENT`, IRSAAgentReference, "A1111A")
+  val HMCEVATAGNTTestFixture = TestFixture(`HMCE-VAT-AGNT`, AgentReferenceNo, "101747696")
+  val IRCTAGENTTestFixture = TestFixture(`IR-CT-AGENT`, IRSAAgentReference, "B2121C")
   val HMRCGTSAGNTTestFixture = TestFixture(`HMRC-GTS-AGNT`, "HMRCGTSAGENTREF", "AB8964622K")
   val HMRCNOVRNAGNTTestFixture = TestFixture(`HMRC-NOVRN-AGNT`, "VATAgentRefNo", "FGH79/96KUJ")
   val HMRCCHARAGENTTestFixture = TestFixture(`HMRC-CHAR-AGENT`, "AGENTCHARID", "FGH79/96KUJ")
   val HMRCMGDAGNTTestFixture = TestFixture(`HMRC-MGD-AGNT`, "HMRCMGDAGENTREF", "737B.89")
-  val IRPAYEAGENTTestFixture = TestFixture(`IR-PAYE-AGENT`, IRAgentReference, "F9876J")
+  val IRPAYEAGENTTestFixture = TestFixture(`IR-PAYE-AGENT`, IRSAAgentReference, "F9876J")
   val IRSDLTAGENTTestFixture = TestFixture(`IR-SDLT-AGENT`, "STORN", "AAA0008")
 
-  val fixtures = Seq(
+  val AgentCodeUserMapping = UserMapping(authProviderId, Some(domain.AgentCode("agent-code")), Seq.empty, 0, "")
+  val IRSAAGENTUserMapping =
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(IRAgentReference, IdentifierValue("A1111A"))), 0, "")
+  val HMCEVATAGNTUserMapping =
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(AgentRefNo, IdentifierValue("101747696"))), 0, "")
+  val IRCTAGENTUserMapping =
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(IRAgentReferenceCt, IdentifierValue("B2121C"))), 0, "")
+  val HMRCGTSAGNTUserMapping =
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(HmrcGtsAgentRef, IdentifierValue("AB8964622K"))), 0, "")
+  val HMRCNOVRNAGNTUserMapping =
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(VATAgentRefNo, IdentifierValue("FGH79/96KUJ"))), 0, "")
+  val HMRCCHARAGENTUserMapping =
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(AgentCharId, IdentifierValue("FGH79/96KUJ"))), 0, "")
+  val HMRCMGDAGNTUserMapping =
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(HmrcMgdAgentRef, IdentifierValue("737B.89"))), 0, "")
+  val IRPAYEAGENTUserMapping =
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(IRAgentReferencePaye, IdentifierValue("F9876J"))), 0, "")
+  val IRSDLTAGENTUserMapping =
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(SdltStorn, IdentifierValue("AAA0008"))), 0, "")
+
+  val fixtures: Seq[TestFixture] = Seq(
     IRSAAGENTTestFixture,
     HMCEVATAGNTTestFixture,
     IRCTAGENTTestFixture,
@@ -94,34 +119,70 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     IRSDLTAGENTTestFixture
   )
 
+  val userMappings: Seq[UserMapping] = Seq(
+    AgentCodeUserMapping,
+    IRSAAGENTUserMapping,
+    HMCEVATAGNTUserMapping,
+    IRCTAGENTUserMapping,
+    HMRCGTSAGNTUserMapping,
+    HMRCNOVRNAGNTUserMapping,
+    HMRCCHARAGENTUserMapping,
+    HMRCMGDAGNTUserMapping,
+    IRPAYEAGENTUserMapping,
+    IRSDLTAGENTUserMapping
+  )
+
   "MappingController" should {
 
-    // Test each fixture in isolation first
-    fixtures.foreach { f =>
-      s"capture ${Service.asString(f.service)} enrolment" when {
-        "return created upon success" in {
-          givenUserIsAuthorisedFor(f)
-          createMappingRequest().putEmpty().status shouldBe 201
+    "/mappings/arn/:arn" should {
+
+      // Test each fixture in isolation first
+      fixtures.foreach { f =>
+        s"capture ${Service.asString(f.service)} enrolment" when {
+          "return created upon success" in {
+            givenUserIsAuthorisedFor(f)
+            createMappingRequest().putEmpty().status shouldBe 201
+          }
+
+          "return created upon success w/o agent code" in {
+            givenUserIsAuthorisedFor(f.service, f.identifierKey, f.identifierValue, "testCredId", agentCodeOpt = None)
+            createMappingRequest().putEmpty().status shouldBe 201
+          }
+
+          "return conflict when the mapping already exists" in {
+            givenUserIsAuthorisedFor(f)
+            createMappingRequest().putEmpty().status shouldBe 201
+            createMappingRequest().putEmpty().status shouldBe 409
+
+            verifyCreateMappingAuditEventSent(f)
+          }
+
+          "return forbidden when an authorisation error occurs" in {
+            givenUserNotAuthorisedWithError("InsufficientEnrolments")
+
+            createMappingRequest().putEmpty().status shouldBe 403
+          }
         }
+      }
+    }
 
-        "return created upon success w/o agent code" in {
-          givenUserIsAuthorisedFor(f.service, f.identifierKey, f.identifierValue, "testCredId", agentCodeOpt = None)
-          createMappingRequest().putEmpty().status shouldBe 201
+    "/mappings/task-list/arn/:arn" should {
+      userMappings.foreach { u =>
+        s"for agent code: ${if(u.agentCode.isDefined) "agentCode" else u.legacyEnrolments.head.enrolmentType}" when {
+          "return created upon success" in {
+            givenUserIsAuthorisedForCreds(IRSAAGENTTestFixture)
+            givenUserMappingsExistsForAuthProviderId(authProviderId, Seq(u))
+
+            createMappingFromSubscriptionJourneyRecordRequest().putEmpty().status shouldBe 201
+          }
         }
+      }
 
-        "return conflict when the mapping already exists" in {
-          givenUserIsAuthorisedFor(f)
-          createMappingRequest().putEmpty().status shouldBe 201
-          createMappingRequest().putEmpty().status shouldBe 409
+      "return NoContent when there are no user mappings found" in {
+        givenUserIsAuthorisedForCreds(IRSAAGENTTestFixture)
+        givenUserMappingsNotFoundForAuthProviderId(authProviderId)
 
-          verifyCreateMappingAuditEventSent(f)
-        }
-
-        "return forbidden when an authorisation error occurs" in {
-          givenUserNotAuthorisedWithError("InsufficientEnrolments")
-
-          createMappingRequest().putEmpty().status shouldBe 403
-        }
+        createMappingFromSubscriptionJourneyRecordRequest().putEmpty().status shouldBe 204
       }
     }
 
@@ -227,7 +288,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
         givenUserIsAuthorisedFor(
           `IR-SA-AGENT`,
-          IRAgentReference,
+          IRSAAgentReference,
           "2000000000",
           "testCredId",
           AffinityGroup.Individual,
@@ -459,6 +520,14 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
       "testCredId",
       agentCodeOpt = Some(agentCode))
 
+  private def givenUserIsAuthorisedForCreds(f: TestFixture): StubMapping =
+    givenUserIsAuthorisedForCreds(
+      f.service,
+      f.identifierKey,
+      f.identifierValue,
+      "testCredId",
+      agentCodeOpt = Some(agentCode))
+
   private def givenUserIsAuthorisedForMultiple(fixtures: Seq[TestFixture]): StubMapping =
     givenUserIsAuthorisedForMultiple(asEnrolments(fixtures), "testCredId", agentCodeOpt = Some(agentCode))
 
@@ -477,18 +546,23 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
       1,
       event = AgentMappingEvent.CreateMapping,
       detail = Map(
-        "identifier" -> f.identifierValue,
-        "identifierType" -> Service.asString(f.service),
+        "identifier"           -> f.identifierValue,
+        "identifierType"       -> Service.asString(f.service),
         "agentReferenceNumber" -> "AARN0000002",
-        "authProviderId" -> "testCredId",
-        "duplicate" -> s"$duplicate"
+        "authProviderId"       -> "testCredId",
+        "duplicate"            -> s"$duplicate"
       ),
       tags = Map("transactionName" -> "create-mapping", "path" -> "/agent-mapping/mappings/arn/AARN0000002")
     )
 }
 
 sealed trait MappingControllerISpecSetup
-  extends UnitSpec with MongoApp with WireMockSupport with AuthStubs with DataStreamStub {
+    extends UnitSpec
+    with MongoApp
+    with WireMockSupport
+    with AuthStubs
+    with DataStreamStub
+    with SubscriptionStub {
 
   implicit val actorSystem = ActorSystem()
   implicit val materializer = ActorMaterializer()
@@ -509,11 +583,13 @@ sealed trait MappingControllerISpecSetup
       .configure(
         mongoConfiguration ++
           Map(
-            "microservice.services.auth.port" -> wireMockPort,
-            "auditing.consumer.baseUri.host" -> wireMockHost,
-            "auditing.consumer.baseUri.port" -> wireMockPort,
-            "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
-            "migrate-repositories" -> "false"
+            "microservice.services.auth.port"               -> wireMockPort,
+            "microservice.services.agent-subscription.port" -> wireMockPort,
+            "microservice.services.agent-subscription.host" -> wireMockHost,
+            "auditing.consumer.baseUri.host"                -> wireMockHost,
+            "auditing.consumer.baseUri.port"                -> wireMockPort,
+            "application.router"                            -> "testOnlyDoNotUseInAppConf.Routes",
+            "migrate-repositories"                          -> "false"
           ))
       .overrides(new TestGuiceModule)
 

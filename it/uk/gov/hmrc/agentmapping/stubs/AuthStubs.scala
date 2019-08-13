@@ -64,6 +64,54 @@ trait AuthStubs {
           .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")))
   }
 
+  def givenUserIsAuthorisedForCreds(
+                                serviceName: String,
+                                identifierName: String,
+                                identifierValue: String,
+                                ggCredId: String,
+                                affinityGroup: AffinityGroup = AffinityGroup.Agent,
+                                agentCodeOpt: Option[String],
+                                expectedRetrievals: Seq[String] = Seq("optionalCredentials")): StubMapping = {
+    stubFor(
+      post(urlEqualTo("/auth/authorise"))
+        .atPriority(1)
+        .withRequestBody(equalToJson(
+          s"""{"authorise":[
+             |  {"authProviders":["GovernmentGateway"]},
+             |  {"affinityGroup":"$affinityGroup"}
+             |],
+             |"retrieve":[${expectedRetrievals.mkString("\"", "\",\"", "\"")}]
+          }""".stripMargin,
+          true,
+          false
+        ))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withHeader("Content-Type", "application/json")
+            .withBody(
+              s"""
+                 |{ "optionalCredentials": {
+                 |    "providerId": "$ggCredId",
+                 |    "providerType": "GovernmmentGateway"
+                 |  }
+                 |  ${agentCodeOpt.map(ac => s""", "agentCode": "$ac" """).getOrElse("")},
+                 |  "allEnrolments": [
+                 |    { "key":"$serviceName", "identifiers": [
+                 |      {"key":"$identifierName", "value": "$identifierValue"}
+                 |    ], "state": "Activated" }
+                 |  ]
+                 |}
+                 |""".stripMargin)))
+
+    stubFor(
+      post(urlEqualTo("/auth/authorise"))
+        .atPriority(2)
+        .willReturn(aResponse()
+          .withStatus(401)
+          .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")))
+  }
+
   def givenUserIsAuthorisedForMultiple(
                                         enrolments: Set[Enrolment],
                                         ggCredId: String,
