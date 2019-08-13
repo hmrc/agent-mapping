@@ -10,7 +10,7 @@ import play.api.libs.ws.WSClient
 import play.api.libs.ws.ahc.AhcWSClient
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent
-import uk.gov.hmrc.agentmapping.model.{AgentCharId, AgentEnrolment, AgentRefNo, AuthProviderId, HmrcGtsAgentRef, HmrcMgdAgentRef, IRAgentReference, IRAgentReferenceCt, IRAgentReferencePaye, LegacyAgentEnrolmentType, SdltStorn, Service, UserMapping, VATAgentRefNo}
+import uk.gov.hmrc.agentmapping.model.{AgentCharId, AgentEnrolment, AgentRefNo, AuthProviderId, HmrcGtsAgentRef, HmrcMgdAgentRef, IRAgentReference, IRAgentReferenceCt, IRAgentReferencePaye, IdentifierValue, LegacyAgentEnrolmentType, SdltStorn, Service, UserMapping, VATAgentRefNo}
 import uk.gov.hmrc.agentmapping.model.Service._
 import uk.gov.hmrc.domain
 import uk.gov.hmrc.agentmapping.repository.MappingRepositories
@@ -89,23 +89,23 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
   val AgentCodeUserMapping = UserMapping(authProviderId, Some(domain.AgentCode("agent-code")), Seq.empty, 0, "")
   val IRSAAGENTUserMapping =
-    UserMapping(authProviderId, None, Seq(AgentEnrolment(IRAgentReference, domain.AgentCode("A1111A"))), 0, "")
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(IRAgentReference, IdentifierValue("A1111A"))), 0, "")
   val HMCEVATAGNTUserMapping =
-    UserMapping(authProviderId, None, Seq(AgentEnrolment(AgentRefNo, domain.AgentCode("101747696"))), 0, "")
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(AgentRefNo, IdentifierValue("101747696"))), 0, "")
   val IRCTAGENTUserMapping =
-    UserMapping(authProviderId, None, Seq(AgentEnrolment(IRAgentReferenceCt, domain.AgentCode("B2121C"))), 0, "")
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(IRAgentReferenceCt, IdentifierValue("B2121C"))), 0, "")
   val HMRCGTSAGNTUserMapping =
-    UserMapping(authProviderId, None, Seq(AgentEnrolment(HmrcGtsAgentRef, domain.AgentCode("AB8964622K"))), 0, "")
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(HmrcGtsAgentRef, IdentifierValue("AB8964622K"))), 0, "")
   val HMRCNOVRNAGNTUserMapping =
-    UserMapping(authProviderId, None, Seq(AgentEnrolment(VATAgentRefNo, domain.AgentCode("FGH79/96KUJ"))), 0, "")
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(VATAgentRefNo, IdentifierValue("FGH79/96KUJ"))), 0, "")
   val HMRCCHARAGENTUserMapping =
-    UserMapping(authProviderId, None, Seq(AgentEnrolment(AgentCharId, domain.AgentCode("FGH79/96KUJ"))), 0, "")
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(AgentCharId, IdentifierValue("FGH79/96KUJ"))), 0, "")
   val HMRCMGDAGNTUserMapping =
-    UserMapping(authProviderId, None, Seq(AgentEnrolment(HmrcMgdAgentRef, domain.AgentCode("737B.89"))), 0, "")
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(HmrcMgdAgentRef, IdentifierValue("737B.89"))), 0, "")
   val IRPAYEAGENTUserMapping =
-    UserMapping(authProviderId, None, Seq(AgentEnrolment(IRAgentReferencePaye, domain.AgentCode("F9876J"))), 0, "")
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(IRAgentReferencePaye, IdentifierValue("F9876J"))), 0, "")
   val IRSDLTAGENTUserMapping =
-    UserMapping(authProviderId, None, Seq(AgentEnrolment(SdltStorn, domain.AgentCode("AAA0008"))), 0, "")
+    UserMapping(authProviderId, None, Seq(AgentEnrolment(SdltStorn, IdentifierValue("AAA0008"))), 0, "")
 
   val fixtures: Seq[TestFixture] = Seq(
     IRSAAGENTTestFixture,

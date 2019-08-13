@@ -16,22 +16,14 @@
 
 package uk.gov.hmrc.agentmapping.model
 
-import play.api.libs.json.{Json, OFormat}
-import uk.gov.hmrc.domain.AgentCode
+import play.api.libs.json.Format
+import play.api.libs.functional.syntax._
 
-final case class UserMapping(
-  authProviderId: AuthProviderId,
-  agentCode: Option[AgentCode],
-  legacyEnrolments: Seq[AgentEnrolment],
-  count: Int = 0,
-  ggTag: String)
+/**
+  * A value associated with an enrolment key
+  */
+final case class IdentifierValue(value: String)
 
-object UserMapping {
-  implicit val format: OFormat[UserMapping] = Json.format
-}
-
-final case class AgentEnrolment(enrolmentType: LegacyAgentEnrolmentType, identifierValue: IdentifierValue)
-
-object AgentEnrolment {
-  implicit val format: OFormat[AgentEnrolment] = Json.format
+object IdentifierValue {
+  implicit val format: Format[IdentifierValue] = implicitly[Format[String]].inmap(IdentifierValue(_), _.value)
 }

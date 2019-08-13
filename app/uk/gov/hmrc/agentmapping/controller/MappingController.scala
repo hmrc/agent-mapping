@@ -191,7 +191,7 @@ class MappingController @Inject()(
       userMapping <- userMappings
       enrolment   <- userMapping.legacyEnrolments
       service     <- Service.valueOf(enrolment.enrolmentType.key)
-      enrolmentIdentifier = Identifier(service, enrolment.agentCode.value)
+      enrolmentIdentifier = Identifier(service, enrolment.identifierValue.value)
     } yield enrolmentIdentifier).toSet
 
     agentCodeIdentifiers ++ legacyIdentifiers
