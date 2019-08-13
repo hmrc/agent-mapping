@@ -67,7 +67,7 @@ class MappingController @Inject()(
                                    createMapping(arn, identifiers)
                                  case None =>
                                    Logger.error("no subscription journey record found when attempting to create mappings")
-                                   Future successful NoContent //no record found
+                                   Future successful NoContent
                                }
       } yield createMappingsResult
     }
