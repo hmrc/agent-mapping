@@ -44,7 +44,7 @@ case class AgentReferenceMapping(businessId: TaxIdentifier, identifier: String, 
     extends ArnToIdentifierMapping
 
 object AgentReferenceMapping extends ReactiveMongoFormats {
-  implicit val dateFormat = ReactiveMongoFormats.dateTimeFormats
+  implicit val dateFormat: Format[DateTime] = ReactiveMongoFormats.dateTimeFormats
 
   implicit val writes: Writes[AgentReferenceMapping] = new Writes[AgentReferenceMapping] {
     override def writes(o: AgentReferenceMapping): JsValue = o match {

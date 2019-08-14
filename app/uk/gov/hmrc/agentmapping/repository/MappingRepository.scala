@@ -72,9 +72,11 @@ abstract class BaseMappingRepository[T: Format: Manifest](
     with StrictlyEnsureIndexes[T, BSONObjectID]
     with RepositoryFunctions[T] {
 
+  @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
   def findBy(arn: Arn)(implicit ec: ExecutionContext): Future[List[T]] =
     find(Seq("arn" -> Some(arn)).map(option => option._1 -> toJsFieldJsValueWrapper(option._2.get)): _*)
 
+  @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
   def findBy(utr: Utr)(implicit ec: ExecutionContext): Future[List[T]] =
     find(Seq("utr" -> Some(utr)).map(option => option._1 -> toJsFieldJsValueWrapper(option._2.get)): _*)
 

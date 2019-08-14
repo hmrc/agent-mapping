@@ -52,7 +52,7 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
         "identifierType"       -> Service.asString(identifier.key),
         "identifier"           -> identifier.value,
         "agentReferenceNumber" -> arn.value,
-        "duplicate"            -> duplicate
+        "duplicate"            -> duplicate.toString
       )
     )
     ()
@@ -61,20 +61,20 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
   private[audit] def auditEvent(
     event: AgentMappingEvent,
     transactionName: String,
-    details: Seq[(String, Any)] = Seq.empty)(
+    details: Seq[(String, String)] = Seq.empty)(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext,
     request: Request[Any]): Future[Unit] =
     send(createEvent(event, transactionName, details: _*))
 
-  private def createEvent(event: AgentMappingEvent, transactionName: String, details: (String, Any)*)(
+  private def createEvent(event: AgentMappingEvent, transactionName: String, details: (String, String)*)(
     implicit hc: HeaderCarrier,
     request: Request[Any]): DataEvent =
     DataEvent(
       auditSource = "agent-mapping",
       auditType = event.toString,
       tags = hc.toAuditTags(transactionName, request.path),
-      detail = hc.toAuditDetails(details.map(pair => pair._1 -> pair._2.toString): _*)
+      detail = hc.toAuditDetails(details.map(pair => pair._1 -> pair._2): _*)
     )
 
   private def send(events: DataEvent*)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Unit] =

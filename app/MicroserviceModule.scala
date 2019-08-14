@@ -88,6 +88,7 @@ class MicroserviceModule(val environment: Environment, val configuration: Config
 
   import scala.reflect.ClassTag
 
+  @SuppressWarnings(Array("org.wartremover.warts.AsInstanceOf"))
   private def bindServiceConfigProperty[A](
     propertyName: String)(implicit classTag: ClassTag[A], ct: ServiceConfigPropertyType[A]): ScopedBindingBuilder =
     ct.bindServiceConfigProperty(classTag.runtimeClass.asInstanceOf[Class[A]])(propertyName)

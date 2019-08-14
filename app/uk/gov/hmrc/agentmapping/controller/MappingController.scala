@@ -47,7 +47,7 @@ class MappingController @Inject()(
   import auditService._
   import authActions._
 
-  def hasEligibleEnrolments() =
+  def hasEligibleEnrolments: Action[AnyContent] =
     authorisedWithEnrolments { implicit request => hasEligibleEnrolments =>
       Future.successful(Ok(Json.obj("hasEligibleEnrolments" -> hasEligibleEnrolments)))
     }
@@ -66,7 +66,8 @@ class MappingController @Inject()(
                                    val identifiers = createIdentifiersFromUserMappings(mappings)
                                    createMapping(arn, identifiers)
                                  case None =>
-                                   Logger.error("no subscription journey record found when attempting to create mappings")
+                                   Logger.error(
+                                     "no subscription journey record found when attempting to create mappings")
                                    Future successful NoContent
                                }
       } yield createMappingsResult
@@ -79,6 +80,11 @@ class MappingController @Inject()(
         .map(clientCount => Ok(Json.obj("clientCount" -> clientCount)))
     }
 
+  /**
+    * Add mapping for the passed identifier against an ARN or UTR (businessId)
+    * The identifier key (enrolment type) determines which data store to use
+    * Returns true IF the mapping already exists, false otherwise
+    */
   private def createMappingInRepository(businessId: TaxIdentifier, identifier: Identifier, ggCredId: String)(
     implicit hc: HeaderCarrier,
     request: Request[Any]): Future[Boolean] =
@@ -104,7 +110,7 @@ class MappingController @Inject()(
           true
       }
 
-  def findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
+  def findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] = Action.async { implicit request =>
     repositories.get(`IR-SA-AGENT`).findBy(arn) map { matches =>
       implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("saAgentReference")
       if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
@@ -112,7 +118,7 @@ class MappingController @Inject()(
     }
   }
 
-  def findVatMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) = Action.async { implicit request =>
+  def findVatMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] = Action.async { implicit request =>
     repositories.get(`HMCE-VAT-AGNT`).findBy(arn) map { matches =>
       implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("vrn")
       if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
@@ -120,7 +126,7 @@ class MappingController @Inject()(
     }
   }
 
-  def findAgentCodeMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) =
+  def findAgentCodeMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] =
     Action.async { implicit request =>
       repositories.get(AgentCode).findBy(arn) map { matches =>
         implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("agentCode")
@@ -129,7 +135,7 @@ class MappingController @Inject()(
       }
     }
 
-  def findMappings(key: String, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn) =
+  def findMappings(key: String, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] =
     Action.async { implicit request =>
       Service.forKey(key) match {
         case Some(service) =>
@@ -142,7 +148,7 @@ class MappingController @Inject()(
       }
     }
 
-  def delete(arn: Arn) = Action.async { implicit request =>
+  def delete(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     Future
       .sequence(repositories.map(_.delete(arn)))
       .map { _ =>
@@ -150,12 +156,12 @@ class MappingController @Inject()(
       }
   }
 
-  def createPreSubscriptionMapping(utr: Utr) =
+  def createPreSubscriptionMapping(utr: Utr): Action[AnyContent] =
     authorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
       createMapping(utr, identifiers)
     }
 
-  def deletePreSubscriptionMapping(utr: Utr) = basicAuth { implicit request =>
+  def deletePreSubscriptionMapping(utr: Utr): Action[AnyContent] = basicAuth { implicit request =>
     Future
       .sequence(repositories.map(_.delete(utr)))
       .map { _ =>
@@ -163,25 +169,24 @@ class MappingController @Inject()(
       }
   }
 
-  def createPostSubscriptionMapping(utr: Utr) =
+  def createPostSubscriptionMapping(utr: Utr): Action[AnyContent] =
     authorisedAsSubscribedAgent { implicit request => arn =>
       repositories.updateUtrToArn(arn, utr).map(_ => Ok)
     }
 
-  private def createMapping[A](businessId: TaxIdentifier, identifiers: Set[Identifier])(
+  private def createMapping(businessId: TaxIdentifier, identifiers: Set[Identifier])(
     implicit hc: HeaderCarrier,
     ec: ExecutionContext,
-    request: Request[A],
-    providerId: String): Future[Result] =
-    identifiers
+    request: Request[AnyContent],
+    providerId: String): Future[Result] = {
+
+    val mappingResults: Set[Future[Boolean]] = identifiers
       .map(identifier => createMappingInRepository(businessId, identifier, providerId))
-      .reduce((f1, f2) => f1.flatMap(b1 => f2.map(b2 => b1 & b2)))
-      .map(
-        allConflicted =>
-          if (allConflicted)
-            Conflict
-          else
-          Created)
+
+    Future
+      .sequence(mappingResults)
+      .map(resultSet => if (resultSet.contains(false)) Created else Conflict)
+  }
 
   private def createIdentifiersFromUserMappings(userMappings: List[UserMapping]): Set[Identifier] = {
 
