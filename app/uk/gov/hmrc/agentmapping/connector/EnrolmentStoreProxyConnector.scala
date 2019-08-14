@@ -22,7 +22,7 @@ import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
 import javax.inject.{Inject, Named, Singleton}
 import play.api.libs.json.Json.format
-import play.api.libs.json.{Json, Writes}
+import play.api.libs.json.{Json, OFormat, Writes}
 import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector.responseHandler
 import uk.gov.hmrc.agentmapping.util._
@@ -34,7 +34,7 @@ import scala.util.Try
 case class Enrolment(state: String)
 
 object Enrolment {
-  implicit val formats = format[Enrolment]
+  implicit val formats: OFormat[Enrolment] = format
 }
 
 case class EnrolmentResponse(enrolments: Seq[Enrolment])
@@ -60,6 +60,8 @@ class EnrolmentStoreProxyConnector @Inject()(
   }
 
   private def getClientCount(userId: String, service: String)(implicit hc: HeaderCarrier): Future[Int] = {
+
+    @SuppressWarnings(Array("org.wartremover.warts.Recursion"))
     def doGet(cumCount: Int = 0, startRecord: Int = 1): Future[Int] =
       getDelegatedEnrolmentsCountFor(userId, startRecord, service)
         .flatMap {
@@ -96,8 +98,8 @@ class EnrolmentStoreProxyConnector @Inject()(
 }
 
 object EnrolmentStoreProxyConnector {
-  implicit val responseHandler = new HttpReads[EnrolmentResponse] {
-    override def read(method: String, url: String, response: HttpResponse) =
+  implicit val responseHandler: HttpReads[EnrolmentResponse] = new HttpReads[EnrolmentResponse] {
+    override def read(method: String, url: String, response: HttpResponse): EnrolmentResponse =
       Try(response.status match {
         case 200 => EnrolmentResponse((response.json \ "enrolments").as[Seq[Enrolment]])
         case 204 => EnrolmentResponse(Seq.empty)

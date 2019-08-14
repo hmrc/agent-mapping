@@ -8,16 +8,17 @@ import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.ws.WSClient
 import play.api.libs.ws.ahc.AhcWSClient
+import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent
-import uk.gov.hmrc.agentmapping.model.{AgentCharId, AgentEnrolment, AgentRefNo, AuthProviderId, HmrcGtsAgentRef, HmrcMgdAgentRef, IRAgentReference, IRAgentReferenceCt, IRAgentReferencePaye, IdentifierValue, LegacyAgentEnrolmentType, SdltStorn, Service, UserMapping, VATAgentRefNo}
 import uk.gov.hmrc.agentmapping.model.Service._
-import uk.gov.hmrc.domain
+import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository.MappingRepositories
 import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DataStreamStub, SubscriptionStub}
 import uk.gov.hmrc.agentmapping.support.{MongoApp, Resource, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.auth.core.{AffinityGroup, Enrolment, EnrolmentIdentifier}
+import uk.gov.hmrc.domain
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.test.UnitSpec
 
@@ -72,7 +73,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     new Resource(s"/agent-mapping/mappings/pre-subscription/utr/${requestUtr.value}", port)
 
   case class TestFixture(service: Service.Name, identifierKey: String, identifierValue: String) {
-    val key = Service.keyFor(service)
+    val key: String = Service.keyFor(service)
   }
 
   val AgentCodeTestFixture = TestFixture(AgentCode, "AgentCode", agentCode)
@@ -470,7 +471,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
     fixtures.foreach(behave like checkEligibility(_))
 
-    def checkEligibility(testFixture: TestFixture) = {
+    def checkEligibility(testFixture: TestFixture): Unit = {
 
       s"return 200 status with a json body with hasEligibleEnrolments=true when user has enrolment: ${testFixture.service}" in {
         givenUserIsAuthorisedFor(
@@ -564,13 +565,13 @@ sealed trait MappingControllerISpecSetup
     with DataStreamStub
     with SubscriptionStub {
 
-  implicit val actorSystem = ActorSystem()
-  implicit val materializer = ActorMaterializer()
+  implicit val actorSystem: ActorSystem = ActorSystem()
+  implicit val materializer: ActorMaterializer = ActorMaterializer()
   implicit val client: WSClient = AhcWSClient()
-  implicit val hc = HeaderCarrier()
-  implicit val fakeRequest = FakeRequest("GET", "/agent-mapping/add-code")
+  implicit val hc: HeaderCarrier = HeaderCarrier()
+  implicit val fakeRequest: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("GET", "/agent-mapping/add-code")
 
-  protected val repositories = app.injector.instanceOf[MappingRepositories]
+  protected val repositories: MappingRepositories = app.injector.instanceOf[MappingRepositories]
 
   val saRepo = repositories.get(`IR-SA-AGENT`)
   val vatRepo = repositories.get(`HMCE-VAT-AGNT`)
