@@ -25,7 +25,6 @@ import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.auth.AuthActions
 import uk.gov.hmrc.agentmapping.connector.{EnrolmentStoreProxyConnector, SubscriptionConnector}
-import uk.gov.hmrc.agentmapping.model.Service._
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
@@ -89,14 +88,13 @@ class MappingController @Inject()(
     implicit hc: HeaderCarrier,
     request: Request[Any]): Future[Boolean] =
     repositories
-      .get(identifier.key)
+      .get(identifier.enrolmentType)
       .store(businessId, identifier.value)
       .map { _ =>
         businessId match {
           case arn: Arn => sendCreateMappingAuditEvent(arn, identifier, ggCredId)
           case _        => ()
         }
-
         false
       }
       .recover {
@@ -105,25 +103,26 @@ class MappingController @Inject()(
             case arn: Arn => sendCreateMappingAuditEvent(arn, identifier, ggCredId, duplicate = true)
             case _        => ()
           }
-
-          Logger(getClass).warn(s"Duplicated mapping attempt for ${Service.asString(identifier.key)}")
+          Logger(getClass).warn(s"Duplicated mapping attempt for ${identifier.enrolmentType}")
           true
       }
 
-  def findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] = Action.async { implicit request =>
-    repositories.get(`IR-SA-AGENT`).findBy(arn) map { matches =>
-      implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("saAgentReference")
-      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
-      else NotFound
-    }
+  def findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] = Action.async {
+    implicit request =>
+      repositories.get(IRAgentReference).findBy(arn) map { matches =>
+        implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("saAgentReference")
+        if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+        else NotFound
+      }
   }
 
-  def findVatMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] = Action.async { implicit request =>
-    repositories.get(`HMCE-VAT-AGNT`).findBy(arn) map { matches =>
-      implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("vrn")
-      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
-      else NotFound
-    }
+  def findVatMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] = Action.async {
+    implicit request =>
+      repositories.get(AgentRefNo).findBy(arn) map { matches =>
+        implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("vrn")
+        if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+        else NotFound
+      }
   }
 
   def findAgentCodeMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] =
@@ -137,7 +136,7 @@ class MappingController @Inject()(
 
   def findMappings(key: String, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] =
     Action.async { implicit request =>
-      Service.forKey(key) match {
+      LegacyAgentEnrolmentType.findByDbKey(key) match {
         case Some(service) =>
           repositories.get(service).findBy(arn) map { matches =>
             if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
@@ -197,7 +196,7 @@ class MappingController @Inject()(
     val legacyIdentifiers: Set[Identifier] = (for {
       userMapping <- userMappings
       enrolment   <- userMapping.legacyEnrolments
-      service     <- Service.valueOf(enrolment.enrolmentType.key)
+      service     <- LegacyAgentEnrolmentType.find(enrolment.enrolmentType.key)
       enrolmentIdentifier = Identifier(service, enrolment.identifierValue.value)
     } yield enrolmentIdentifier).toSet
 

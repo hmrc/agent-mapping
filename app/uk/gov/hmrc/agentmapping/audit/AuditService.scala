@@ -19,8 +19,7 @@ package uk.gov.hmrc.agentmapping.audit
 import com.google.inject.Singleton
 import javax.inject.Inject
 import play.api.mvc.Request
-import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.AgentMappingEvent
-import uk.gov.hmrc.agentmapping.model.{Identifier, Service}
+import uk.gov.hmrc.agentmapping.model.Identifier
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
@@ -30,13 +29,8 @@ import uk.gov.hmrc.play.audit.model.DataEvent
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
-object AgentMappingEvent extends Enumeration {
-
-  val CreateMapping = Value
-
-  type AgentMappingEvent = AgentMappingEvent.Value
-}
-
+sealed abstract class AgentMappingEvent
+case object CreateMapping extends AgentMappingEvent
 @Singleton
 class AuditService @Inject()(val auditConnector: AuditConnector) {
 
@@ -45,11 +39,11 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
     ec: ExecutionContext,
     request: Request[Any]): Unit = {
     auditEvent(
-      AgentMappingEvent.CreateMapping,
+      CreateMapping,
       "create-mapping",
       Seq(
         "authProviderId"       -> authProviderId,
-        "identifierType"       -> Service.asString(identifier.key),
+        "identifierType"       -> identifier.enrolmentType.key,
         "identifier"           -> identifier.value,
         "agentReferenceNumber" -> arn.value,
         "duplicate"            -> duplicate.toString
