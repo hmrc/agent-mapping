@@ -32,7 +32,7 @@ lazy val wartRemoverSettings = {
       Wart.ArrayEquals,
       Wart.AnyVal,
       Wart.EitherProjectionPartial,
-      //Wart.Enumeration, disabled for now, until Identifier refactor
+      Wart.Enumeration,
       Wart.ExplicitImplicitTypes,
       Wart.FinalVal,
       Wart.JavaConversions,

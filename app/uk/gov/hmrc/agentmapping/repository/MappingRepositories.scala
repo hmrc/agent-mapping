@@ -19,7 +19,6 @@ package uk.gov.hmrc.agentmapping.repository
 import javax.inject.{Inject, Singleton}
 import play.modules.reactivemongo.ReactiveMongoComponent
 import uk.gov.hmrc.agentmapping.model._
-import uk.gov.hmrc.agentmapping.model.Service._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -39,21 +38,21 @@ class MappingRepositories @Inject()(
 
   type Repository = MappingRepository with RepositoryFunctions[AgentReferenceMapping]
 
-  private val repositories: Map[Service.Name, Repository] =
+  private val repositories: Map[LegacyAgentEnrolmentType, Repository] =
     Map(
-      AgentCode         -> agentCodeMappingRepository,
-      `IR-SA-AGENT`     -> iRSAAGENTMappingRepository,
-      `HMCE-VAT-AGNT`   -> hMCEVATAGNTMappingRepository,
-      `HMRC-CHAR-AGENT` -> hMRCCHARAGENTMappingRepository,
-      `HMRC-GTS-AGNT`   -> hMRCGTSAGNTMappingRepository,
-      `HMRC-MGD-AGNT`   -> hMRCMGDAGNTMappingRepository,
-      `HMRC-NOVRN-AGNT` -> hMRCNOVRNAGNTMappingRepository,
-      `IR-CT-AGENT`     -> iRCTAGENTMappingRepository,
-      `IR-PAYE-AGENT`   -> iRPAYEAGENTMappingRepository,
-      `IR-SDLT-AGENT`   -> iRSDLTAGENTMappingRepository
+      AgentCode            -> agentCodeMappingRepository,
+      IRAgentReference     -> iRSAAGENTMappingRepository,
+      AgentRefNo           -> hMCEVATAGNTMappingRepository,
+      AgentCharId          -> hMRCCHARAGENTMappingRepository,
+      HmrcGtsAgentRef      -> hMRCGTSAGNTMappingRepository,
+      HmrcMgdAgentRef      -> hMRCMGDAGNTMappingRepository,
+      VATAgentRefNo        -> hMRCNOVRNAGNTMappingRepository,
+      IRAgentReferenceCt   -> iRCTAGENTMappingRepository,
+      IRAgentReferencePaye -> iRPAYEAGENTMappingRepository,
+      SdltStorn            -> iRSDLTAGENTMappingRepository
     )
 
-  def get(serviceName: Service.Name): Repository = repositories(serviceName)
+  def get(legacyAgentEnrolmentType: LegacyAgentEnrolmentType): Repository = repositories(legacyAgentEnrolmentType)
 
   def map[T](f: Repository => T): Seq[T] = repositories.values.map(f).toSeq
 

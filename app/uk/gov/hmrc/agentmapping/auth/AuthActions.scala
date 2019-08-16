@@ -17,8 +17,7 @@
 package uk.gov.hmrc.agentmapping.auth
 import javax.inject.{Inject, Singleton}
 import play.api.mvc._
-import uk.gov.hmrc.agentmapping.model.Service.AgentCode
-import uk.gov.hmrc.agentmapping.model.{Identifier, Service}
+import uk.gov.hmrc.agentmapping.model.{AgentCode, Identifier, LegacyAgentEnrolmentType}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core._
@@ -42,10 +41,7 @@ class AuthActions @Inject()(val authConnector: AuthConnector) extends Authorised
       implicit val hc: HeaderCarrier = fromHeadersAndSession(request.headers, None)
 
       authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
-        .retrieve(allEnrolments) {
-          case allEnrolments => body(request)(captureIdentifiersFrom(allEnrolments).nonEmpty)
-
-        }
+        .retrieve(allEnrolments)(allEnrolments => body(request)(captureIdentifiersFrom(allEnrolments).nonEmpty))
     }
 
   def authorisedWithAgentCode(body: Request[AnyContent] => Set[Identifier] => ProviderId => Future[Result])(
@@ -125,10 +121,21 @@ class AuthActions @Inject()(val authConnector: AuthConnector) extends Authorised
       })
   }
 
-  private def captureIdentifiersFrom(enrolments: Enrolments): Set[Identifier] =
+  private def captureIdentifiersFrom(enrolments: Enrolments): Set[Identifier] = {
+
+    case class AgentEnrolment(legacyAgentEnrolmentType: LegacyAgentEnrolmentType, values: Seq[String])
+
     enrolments.enrolments
-      .map(e => Service.valueOf(e.key).map((_, e.identifiers)))
+      .map(
+        enrolment =>
+          LegacyAgentEnrolmentType
+            .find(enrolment.key)
+            .map(eType => AgentEnrolment(eType, enrolment.identifiers.map(_.value))))
       .collect {
-        case Some((service, identifiers)) => Identifier(service, identifiers.map(i => i.value).mkString("/"))
+        // We only use the FIRST value; since all the enrolments we care about are single valued
+        case Some(AgentEnrolment(enrolmentType, Seq(enrolmentIdentifierValue))) =>
+          Identifier(enrolmentType, enrolmentIdentifierValue)
       }
+  }
+
 }
