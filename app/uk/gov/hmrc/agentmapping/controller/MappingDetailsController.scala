@@ -32,7 +32,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class MappingDetailsController @Inject()(repository: MappingDetailsRepository)(implicit val ec: ExecutionContext)
     extends BaseController {
 
-  def createOrUpdateMappingDisplayDetails(arn: Arn): Action[JsValue] =
+  def createOrUpdateRecord(arn: Arn): Action[JsValue] =
     Action.async(parse.json) { implicit request: Request[JsValue] =>
       withJsonBody[MappingDetailsRequest] { mappingDetailsRequest =>
         val details: MappingDetails = MappingDetails(
@@ -55,7 +55,7 @@ class MappingDetailsController @Inject()(repository: MappingDetailsRepository)(i
       }
     }
 
-  def findMappingDisplayDetailsByArn(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+  def findRecordByArn(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     repository.findByArn(arn).map {
       case Some(record) => Ok(Json.toJson(record))
       case None         => NotFound(s"no record found for this arn: $arn")

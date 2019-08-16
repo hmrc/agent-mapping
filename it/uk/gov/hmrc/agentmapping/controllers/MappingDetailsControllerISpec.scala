@@ -36,12 +36,12 @@ class MappingDetailsControllerISpec extends MappingDetailsControllerISpecSetup {
     val ggTag = GGTag("1234")
     val count = 10
 
-    "POST /mappings/display/arn/:arn" should {
+    "POST /mappings/details/arn/:arn" should {
       "create a new record when one doesn't exist" in {
-        val request: Request[JsValue] = FakeRequest("POST", "agent-mapping/mappings/display/arn/:arn").withBody(
+        val request: Request[JsValue] = FakeRequest("POST", "agent-mapping/mappings/details/arn/:arn").withBody(
           Json.parse(s"""{"authProviderId": "cred-123", "ggTag": "1234", "count": 10}"""))
 
-        val result = controller.createOrUpdateMappingDisplayDetails(arn)(request)
+        val result = controller.createOrUpdateRecord(arn)(request)
 
         status(result) shouldBe Status.CREATED
 
@@ -51,13 +51,13 @@ class MappingDetailsControllerISpec extends MappingDetailsControllerISpecSetup {
       }
 
       "update a records mappings when it does exist" in {
-        val request: Request[JsValue] = FakeRequest("POST", "agent-mapping/mappings/display/arn/:arn").withBody(
+        val request: Request[JsValue] = FakeRequest("POST", "agent-mapping/mappings/details/arn/:arn").withBody(
           Json.parse(s"""{"authProviderId": "cred-456", "ggTag": "5678", "count": 20}"""))
 
         await(repository.create(
           MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, count, LocalDateTime.now())))))
 
-        val result = controller.createOrUpdateMappingDisplayDetails(arn)(request)
+        val result = controller.createOrUpdateRecord(arn)(request)
 
         status(result) shouldBe Status.OK
 
@@ -73,24 +73,24 @@ class MappingDetailsControllerISpec extends MappingDetailsControllerISpecSetup {
       }
 
       "return conflict if the mapping already exists" in {
-        val request: Request[JsValue] = FakeRequest("POST", "agent-mapping/mappings/display/arn/:arn").withBody(
+        val request: Request[JsValue] = FakeRequest("POST", "agent-mapping/mappings/details/arn/:arn").withBody(
           Json.parse(s"""{"authProviderId": "cred-123", "ggTag": "1234", "count": 10}"""))
 
         await(repository.create(
           MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, count, LocalDateTime.now())))))
 
-        val result = controller.createOrUpdateMappingDisplayDetails(arn)(request)
+        val result = controller.createOrUpdateRecord(arn)(request)
 
         status(result) shouldBe Status.CONFLICT
       }
     }
-    "GET /mappings/display/arn/:arn" should {
+    "GET /mappings/details/arn/:arn" should {
       "find and return record if it exists for the arn" in {
         await(repository.create(
           MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, count, LocalDateTime.now())))))
 
         val result =
-          controller.findMappingDisplayDetailsByArn(arn)(FakeRequest("GET", "agent-mapping/mappings/display/arn/:arn"))
+          controller.findRecordByArn(arn)(FakeRequest("GET", "agent-mapping/mappings/details/arn/:arn"))
 
         status(result) shouldBe Status.OK
         jsonBodyOf(result).as[MappingDetailsRepositoryRecord] should matchRecordIgnoringDateTime(
@@ -99,7 +99,7 @@ class MappingDetailsControllerISpec extends MappingDetailsControllerISpecSetup {
 
       "return not found if there is not record found for the arn" in {
         val result =
-          controller.findMappingDisplayDetailsByArn(arn)(FakeRequest("GET", "agent-mapping/mappings/display/arn/:arn"))
+          controller.findRecordByArn(arn)(FakeRequest("GET", "agent-mapping/mappings/details/arn/:arn"))
 
         status(result) shouldBe Status.NOT_FOUND
       }
