@@ -16,34 +16,49 @@
 
 package uk.gov.hmrc.agentmapping.controller
 
+import java.time.LocalDateTime
+
 import javax.inject.Inject
-import play.api.libs.json.JsValue
-import play.api.mvc.{Action, Request}
-import uk.gov.hmrc.agentmapping.model.{MappingDisplayDetails, MappingDisplayRepositoryRecord, MappingDisplayRequest}
-import uk.gov.hmrc.agentmapping.repository.MappingDisplayRepository
+import play.api.Logger
+import play.api.libs.json.{JsValue, Json}
+import play.api.mvc.{Action, AnyContent, Request}
+import uk.gov.hmrc.agentmapping.model.{MappingDetails, MappingDetailsRepositoryRecord, MappingDetailsRequest}
+import uk.gov.hmrc.agentmapping.repository.MappingDetailsRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
 
-import scala.concurrent.ExecutionContext
+import scala.concurrent.{ExecutionContext, Future}
 
-class MappingDetailsController @Inject()(repository: MappingDisplayRepository) extends BaseController {
+class MappingDetailsController @Inject()(repository: MappingDetailsRepository)(implicit val ec: ExecutionContext)
+    extends BaseController {
 
-//  def createOrUpdateMappingDisplayDetails(arn: Arn)(implicit ec: ExecutionContext): Action[JsValue] = Action.async(parse.json) {
-//    implicit request: Request[JsValue] =>
-//    withJsonBody[MappingDisplayDetails] { mappingDisplayRequest =>
-//      repository.findByArn(arn).flatMap {
-//        case Some(record) => {
-//          val newRecord = record.copy(mappings = record.mappings ++ mappingDisplayRequest)
-//          repository.upsert(arn, newRecord)
-//        case None => ???
-//      }}
-//
-//    }
-//
-//  }
-//
-//  def findMappingDisplayDetailsByArn(arn: Arn) = {
-//
-//  }
+  def createOrUpdateMappingDisplayDetails(arn: Arn): Action[JsValue] =
+    Action.async(parse.json) { implicit request: Request[JsValue] =>
+      withJsonBody[MappingDetailsRequest] { mappingDetailsRequest =>
+        val details: MappingDetails = MappingDetails(
+          mappingDetailsRequest.authProviderId,
+          mappingDetailsRequest.ggTag,
+          mappingDetailsRequest.count,
+          LocalDateTime.now())
 
+        repository.findByArn(arn).flatMap {
+          case Some(record) =>
+            if (record.mappingDetails.exists(m => m.authProviderId == mappingDetailsRequest.authProviderId)) {
+              Logger.error("already mapped")
+              Future successful Conflict
+            } else repository.updateMappingDisplayDetails(arn, details).map(_ => Ok)
+
+          case None =>
+            val record = MappingDetailsRepositoryRecord(arn, Seq(details))
+            repository.create(record).map(_ => Created)
+        }
+      }
+    }
+
+  def findMappingDisplayDetailsByArn(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    repository.findByArn(arn).map {
+      case Some(record) => Ok(Json.toJson(record))
+      case None         => NotFound(s"no record found for this arn: $arn")
+    }
+  }
 }

@@ -20,3 +20,6 @@ GET           /mappings/agentcode/:arn                    @uk.gov.hmrc.agentmapp
 
 # supported keys: char,gts,mgd,novrn,ct,paye,sdlt
 GET           /mappings/key/:key/arn/:arn                 @uk.gov.hmrc.agentmapping.controller.MappingController.findMappings(key: String, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+
+POST          /mappings/display/arn/:arn                  @uk.gov.hmrc.agentmapping.controller.MappingDetailsController.createOrUpdateMappingDisplayDetails(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+GET           /mappings/display/arn/:arn                  @uk.gov.hmrc.agentmapping.controller.MappingDetailsController.findMappingDisplayDetailsByArn(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)

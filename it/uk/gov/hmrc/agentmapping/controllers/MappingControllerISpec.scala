@@ -1,4 +1,4 @@
-package uk.gov.hmrc.agentmapping
+package uk.gov.hmrc.agentmapping.controllers
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
@@ -10,7 +10,7 @@ import play.api.libs.ws.WSClient
 import play.api.libs.ws.ahc.AhcWSClient
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentmapping.audit.{AgentMappingEvent, CreateMapping}
+import uk.gov.hmrc.agentmapping.audit.CreateMapping
 import uk.gov.hmrc.agentmapping.model.{AgentCharId, AgentRefNo, HmrcGtsAgentRef, HmrcMgdAgentRef, IRAgentReference, IRAgentReferenceCt, IRAgentReferencePaye, SdltStorn, VATAgentRefNo, _}
 import uk.gov.hmrc.agentmapping.repository.MappingRepositories
 import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DataStreamStub, SubscriptionStub}

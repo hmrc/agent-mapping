@@ -22,32 +22,28 @@ import play.api.libs.json.{JsPath, OFormat}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json.format
 
-case class MappingDisplayRepositoryRecord(arn: Arn, mappings: Seq[MappingDisplayDetails])
+case class MappingDetailsRepositoryRecord(arn: Arn, mappingDetails: Seq[MappingDetails])
 
-object MappingDisplayRepositoryRecord {
-  implicit val mappingDisplayRepositoryFormat: OFormat[MappingDisplayRepositoryRecord] = format
+object MappingDetailsRepositoryRecord {
+  implicit val mappingDisplayRepositoryFormat: OFormat[MappingDetailsRepositoryRecord] = format
 }
 
-final case class MappingDisplayDetails(
-  authProviderId: AuthProviderId,
-  ggTag: GGTag,
-  count: Int,
-  createdOn: LocalDateTime)
+final case class MappingDetails(authProviderId: AuthProviderId, ggTag: GGTag, count: Int, createdOn: LocalDateTime)
 
-object MappingDisplayDetails {
+object MappingDetails {
 
   import MongoLocalDateTimeFormat._
 
-  implicit val mongoDisplayDetailsFormat: OFormat[MappingDisplayDetails] = (
+  implicit val mongoDisplayDetailsFormat: OFormat[MappingDetails] = (
     (JsPath \ "authProviderId").format[AuthProviderId] and
       (JsPath \ "ggTag").format[GGTag] and
       (JsPath \ "count").format[Int] and
       (JsPath \ "createdOn").format[LocalDateTime]
-  )(MappingDisplayDetails.apply, unlift(MappingDisplayDetails.unapply))
+  )(MappingDetails.apply, unlift(MappingDetails.unapply))
 }
 
-final case class MappingDisplayRequest(authProviderId: AuthProviderId, ggTag: GGTag, count: Int)
+final case class MappingDetailsRequest(authProviderId: AuthProviderId, ggTag: GGTag, count: Int)
 
-object MappingDisplayRequest {
-  implicit val mappingDisplayRequestFormat: OFormat[MappingDisplayRequest] = format
+object MappingDetailsRequest {
+  implicit val mappingDisplayRequestFormat: OFormat[MappingDetailsRequest] = format
 }
