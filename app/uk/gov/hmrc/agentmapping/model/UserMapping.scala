@@ -17,11 +17,11 @@
 package uk.gov.hmrc.agentmapping.model
 
 import play.api.libs.json.{Json, OFormat}
-import uk.gov.hmrc.domain.AgentCode
+import uk.gov.hmrc.domain.{AgentCode => MappedAgentCode}
 
 final case class UserMapping(
   authProviderId: AuthProviderId,
-  agentCode: Option[AgentCode],
+  agentCode: Option[MappedAgentCode],
   legacyEnrolments: Seq[AgentEnrolment],
   count: Int = 0,
   ggTag: String)

@@ -18,17 +18,16 @@ package uk.gov.hmrc.agentmapping.model
 
 import play.api.libs.json.Json.format
 import play.api.libs.json._
-import uk.gov.hmrc.agentmapping.model.Service._
 
-case class Identifier(key: Service.Name, value: String)
+case class Identifier(enrolmentType: LegacyAgentEnrolmentType, value: String)
 
 object Identifier {
-  implicit val serviceNameFormat: Format[Name] = Format(
+  implicit val enrolmentTypeFormat: Format[LegacyAgentEnrolmentType] = Format(
     Reads {
-      case JsString(s) => Service.valueOf(s).map(JsSuccess(_)).getOrElse(JsError("Unknown service name"))
+      case JsString(s) => LegacyAgentEnrolmentType.find(s).map(JsSuccess(_)).getOrElse(JsError("Unknown service name"))
       case _           => JsError("String value expected")
     },
-    Writes(e => JsString(e.toString))
+    Writes(legacyAgentEnrolmentType => JsString(legacyAgentEnrolmentType.toString))
   )
   implicit val formats: Format[Identifier] = format[Identifier]
 }

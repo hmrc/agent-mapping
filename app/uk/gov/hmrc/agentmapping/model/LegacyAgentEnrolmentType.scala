@@ -21,7 +21,7 @@ import play.api.libs.json.{Format, JsError, JsResult, JsString, JsSuccess, JsVal
 /**
   * A comprehensive list of all the old (pre-MTD) agent enrolment types
   * IR-SA-AGENT is the only legacy code we actually use in authentication
-  * others are captured for future use
+  * others are captured for future use.  One Mongo DB per instance of this type
   */
 sealed abstract class LegacyAgentEnrolmentType {
   def key: String = this match {
@@ -34,7 +34,14 @@ sealed abstract class LegacyAgentEnrolmentType {
     case IRAgentReferenceCt   => "IR-CT-AGENT"
     case IRAgentReferencePaye => "IR-PAYE-AGENT"
     case SdltStorn            => "IR-SDLT-AGENT"
+    case AgentCode            => "AgentCode" // not an actual enrolment, but included here for completeness
   }
+
+  def dbKey: String = this match {
+    case AgentCode => "agentcode"
+    case _         => this.key.split("-")(1).toLowerCase
+  }
+
 }
 
 object LegacyAgentEnrolmentType {
@@ -64,8 +71,25 @@ object LegacyAgentEnrolmentType {
       case "IR-CT-AGENT"     => Some(IRAgentReferenceCt)
       case "IR-PAYE-AGENT"   => Some(IRAgentReferencePaye)
       case "IR-SDLT-AGENT"   => Some(SdltStorn)
+      case "AgentCode"       => Some(AgentCode)
       case _                 => None
     }
+
+  def findByDbKey(dbKey: String): Option[LegacyAgentEnrolmentType] =
+    dbKey match {
+      case "sa"        => Some(IRAgentReference)
+      case "vat"       => Some(AgentRefNo)
+      case "char"      => Some(AgentCharId)
+      case "gts"       => Some(HmrcGtsAgentRef)
+      case "mgd"       => Some(HmrcMgdAgentRef)
+      case "novrn"     => Some(VATAgentRefNo)
+      case "ct"        => Some(IRAgentReferenceCt)
+      case "paye"      => Some(IRAgentReferencePaye)
+      case "sdlt"      => Some(SdltStorn)
+      case "agentcode" => Some(AgentCode)
+      case _           => None
+    }
+
 }
 
 case object IRAgentReference extends LegacyAgentEnrolmentType
@@ -77,3 +101,4 @@ case object VATAgentRefNo extends LegacyAgentEnrolmentType
 case object IRAgentReferenceCt extends LegacyAgentEnrolmentType
 case object IRAgentReferencePaye extends LegacyAgentEnrolmentType
 case object SdltStorn extends LegacyAgentEnrolmentType
+case object AgentCode extends LegacyAgentEnrolmentType

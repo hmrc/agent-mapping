@@ -10,9 +10,8 @@ import play.api.libs.ws.WSClient
 import play.api.libs.ws.ahc.AhcWSClient
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
-import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent
-import uk.gov.hmrc.agentmapping.model.Service._
-import uk.gov.hmrc.agentmapping.model._
+import uk.gov.hmrc.agentmapping.audit.{AgentMappingEvent, CreateMapping}
+import uk.gov.hmrc.agentmapping.model.{AgentCharId, AgentRefNo, HmrcGtsAgentRef, HmrcMgdAgentRef, IRAgentReference, IRAgentReferenceCt, IRAgentReferencePaye, SdltStorn, VATAgentRefNo, _}
 import uk.gov.hmrc.agentmapping.repository.MappingRepositories
 import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DataStreamStub, SubscriptionStub}
 import uk.gov.hmrc.agentmapping.support.{MongoApp, Resource, WireMockSupport}
@@ -72,21 +71,20 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
   def deletePreSubscriptionMappingsRequest(requestUtr: Utr = utr): Resource =
     new Resource(s"/agent-mapping/mappings/pre-subscription/utr/${requestUtr.value}", port)
 
-  case class TestFixture(service: Service.Name, identifierKey: String, identifierValue: String) {
-    val key: String = Service.keyFor(service)
+  case class TestFixture(legacyAgentEnrolmentType: LegacyAgentEnrolmentType, identifierKey: String, identifierValue: String) {
+    val dbKey: String = legacyAgentEnrolmentType.dbKey
   }
 
   val AgentCodeTestFixture = TestFixture(AgentCode, "AgentCode", agentCode)
-
-  val IRSAAGENTTestFixture = TestFixture(`IR-SA-AGENT`, IRSAAgentReference, "A1111A")
-  val HMCEVATAGNTTestFixture = TestFixture(`HMCE-VAT-AGNT`, AgentReferenceNo, "101747696")
-  val IRCTAGENTTestFixture = TestFixture(`IR-CT-AGENT`, IRSAAgentReference, "B2121C")
-  val HMRCGTSAGNTTestFixture = TestFixture(`HMRC-GTS-AGNT`, "HMRCGTSAGENTREF", "AB8964622K")
-  val HMRCNOVRNAGNTTestFixture = TestFixture(`HMRC-NOVRN-AGNT`, "VATAgentRefNo", "FGH79/96KUJ")
-  val HMRCCHARAGENTTestFixture = TestFixture(`HMRC-CHAR-AGENT`, "AGENTCHARID", "FGH79/96KUJ")
-  val HMRCMGDAGNTTestFixture = TestFixture(`HMRC-MGD-AGNT`, "HMRCMGDAGENTREF", "737B.89")
-  val IRPAYEAGENTTestFixture = TestFixture(`IR-PAYE-AGENT`, IRSAAgentReference, "F9876J")
-  val IRSDLTAGENTTestFixture = TestFixture(`IR-SDLT-AGENT`, "STORN", "AAA0008")
+  val IRSAAGENTTestFixture = TestFixture(IRAgentReference, IRSAAgentReference, "A1111A")
+  val HMCEVATAGNTTestFixture = TestFixture(AgentRefNo, AgentReferenceNo, "101747696")
+  val IRCTAGENTTestFixture = TestFixture(IRAgentReferenceCt, IRSAAgentReference, "B2121C")
+  val HMRCGTSAGNTTestFixture = TestFixture(HmrcGtsAgentRef, "HMRCGTSAGENTREF", "AB8964622K")
+  val HMRCNOVRNAGNTTestFixture = TestFixture(VATAgentRefNo, "VATAgentRefNo", "FGH79/96KUJ")
+  val HMRCCHARAGENTTestFixture = TestFixture(AgentCharId, "AGENTCHARID", "FGH79/96KUJ")
+  val HMRCMGDAGNTTestFixture = TestFixture(HmrcMgdAgentRef, "HMRCMGDAGENTREF", "737B.89")
+  val IRPAYEAGENTTestFixture = TestFixture(IRAgentReferencePaye, IRSAAgentReference, "F9876J")
+  val IRSDLTAGENTTestFixture = TestFixture(SdltStorn, "STORN", "AAA0008")
 
   val AgentCodeUserMapping = UserMapping(authProviderId, Some(domain.AgentCode("agent-code")), Seq.empty, 0, "")
   val IRSAAGENTUserMapping =
@@ -139,14 +137,14 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
       // Test each fixture in isolation first
       fixtures.foreach { f =>
-        s"capture ${Service.asString(f.service)} enrolment" when {
+        s"capture ${f.legacyAgentEnrolmentType.key} enrolment" when {
           "return created upon success" in {
             givenUserIsAuthorisedFor(f)
             createMappingRequest().putEmpty().status shouldBe 201
           }
 
           "return created upon success w/o agent code" in {
-            givenUserIsAuthorisedFor(f.service, f.identifierKey, f.identifierValue, "testCredId", agentCodeOpt = None)
+            givenUserIsAuthorisedFor(f.legacyAgentEnrolmentType.key, f.identifierKey, f.identifierValue, "testCredId", agentCodeOpt = None)
             createMappingRequest().putEmpty().status shouldBe 201
           }
 
@@ -188,7 +186,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
     }
 
     fixtures.foreach { f =>
-      s"capture ${Service.asString(f.service)} enrolment for pre-subscription" when {
+      s"capture ${f.legacyAgentEnrolmentType.key} enrolment for pre-subscription" when {
         "return created upon success" in {
           givenUserIsAuthorisedFor(f)
 
@@ -196,7 +194,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
         }
 
         "return created upon success w/o agent code" in {
-          givenUserIsAuthorisedFor(f.service, f.identifierKey, f.identifierValue, "testCredId", agentCodeOpt = None)
+          givenUserIsAuthorisedFor(f.legacyAgentEnrolmentType.key, f.identifierKey, f.identifierValue, "testCredId", agentCodeOpt = None)
 
           createPreSubscriptionMappingRequest().putEmpty().status shouldBe 201
         }
@@ -232,7 +230,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
       splitFixtures.foreach {
         case (left, right) =>
-          val leftTag = left.map(f => Service.asString(f.service)).mkString(",")
+          val leftTag = left.map(f => f.legacyAgentEnrolmentType.key).mkString(",")
           s"return created when we add all, but some mappings already exist: $leftTag" in {
             givenUserIsAuthorisedForMultiple(left)
             createMappingRequest().putEmpty().status shouldBe 201
@@ -288,7 +286,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
       "authenticated user with IR-SA-AGENT enrolment but without Agent Affinity group attempts to create mapping" in {
 
         givenUserIsAuthorisedFor(
-          `IR-SA-AGENT`,
+          IRAgentReference.key,
           IRSAAgentReference,
           "2000000000",
           "testCredId",
@@ -390,12 +388,12 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
       IRPAYEAGENTTestFixture,
       IRSDLTAGENTTestFixture
     ).foreach { f =>
-      s"return 200 status with a json body representing the mappings that match the supplied arn for ${f.key}" in {
-        val repo = repositories.get(f.service)
+      s"return 200 status with a json body representing the mappings that match the supplied arn for ${f.dbKey}" in {
+        val repo = repositories.get(f.legacyAgentEnrolmentType)
         await(repo.store(registeredArn, "ABCDE123456"))
         await(repo.store(registeredArn, "ABCDE298980"))
 
-        val response = findMappingsRequestByKey(f.key)().get()
+        val response = findMappingsRequestByKey(f.dbKey)().get()
 
         response.status shouldBe 200
         val body = response.body
@@ -404,8 +402,8 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
         body should include("""{"arn":"AARN0000002","identifier":"ABCDE123456"}""")
       }
 
-      s"return 404 when there are no ${f.key} mappings that match the supplied arn" in {
-        findMappingsRequestByKey(f.key)().get.status shouldBe 404
+      s"return 404 when there are no ${f.dbKey} mappings that match the supplied arn" in {
+        findMappingsRequestByKey(f.dbKey)().get.status shouldBe 404
       }
     }
 
@@ -473,9 +471,9 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
     def checkEligibility(testFixture: TestFixture): Unit = {
 
-      s"return 200 status with a json body with hasEligibleEnrolments=true when user has enrolment: ${testFixture.service}" in {
+      s"return 200 status with a json body with hasEligibleEnrolments=true when user has enrolment: ${testFixture.legacyAgentEnrolmentType.key}" in {
         givenUserIsAuthorisedFor(
-          testFixture.service,
+          testFixture.legacyAgentEnrolmentType.key,
           testFixture.identifierKey,
           testFixture.identifierValue,
           "testCredId",
@@ -487,9 +485,9 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
         (request.json \ "hasEligibleEnrolments").as[Boolean] shouldBe true
       }
 
-      s"return 200 with hasEligibleEnrolments=false when user has only ineligible enrolment: ${testFixture.key}" in {
+      s"return 200 with hasEligibleEnrolments=false when user has only ineligible enrolment: ${testFixture.dbKey}" in {
         givenUserIsAuthorisedWithNoEnrolments(
-          testFixture.service,
+          testFixture.legacyAgentEnrolmentType.key,
           testFixture.identifierKey,
           testFixture.identifierValue,
           "testCredId",
@@ -499,13 +497,13 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
         (request.json \ "hasEligibleEnrolments").as[Boolean] shouldBe false
       }
 
-      s"return 401 if user is not logged in for ${testFixture.key}" in {
+      s"return 401 if user is not logged in for ${testFixture.dbKey}" in {
         givenUserNotAuthorisedWithError("MissingBearerToken")
 
         request.status shouldBe 401
       }
 
-      s"return 401 if user is logged in but does not have agent affinity for ${testFixture.key}" in {
+      s"return 401 if user is logged in but does not have agent affinity for ${testFixture.dbKey}" in {
         givenUserNotAuthorisedWithError("UnsupportedAffinityGroup")
 
         request.status shouldBe 401
@@ -515,7 +513,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
   private def givenUserIsAuthorisedFor(f: TestFixture): StubMapping =
     givenUserIsAuthorisedFor(
-      f.service,
+      f.legacyAgentEnrolmentType.key,
       f.identifierKey,
       f.identifierValue,
       "testCredId",
@@ -523,7 +521,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
 
   private def givenUserIsAuthorisedForCreds(f: TestFixture): StubMapping =
     givenUserIsAuthorisedForCreds(
-      f.service,
+      f.legacyAgentEnrolmentType.key,
       f.identifierKey,
       f.identifierValue,
       "testCredId",
@@ -537,7 +535,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
       .map(
         f =>
           Enrolment(
-            Service.asString(f.service),
+            f.legacyAgentEnrolmentType.key,
             Seq(EnrolmentIdentifier(f.identifierKey, f.identifierValue)),
             "Activated"))
       .toSet
@@ -545,10 +543,10 @@ class MappingControllerISpec extends MappingControllerISpecSetup {
   private def verifyCreateMappingAuditEventSent(f: TestFixture, duplicate: Boolean = false): Unit =
     verifyAuditRequestSent(
       1,
-      event = AgentMappingEvent.CreateMapping,
+      event = CreateMapping,
       detail = Map(
         "identifier"           -> f.identifierValue,
-        "identifierType"       -> Service.asString(f.service),
+        "identifierType"       -> f.legacyAgentEnrolmentType.key,
         "agentReferenceNumber" -> "AARN0000002",
         "authProviderId"       -> "testCredId",
         "duplicate"            -> s"$duplicate"
@@ -573,8 +571,8 @@ sealed trait MappingControllerISpecSetup
 
   protected val repositories: MappingRepositories = app.injector.instanceOf[MappingRepositories]
 
-  val saRepo = repositories.get(`IR-SA-AGENT`)
-  val vatRepo = repositories.get(`HMCE-VAT-AGNT`)
+  val saRepo: repositories.Repository = repositories.get(IRAgentReference)
+  val vatRepo = repositories.get(AgentRefNo)
   val agentCodeRepo = repositories.get(AgentCode)
 
   override implicit lazy val app: Application = appBuilder.build()

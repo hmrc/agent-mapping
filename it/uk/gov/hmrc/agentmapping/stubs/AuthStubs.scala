@@ -17,7 +17,7 @@ trait AuthStubs {
 
 
   def givenUserIsAuthorisedFor(
-                                serviceName: String,
+                                enrolmentKey: String,
                                 identifierName: String,
                                 identifierValue: String,
                                 ggCredId: String,
@@ -49,7 +49,7 @@ trait AuthStubs {
                  |  }
                  |  ${agentCodeOpt.map(ac => s""", "agentCode": "$ac" """).getOrElse("")},
                  |  "allEnrolments": [
-                 |    { "key":"$serviceName", "identifiers": [
+                 |    { "key":"$enrolmentKey", "identifiers": [
                  |      {"key":"$identifierName", "value": "$identifierValue"}
                  |    ], "state": "Activated" }
                  |  ]
@@ -200,12 +200,12 @@ trait AuthStubs {
   }
 
   def givenUserIsAuthorisedWithNoEnrolments(
-                                serviceName: String,
-                                identifierName: String,
-                                identifierValue: String,
-                                ggCredId: String,
-                                affinityGroup: AffinityGroup = AffinityGroup.Agent,
-                                agentCodeOpt: Option[String]): StubMapping = {
+                                             enrolmentKey: String,
+                                             identifierName: String,
+                                             identifierValue: String,
+                                             ggCredId: String,
+                                             affinityGroup: AffinityGroup = AffinityGroup.Agent,
+                                             agentCodeOpt: Option[String]): StubMapping = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .atPriority(1)
