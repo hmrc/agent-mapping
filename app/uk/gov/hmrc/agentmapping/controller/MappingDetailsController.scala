@@ -22,15 +22,22 @@ import javax.inject.Inject
 import play.api.Logger
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{Action, AnyContent, Request}
-import uk.gov.hmrc.agentmapping.model.{MappingDetails, MappingDetailsRepositoryRecord, MappingDetailsRequest}
+import uk.gov.hmrc.agentmapping.model.{AuthProviderId, GGTag, MappingDetails, MappingDetailsRepositoryRecord, MappingDetailsRequest, UserMapping}
 import uk.gov.hmrc.agentmapping.repository.MappingDetailsRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.play.bootstrap.controller.BaseController
+import uk.gov.hmrc.agentmapping.auth.AuthActions
+import uk.gov.hmrc.agentmapping.connector.SubscriptionConnector
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class MappingDetailsController @Inject()(repository: MappingDetailsRepository)(implicit val ec: ExecutionContext)
+class MappingDetailsController @Inject()(
+  repository: MappingDetailsRepository,
+  val authActions: AuthActions,
+  subscriptionConnector: SubscriptionConnector)(implicit val ec: ExecutionContext)
     extends BaseController {
+
+  import authActions._
 
   def createOrUpdateRecord(arn: Arn): Action[JsValue] =
     Action.async(parse.json) { implicit request: Request[JsValue] =>
@@ -61,4 +68,19 @@ class MappingDetailsController @Inject()(repository: MappingDetailsRepository)(i
       case None         => NotFound(s"no record found for this arn: $arn")
     }
   }
+
+  def transferSubscriptionRecordToMappingDetails(arn: Arn): Action[AnyContent] =
+    authorisedWithProviderId { implicit request => implicit providerId =>
+      subscriptionConnector.getUserMappings(AuthProviderId(providerId)).flatMap {
+        case Some(userMappings) =>
+          val record = MappingDetailsRepositoryRecord(arn, userMappings2MappingDetails(userMappings))
+          repository.create(record).map(_ => Created)
+
+        case None => Future successful NotFound(s"no user mappings found for this auth provider id: $providerId")
+      }
+    }
+
+  def userMappings2MappingDetails(userMappings: List[UserMapping]): Seq[MappingDetails] =
+    userMappings.map(u => MappingDetails(u.authProviderId, GGTag(u.ggTag), u.count, LocalDateTime.now()))
+
 }

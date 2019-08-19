@@ -15,12 +15,13 @@ import play.api.mvc.Request
 import play.api.test.FakeRequest
 import play.mvc.Http.Status
 import uk.gov.hmrc.agentmapping.controller.MappingDetailsController
-import uk.gov.hmrc.agentmapping.model.{AuthProviderId, GGTag, MappingDetails, MappingDetailsRepositoryRecord}
+import uk.gov.hmrc.agentmapping.model.{AgentCharId, AgentCode, AgentEnrolment, AuthProviderId, GGTag, HmrcGtsAgentRef, IRAgentReferenceCt, IdentifierValue, MappingDetails, MappingDetailsRepositoryRecord, SdltStorn, UserMapping}
 import uk.gov.hmrc.agentmapping.repository.MappingDetailsRepository
 import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DataStreamStub, SubscriptionStub}
 import uk.gov.hmrc.agentmapping.support.{MongoApp, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.domain
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -100,6 +101,59 @@ class MappingDetailsControllerISpec extends MappingDetailsControllerISpecSetup {
       "return not found if there is not record found for the arn" in {
         val result =
           controller.findRecordByArn(arn)(FakeRequest("GET", "agent-mapping/mappings/details/arn/:arn"))
+
+        status(result) shouldBe Status.NOT_FOUND
+      }
+    }
+
+    "PUT /mappings/task-list/details/arn/:arn" should {
+      val agentCode = "TZRXXV"
+
+      "update the permanent mapping details store with the user mappings from the subscription journey record" in {
+        givenUserIsAuthorisedForCreds(AgentCode.key, "AgentCode", agentCode, "cred-123", agentCodeOpt = None)
+        givenUserMappingsExistsForAuthProviderId(
+          AuthProviderId("cred-123"),
+          Seq(
+            UserMapping(
+              AuthProviderId("cred-456"),
+              Some(domain.AgentCode("code-1")),
+              Seq(
+                AgentEnrolment(HmrcGtsAgentRef, IdentifierValue("id-gts")),
+                AgentEnrolment(IRAgentReferenceCt, IdentifierValue("id-ct"))),
+              5,
+              "ggTag-1"
+            ),
+            UserMapping(
+              AuthProviderId("cred-789"),
+              Some(domain.AgentCode("code-2")),
+              Seq(
+                AgentEnrolment(SdltStorn, IdentifierValue("id-sdl")),
+                AgentEnrolment(AgentCharId, IdentifierValue("id-char"))),
+              10,
+              "ggTag-2"
+            )
+          )
+        )
+
+        val result = controller.transferSubscriptionRecordToMappingDetails(arn)(
+          FakeRequest("PUT", "agent-mapping/mappings/task-list/details/arn/:arn"))
+
+        status(result) shouldBe Status.CREATED
+        await(repository.findByArn(arn)).get should matchRecordIgnoringDateTime(
+          MappingDetailsRepositoryRecord(
+            arn,
+            Seq(
+              MappingDetails(AuthProviderId("cred-456"), GGTag("ggTag-1"), 5, LocalDateTime.now()),
+              MappingDetails(AuthProviderId("cred-789"), GGTag("ggTag-2"), 10, LocalDateTime.now())
+            )
+          ))
+      }
+      "return not found when no user mappings are found in the subscription journey record" in {
+        givenUserIsAuthorisedForCreds(AgentCode.key, "AgentCode", agentCode, "cred-123", agentCodeOpt = None)
+        givenUserMappingsNotFoundForAuthProviderId(AuthProviderId("cred-123"))
+
+        val result = controller.transferSubscriptionRecordToMappingDetails(arn)(
+          FakeRequest("PUT", "agent-mapping/mappings/task-list/details/arn/:arn"))
 
         status(result) shouldBe Status.NOT_FOUND
       }

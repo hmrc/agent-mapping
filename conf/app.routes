@@ -23,3 +23,4 @@ GET           /mappings/key/:key/arn/:arn                 @uk.gov.hmrc.agentmapp
 
 POST          /mappings/details/arn/:arn                  @uk.gov.hmrc.agentmapping.controller.MappingDetailsController.createOrUpdateRecord(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 GET           /mappings/details/arn/:arn                  @uk.gov.hmrc.agentmapping.controller.MappingDetailsController.findRecordByArn(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+PUT           /mappings/task-list/details/arn/:arn        @uk.gov.hmrc.agentmapping.controller.MappingDetailsController.transferSubscriptionRecordToMappingDetails(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
