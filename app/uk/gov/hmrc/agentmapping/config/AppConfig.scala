@@ -14,16 +14,26 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentmapping.connector
+package uk.gov.hmrc.agentmapping.config
 
-import akka.actor.ActorSystem
-import com.typesafe.config.Config
 import javax.inject.{Inject, Singleton}
-import play.api.{Configuration, Environment}
-import uk.gov.hmrc.http.HttpPost
-import uk.gov.hmrc.play.bootstrap.auth.DefaultAuthConnector
-import uk.gov.hmrc.play.bootstrap.http.HttpClient
-import uk.gov.hmrc.play.http.ws.WSPost
+import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 @Singleton
-class MicroserviceAuthConnector @Inject()() {}
+class AppConfig @Inject()(servicesConfig: ServicesConfig) {
+
+  val appName = "agent-mapping"
+
+  def getConf(key: String) = servicesConfig.getString(key)
+
+  val mongoTTL = servicesConfig.getInt("mongodb.session.expireAfterSeconds")
+
+  val clientCountMaxResults = servicesConfig.getInt("clientCount.maxRecords")
+
+  val authBaseUrl = servicesConfig.baseUrl("auth")
+
+  val enrolmentStoreProxyBaseUrl = servicesConfig.baseUrl("enrolment-store-proxy")
+
+  val agentSubscriptionBaseUrl = servicesConfig.baseUrl("agent-subscription")
+
+}

@@ -64,12 +64,13 @@ lazy val wartRemoverSettings = {
 }
 
 lazy val compileDeps = Seq(
-  "uk.gov.hmrc" %% "bootstrap-play-25" % "4.12.0",
-  "uk.gov.hmrc" %% "auth-client" % "2.21.0-play-25",
-  "uk.gov.hmrc" %% "agent-mtd-identifiers" % "0.15.0-play-25",
+  "uk.gov.hmrc" %% "bootstrap-play-26" % "0.45.0",
+  "uk.gov.hmrc" %% "auth-client" % "2.27.0-play-26",
+  "uk.gov.hmrc" %% "agent-mtd-identifiers" % "0.16.0-play-26",
   "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "3.8.0",
-  "uk.gov.hmrc" %% "simple-reactivemongo" % "7.20.0-play-25",
-  "uk.gov.hmrc" %% "mongo-lock" % "6.12.0-play-25",
+  "uk.gov.hmrc" %% "simple-reactivemongo" % "7.20.0-play-26",
+  "uk.gov.hmrc" %% "mongo-lock" % "6.15.0-play-26",
+  "com.typesafe.play" %% "play-json" % "2.6.0",
   ws
 )
 

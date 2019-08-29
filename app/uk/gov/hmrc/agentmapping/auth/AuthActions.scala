@@ -25,12 +25,14 @@ import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{agentCode, allEnrolments, a
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.HeaderCarrierConverter.fromHeadersAndSession
-import uk.gov.hmrc.play.bootstrap.controller.BaseController
+import uk.gov.hmrc.play.bootstrap.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class AuthActions @Inject()(val authConnector: AuthConnector) extends AuthorisedFunctions with BaseController {
+class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComponents)
+    extends BackendController(cc)
+    with AuthorisedFunctions {
 
   private type HasEligibleEnrolments = Boolean
   private type ProviderId = String

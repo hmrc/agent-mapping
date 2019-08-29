@@ -19,10 +19,10 @@ package uk.gov.hmrc.agentmapping.wiring
 import java.util.regex.{Matcher, Pattern}
 
 import akka.stream.Materializer
-import javax.inject.{Inject, Singleton}
 import app.Routes
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
+import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.mvc.{Filter, RequestHeader, Result}
 import uk.gov.hmrc.http.{HeaderCarrier, HttpException, Upstream4xxResponse, Upstream5xxResponse}
