@@ -26,8 +26,6 @@ class AppConfig @Inject()(servicesConfig: ServicesConfig) {
 
   def getConf(key: String) = servicesConfig.getString(key)
 
-  val mongoTTL = servicesConfig.getInt("mongodb.session.expireAfterSeconds")
-
   val clientCountMaxResults = servicesConfig.getInt("clientCount.maxRecords")
 
   val authBaseUrl = servicesConfig.baseUrl("auth")

@@ -17,13 +17,13 @@
 package uk.gov.hmrc.agentmapping.support
 
 import org.scalatest.{BeforeAndAfterEach, Suite, TestSuite}
-import org.scalatestplus.play.OneServerPerSuite
+import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import uk.gov.hmrc.mongo.{MongoSpecSupport, Awaiting => MongoAwaiting}
 
 import scala.concurrent.ExecutionContext
 import scala.concurrent.ExecutionContext.global
 
-trait MongoApp extends MongoSpecSupport with ResetMongoBeforeTest with OneServerPerSuite {
+trait MongoApp extends MongoSpecSupport with ResetMongoBeforeTest with GuiceOneServerPerSuite {
   me: TestSuite =>
 
   protected def mongoConfiguration = Map("mongodb.uri" -> mongoUri)

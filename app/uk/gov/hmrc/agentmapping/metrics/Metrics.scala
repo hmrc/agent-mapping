@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentmapping.connector
+package uk.gov.hmrc.agentmapping.metrics
 
-import akka.actor.ActorSystem
-import com.typesafe.config.Config
+import com.codahale.metrics.{Counter, Timer}
 import javax.inject.{Inject, Singleton}
-import play.api.{Configuration, Environment}
-import uk.gov.hmrc.http.HttpPost
-import uk.gov.hmrc.play.bootstrap.auth.DefaultAuthConnector
-import uk.gov.hmrc.play.bootstrap.http.HttpClient
-import uk.gov.hmrc.play.http.ws.WSPost
 
 @Singleton
-class MicroserviceAuthConnector @Inject()() {}
+class Metrics @Inject()(val metrics: com.kenshoo.play.metrics.Metrics) {
+
+  def timer(name: String): Timer = metrics.defaultRegistry.timer(name)
+
+  def counter(name: String): Counter = metrics.defaultRegistry.counter(name)
+
+  def espDelegatedEnrolmentsCountTimer(service: String): Timer = timer(s"ConsumedAPI-ESPes2-$service-GET")
+
+  val getUserMappingsTimer: Timer = timer("ConsumedAPI-Agent-Subscription-getJourneyByPrimaryId-GET")
+
+}
