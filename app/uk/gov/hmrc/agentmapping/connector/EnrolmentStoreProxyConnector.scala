@@ -16,17 +16,15 @@
 
 package uk.gov.hmrc.agentmapping.connector
 
-import java.net.URL
-
-import com.codahale.metrics.MetricRegistry
-import com.kenshoo.play.metrics.Metrics
-import javax.inject.{Inject, Named, Singleton}
+import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json.format
 import play.api.libs.json.{Json, OFormat, Writes}
-import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
+import uk.gov.hmrc.agentmapping.config.AppConfig
 import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector.responseHandler
+import uk.gov.hmrc.agentmapping.metrics.Metrics
 import uk.gov.hmrc.agentmapping.util._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpGet, HttpReads, HttpResponse}
+import uk.gov.hmrc.http.{HeaderCarrier, HttpReads, HttpResponse}
+import uk.gov.hmrc.play.bootstrap.http.HttpClient
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
@@ -40,13 +38,12 @@ object Enrolment {
 case class EnrolmentResponse(enrolments: Seq[Enrolment])
 
 @Singleton
-class EnrolmentStoreProxyConnector @Inject()(
-  @Named("enrolment-store-proxy-baseUrl") baseUrl: URL,
-  @Named("clientCount.maxRecords") batchSize: Int,
-  http: HttpGet)(implicit metrics: Metrics, ec: ExecutionContext)
-    extends HttpAPIMonitor {
+class EnrolmentStoreProxyConnector @Inject()(appConfig: AppConfig, http: HttpClient, metrics: Metrics)(
+  implicit ec: ExecutionContext) {
 
-  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
+  private val batchSize = appConfig.clientCountMaxResults
+
+  private val espBaseUrl = appConfig.enrolmentStoreProxyBaseUrl
 
   def getClientCount(userId: String)(implicit hc: HeaderCarrier): Future[Int] = {
 
@@ -77,24 +74,21 @@ class EnrolmentStoreProxyConnector @Inject()(
 
   //ES2 - delegated
   private def getDelegatedEnrolmentsCountFor(userId: String, startRecord: Int, service: String)(
-    implicit hc: HeaderCarrier): Future[(Int, Int)] =
-    monitor(s"ConsumedAPI-ESPes2-$service-GET") {
+    implicit hc: HeaderCarrier): Future[(Int, Int)] = {
 
-      def url(userId: String, startRecord: Int, service: String): URL =
-        new URL(
-          baseUrl,
-          s"enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated&service=$service&start-record=$startRecord&max-records=$batchSize"
-        )
+    def url(userId: String, startRecord: Int, service: String): String =
+      s"$espBaseUrl/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated&service=$service&start-record=$startRecord&max-records=$batchSize"
+    val timerContext = metrics.espDelegatedEnrolmentsCountTimer(service).time()
+    http.GET[EnrolmentResponse](url(userId, startRecord, service).toString)(responseHandler, hc, ec).map {
+      enrolmentResponse =>
+        timerContext.stop()
+        val filteredCount =
+          enrolmentResponse.enrolments
+            .count(e => e.state.toLowerCase == "activated" || e.state.toLowerCase == "unknown")
 
-      http.GET[EnrolmentResponse](url(userId, startRecord, service).toString)(responseHandler, hc, ec).map {
-        enrolmentResponse =>
-          val filteredCount =
-            enrolmentResponse.enrolments
-              .count(e => e.state.toLowerCase == "activated" || e.state.toLowerCase == "unknown")
-
-          (enrolmentResponse.enrolments.length, filteredCount)
-      }
+        (enrolmentResponse.enrolments.length, filteredCount)
     }
+  }
 }
 
 object EnrolmentStoreProxyConnector {

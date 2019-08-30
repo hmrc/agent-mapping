@@ -20,7 +20,7 @@ import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.libs.json.Json.toJson
 import play.api.libs.json._
-import play.api.mvc.{Action, AnyContent, Request, Result}
+import play.api.mvc._
 import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.auth.AuthActions
@@ -30,7 +30,7 @@ import uk.gov.hmrc.agentmapping.repository._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.bootstrap.controller.BaseController
+import uk.gov.hmrc.play.bootstrap.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -40,8 +40,9 @@ class MappingController @Inject()(
   auditService: AuditService,
   subscriptionConnector: SubscriptionConnector,
   espConnector: EnrolmentStoreProxyConnector,
+  cc: ControllerComponents,
   val authActions: AuthActions)(implicit val ec: ExecutionContext)
-    extends BaseController {
+    extends BackendController(cc) {
 
   import auditService._
   import authActions._

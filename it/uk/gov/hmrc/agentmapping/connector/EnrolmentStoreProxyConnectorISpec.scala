@@ -1,39 +1,30 @@
 package uk.gov.hmrc.agentmapping.connector
 
-import java.net.URL
-
-import com.kenshoo.play.metrics.Metrics
-import org.scalatestplus.play.OneAppPerSuite
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
+import uk.gov.hmrc.agentmapping.config.AppConfig
+import uk.gov.hmrc.agentmapping.metrics.Metrics
 import uk.gov.hmrc.agentmapping.stubs.EnrolmentStoreStubs
-import uk.gov.hmrc.agentmapping.support.WireMockSupport
-import uk.gov.hmrc.http.{HeaderCarrier, HttpGet}
-import uk.gov.hmrc.play.test.UnitSpec
+import uk.gov.hmrc.agentmapping.support.{BaseISpec, WireMockSupport}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.play.bootstrap.http.HttpClient
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class EnrolmentStoreProxyConnectorISpec  extends UnitSpec with WireMockSupport with OneAppPerSuite with EnrolmentStoreStubs{
+class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport with GuiceOneAppPerSuite with EnrolmentStoreStubs{
 
   private lazy implicit val metrics = app.injector.instanceOf[Metrics]
-  private lazy val http = app.injector.instanceOf[HttpGet]
+  private lazy val http = app.injector.instanceOf[HttpClient]
 
   override implicit lazy val app: Application = appBuilder.build()
+
+  private lazy val appConfig = app.injector.instanceOf[AppConfig]
+
 
   implicit val hc = HeaderCarrier()
 
   private lazy val connector: EnrolmentStoreProxyConnector =
-    new EnrolmentStoreProxyConnector(new URL(s"http://localhost:$wireMockPort"),
-      5, http)
-
-  protected def appBuilder: GuiceApplicationBuilder = {
-    new GuiceApplicationBuilder()
-      .configure(
-        "microservice.services.enrolment-store-proxy.host" -> wireMockHost,
-        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-        "clientCount.maxRecords" -> 5
-      )
-  }
+    new EnrolmentStoreProxyConnector(appConfig, http, metrics)
 
 
   "runEs2ForServices" should {

@@ -1,29 +1,30 @@
 package uk.gov.hmrc.agentmapping.auth
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.{reset, when}
-import org.scalatest.BeforeAndAfterEach
 import org.scalatestplus.mockito.MockitoSugar
+import play.api.Application
 import play.api.mvc.Results._
-import play.api.mvc.{AnyContent, AnyContentAsEmpty, Request, Result}
+import play.api.mvc._
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmapping.model.Identifier
+import uk.gov.hmrc.agentmapping.support.BaseISpec
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve._
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class AuthActionsISpec(implicit val ec: ExecutionContext) extends UnitSpec with MockitoSugar with BeforeAndAfterEach {
-  implicit val actorSystem = ActorSystem()
-  implicit val materializer = ActorMaterializer()
+class AuthActionsISpec(implicit val ec: ExecutionContext) extends BaseISpec with MockitoSugar  {
+
+  lazy val app: Application = appBuilder.build()
+
+  val cc = app.injector.instanceOf[ControllerComponents]
+
 
   val mockAuthConnector = mock[AuthConnector]
-  val mockAuthActions = new AuthActions(mockAuthConnector)
+  val mockAuthActions = new AuthActions(mockAuthConnector, cc)
 
   override def beforeEach(): Unit = reset(mockAuthConnector)
 

@@ -2,34 +2,37 @@ package uk.gov.hmrc.agentmapping.controllers
 
 import java.time.LocalDateTime
 
-import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
-import com.google.inject.AbstractModule
-import org.scalatest.matchers.{MatchResult, Matcher}
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
+import org.scalatest.Suite
+import org.scalatestplus.play.ServerProvider
 import play.api.libs.json.{JsValue, Json}
-import play.api.libs.ws.WSClient
-import play.api.libs.ws.ahc.AhcWSClient
 import play.api.mvc.Request
 import play.api.test.FakeRequest
 import play.mvc.Http.Status
 import uk.gov.hmrc.agentmapping.controller.MappingDetailsController
-import uk.gov.hmrc.agentmapping.model.{AgentCharId, AgentCode, AgentEnrolment, AuthProviderId, GGTag, HmrcGtsAgentRef, IRAgentReferenceCt, IdentifierValue, MappingDetails, MappingDetailsRepositoryRecord, SdltStorn, UserMapping}
+import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository.MappingDetailsRepository
-import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DataStreamStub, SubscriptionStub}
-import uk.gov.hmrc.agentmapping.support.{MongoApp, WireMockSupport}
+import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, SubscriptionStub}
+import uk.gov.hmrc.agentmapping.support.ServerBaseISpec
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.play.test.UnitSpec
 import uk.gov.hmrc.domain
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class MappingDetailsControllerISpec extends MappingDetailsControllerISpecSetup {
+class MappingDetailsControllerISpec extends ServerBaseISpec with AuthStubs with SubscriptionStub {
+
+  this: Suite with ServerProvider =>
 
   val arn: Arn = Arn("TARN0000001")
 
   val controller: MappingDetailsController = app.injector.instanceOf[MappingDetailsController]
+
+  protected val repository: MappingDetailsRepository = app.injector.instanceOf[MappingDetailsRepository]
+
+  override def beforeEach() {
+    super.beforeEach()
+    await(repository.drop)
+    ()
+  }
 
   "MappingDetailsController" should {
 
@@ -159,58 +162,4 @@ class MappingDetailsControllerISpec extends MappingDetailsControllerISpecSetup {
       }
     }
   }
-}
-
-sealed trait MappingDetailsControllerISpecSetup
-    extends UnitSpec
-    with MongoApp
-    with WireMockSupport
-    with AuthStubs
-    with DataStreamStub
-    with SubscriptionStub {
-
-  implicit val actorSystem: ActorSystem = ActorSystem()
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
-  implicit val client: WSClient = AhcWSClient()
-
-  override implicit lazy val app: Application = appBuilder.build()
-
-  protected val repository: MappingDetailsRepository = app.injector.instanceOf[MappingDetailsRepository]
-
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        mongoConfiguration ++
-          Map(
-            "microservice.services.auth.port"               -> wireMockPort,
-            "microservice.services.agent-subscription.port" -> wireMockPort,
-            "microservice.services.agent-subscription.host" -> wireMockHost,
-            "auditing.consumer.baseUri.host"                -> wireMockHost,
-            "auditing.consumer.baseUri.port"                -> wireMockPort,
-            "migrate-repositories"                          -> "false"
-          ))
-      .overrides(new TestGuiceModule)
-
-  private class TestGuiceModule extends AbstractModule {
-    override def configure(): Unit = {}
-  }
-
-  override def beforeEach() {
-    super.beforeEach()
-    await(repository.ensureIndexes)
-    givenAuditConnector()
-    ()
-  }
-
-  def matchRecordIgnoringDateTime(
-    mappingDisplayRecord: MappingDetailsRepositoryRecord): Matcher[MappingDetailsRepositoryRecord] =
-    new Matcher[MappingDetailsRepositoryRecord] {
-      override def apply(left: MappingDetailsRepositoryRecord): MatchResult = left match {
-        case record
-            if mappingDisplayRecord.arn == record.arn &&
-              mappingDisplayRecord.mappingDetails.map(m => (m.ggTag, m.count)) == record.mappingDetails
-                .map(m => (m.ggTag, m.count)) =>
-          MatchResult(matches = true, "", "")
-      }
-    }
 }

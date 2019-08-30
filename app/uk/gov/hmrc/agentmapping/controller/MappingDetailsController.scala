@@ -21,11 +21,11 @@ import java.time.LocalDateTime
 import javax.inject.Inject
 import play.api.Logger
 import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{Action, AnyContent, Request}
+import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.agentmapping.model.{AuthProviderId, GGTag, MappingDetails, MappingDetailsRepositoryRecord, MappingDetailsRequest, UserMapping}
 import uk.gov.hmrc.agentmapping.repository.MappingDetailsRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.play.bootstrap.controller.BaseController
+import uk.gov.hmrc.play.bootstrap.controller.BackendController
 import uk.gov.hmrc.agentmapping.auth.AuthActions
 import uk.gov.hmrc.agentmapping.connector.SubscriptionConnector
 
@@ -34,8 +34,9 @@ import scala.concurrent.{ExecutionContext, Future}
 class MappingDetailsController @Inject()(
   repository: MappingDetailsRepository,
   val authActions: AuthActions,
+  cc: ControllerComponents,
   subscriptionConnector: SubscriptionConnector)(implicit val ec: ExecutionContext)
-    extends BaseController {
+    extends BackendController(cc) {
 
   import authActions._
 
