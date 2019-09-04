@@ -16,7 +16,11 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
   private lazy implicit val metrics = app.injector.instanceOf[Metrics]
   private lazy val http = app.injector.instanceOf[HttpClient]
 
-  override implicit lazy val app: Application = appBuilder.build()
+  private val clientCountBatchSize = 7
+  private val clientCountMaxRecords = 40
+
+  override implicit lazy val app: Application = appBuilder.configure("clientCount.maxRecord" -> clientCountMaxRecords, "clientCount.batchSize" -> clientCountBatchSize)
+    .build()
 
   private lazy val appConfig = app.injector.instanceOf[AppConfig]
 
@@ -30,17 +34,21 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
   "runEs2ForServices" should {
     "return the total count for VAT and SA" in {
 
-      val maxSizeResponse = EnrolmentResponse(List.fill(5)(Enrolment("Activated")))
-      val partialSizeResponse = EnrolmentResponse(List.fill(3)(Enrolment("Activated")))
+      val maxSizeResponse = EnrolmentResponse(List.fill(clientCountBatchSize)(Enrolment("Activated")))
+      val partialSizeResponse = EnrolmentResponse(List.fill(clientCountBatchSize - 2)(Enrolment("Activated")))
+
+
+      def callEs2EndpointForService(serviceName: String, startRecord: Int) = givenEs2ClientsFoundFor("agent1", serviceName, startRecord, 200)
 
       givenEs2ClientsFoundFor("agent1","HMCE-VATDEC-ORG",1,maxSizeResponse,200)
       givenEs2ClientsFoundFor("agent1","HMCE-VATDEC-ORG",6,maxSizeResponse,200)
-      givenEs2ClientsFoundFor("agent1","HMCE-VATDEC-ORG",11,maxSizeResponse,200)
-      givenEs2ClientsFoundFor("agent1","HMCE-VATDEC-ORG",16,maxSizeResponse,200)
-      givenEs2ClientsFoundFor("agent1","HMCE-VATDEC-ORG",21,partialSizeResponse,200)
-      givenEs2ClientsFoundFor("agent1","IR-SA",1,partialSizeResponse,200)
+      givenEs2ClientsFoundFor("agent1","HMCE-VATDEC-ORG",11,partialSizeResponse,200)
+      givenEs2ClientsFoundFor("agent1","IR-SA",1,maxSizeResponse,200)
+      givenEs2ClientsFoundFor("agent1","IR-SA",6,maxSizeResponse,200)
+      givenEs2ClientsFoundFor("agent1","IR-SA",11,maxSizeResponse,200)
+      givenEs2ClientsFoundFor("agent1","IR-SA",16,partialSizeResponse,200)
 
-      await(connector.getClientCount("agent1")) shouldBe 26
+      await(connector.getClientCount("agent1")) shouldBe 30
     }
   }
 }

@@ -41,33 +41,30 @@ case class EnrolmentResponse(enrolments: Seq[Enrolment])
 class EnrolmentStoreProxyConnector @Inject()(appConfig: AppConfig, http: HttpClient, metrics: Metrics)(
   implicit ec: ExecutionContext) {
 
-  private val batchSize = appConfig.clientCountMaxResults
+  private val batchSize = appConfig.clientCountBatchSize
+  private val maxClientRelationships = appConfig.clientCountMaxResults
 
   private val espBaseUrl = appConfig.enrolmentStoreProxyBaseUrl
 
-  def getClientCount(userId: String)(implicit hc: HeaderCarrier): Future[Int] = {
+  def getClientCount(userId: String)(implicit hc: HeaderCarrier): Future[Int] =
+    getClientCount(userId, "HMCE-VATDEC-ORG").flatMap(vatCount => getClientCount(userId, "IR-SA", vatCount))
 
-    val vatCountF = getClientCount(userId, "HMCE-VATDEC-ORG")
-    val irsaCountF = getClientCount(userId, "IR-SA")
-
-    for {
-      vatCount  <- vatCountF
-      irService <- irsaCountF
-    } yield vatCount + irService
-  }
-
-  private def getClientCount(userId: String, service: String)(implicit hc: HeaderCarrier): Future[Int] = {
+  private def getClientCount(userId: String, service: String, cumulativeCount: Int = 0)(
+    implicit hc: HeaderCarrier): Future[Int] = {
 
     @SuppressWarnings(Array("org.wartremover.warts.Recursion"))
-    def doGet(cumCount: Int = 0, startRecord: Int = 1): Future[Int] =
-      getDelegatedEnrolmentsCountFor(userId, startRecord, service)
-        .flatMap {
-          case (preFilteredCount, batchCount) =>
-            if (preFilteredCount < batchSize) {
+    def doGet(cumCount: Int = cumulativeCount, startRecord: Int = 1): Future[Int] = cumCount match {
+      case c if c >= maxClientRelationships => maxClientRelationships
+      case _ =>
+        getDelegatedEnrolmentsCountFor(userId, startRecord, service).flatMap {
+          case (prefilterteredCount, batchCount) =>
+            if (prefilterteredCount < batchSize) {
               batchCount + cumCount
             } else
               doGet(batchCount + cumCount, startRecord + batchCount)
         }
+
+    }
 
     doGet()
   }
