@@ -1,9 +1,9 @@
 package uk.gov.hmrc.agentmapping.connector
 
+import com.kenshoo.play.metrics.Metrics
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import uk.gov.hmrc.agentmapping.config.AppConfig
-import uk.gov.hmrc.agentmapping.metrics.Metrics
 import uk.gov.hmrc.agentmapping.stubs.EnrolmentStoreStubs
 import uk.gov.hmrc.agentmapping.support.{BaseISpec, WireMockSupport}
 import uk.gov.hmrc.http.HeaderCarrier
