@@ -46,8 +46,14 @@ class EnrolmentStoreProxyConnector @Inject()(appConfig: AppConfig, http: HttpCli
 
   private val espBaseUrl = appConfig.enrolmentStoreProxyBaseUrl
 
+  private val HMCE_VATDEC_ORG = "HMCE-VATDEC-ORG"
+  private val IR_SA = "IR-SA"
+
   def getClientCount(userId: String)(implicit hc: HeaderCarrier): Future[Int] =
-    getClientCount(userId, "HMCE-VATDEC-ORG").flatMap(vatCount => getClientCount(userId, "IR-SA", vatCount))
+    for {
+      vatF  <- getClientCount(userId, HMCE_VATDEC_ORG)
+      irSaF <- getClientCount(userId, IR_SA, vatF)
+    } yield irSaF
 
   private def getClientCount(userId: String, service: String, cumulativeCount: Int = 0)(
     implicit hc: HeaderCarrier): Future[Int] = {

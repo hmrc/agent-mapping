@@ -13,42 +13,109 @@ import scala.concurrent.ExecutionContext.Implicits.global
 
 class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport with GuiceOneAppPerSuite with EnrolmentStoreStubs{
 
+  implicit val hc = HeaderCarrier()
+
   private lazy implicit val metrics = app.injector.instanceOf[Metrics]
   private lazy val http = app.injector.instanceOf[HttpClient]
 
-  private val clientCountBatchSize = 7
-  private val clientCountMaxRecords = 40
+  override implicit lazy val app: Application = appBuilder.build()
 
-  override implicit lazy val app: Application = appBuilder.configure("clientCount.maxRecord" -> clientCountMaxRecords, "clientCount.batchSize" -> clientCountBatchSize)
-    .build()
-
-  private lazy val appConfig = app.injector.instanceOf[AppConfig]
-
-
-  implicit val hc = HeaderCarrier()
+   val appConfig = app.injector.instanceOf[AppConfig]
 
   private lazy val connector: EnrolmentStoreProxyConnector =
     new EnrolmentStoreProxyConnector(appConfig, http, metrics)
 
+  private val maxRecordsToDisplay = appConfig.clientCountMaxResults
+  private val clientCountBatchSize = appConfig.clientCountBatchSize
+
+  private val HMCE_VATDEC_ORG = "HMCE-VATDEC-ORG"
+  private val IR_SA = "IR-SA"
+
+  private def batchResponse(recordsToReturn: Int) = EnrolmentResponse(List.fill(recordsToReturn)(Enrolment("Activated")))
 
   "runEs2ForServices" should {
-    "return the total count for VAT and SA" in {
+    s"return $maxRecordsToDisplay if the total records from $HMCE_VATDEC_ORG is higher than $maxRecordsToDisplay" in {
 
-      val maxSizeResponse = EnrolmentResponse(List.fill(clientCountBatchSize)(Enrolment("Activated")))
-      val partialSizeResponse = EnrolmentResponse(List.fill(clientCountBatchSize - 2)(Enrolment("Activated")))
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8,  batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 15,  batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 22,  batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 29,  batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 36,  batchResponse(clientCountBatchSize), 200)
 
-
-      def callEs2EndpointForService(serviceName: String, startRecord: Int) = givenEs2ClientsFoundFor("agent1", serviceName, startRecord, 200)
-
-      givenEs2ClientsFoundFor("agent1","HMCE-VATDEC-ORG",1,maxSizeResponse,200)
-      givenEs2ClientsFoundFor("agent1","HMCE-VATDEC-ORG",6,maxSizeResponse,200)
-      givenEs2ClientsFoundFor("agent1","HMCE-VATDEC-ORG",11,partialSizeResponse,200)
-      givenEs2ClientsFoundFor("agent1","IR-SA",1,maxSizeResponse,200)
-      givenEs2ClientsFoundFor("agent1","IR-SA",6,maxSizeResponse,200)
-      givenEs2ClientsFoundFor("agent1","IR-SA",11,maxSizeResponse,200)
-      givenEs2ClientsFoundFor("agent1","IR-SA",16,partialSizeResponse,200)
-
-      await(connector.getClientCount("agent1")) shouldBe 30
+      await(connector.getClientCount("agent1")) shouldBe 40
     }
+
+    s"return $maxRecordsToDisplay if the total records from $HMCE_VATDEC_ORG alone is lower than $maxRecordsToDisplay but not when combined with $IR_SA" in {
+
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8,  batchResponse(clientCountBatchSize - 2), 200)
+      givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", IR_SA, 8, batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", IR_SA, 15, batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", IR_SA, 22, batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", IR_SA, 29, batchResponse(clientCountBatchSize - 4), 200)
+
+      await(connector.getClientCount("agent1")) shouldBe 40
+
+    }
+
+    s"return $maxRecordsToDisplay if the total records return from each $HMCE_VATDEC_ORG and $IR_SA is exactly half of the $maxRecordsToDisplay" in {
+
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8,  batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 15,  batchResponse(clientCountBatchSize - 1), 200)
+      givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", IR_SA, 8, batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", IR_SA, 15, batchResponse(clientCountBatchSize -1), 200)
+
+      await(connector.getClientCount("agent1")) shouldBe 40
+
+    }
+
+    s"return the actual number of records when the total from $HMCE_VATDEC_ORG is less than $maxRecordsToDisplay and there are no records from $IR_SA" in {
+
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8,  batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 15,  batchResponse(clientCountBatchSize - 1), 200)
+      givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(0), 200)
+
+      await(connector.getClientCount("agent1")) shouldBe 20
+    }
+
+    s"return the actual number of records when the total from $HMCE_VATDEC_ORG and $IR_SA is less than $maxRecordsToDisplay" in {
+
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8,  batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 15,  batchResponse(clientCountBatchSize - 1), 200)
+      givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(clientCountBatchSize - 2), 200)
+
+      await(connector.getClientCount("agent1")) shouldBe 25
+    }
+
+    s"return the actual number of records when there are only records from $IR_SA and is less than $maxRecordsToDisplay" in {
+
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(0), 200)
+      givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(clientCountBatchSize - 2), 200)
+
+      await(connector.getClientCount("agent1")) shouldBe 5
+    }
+
+    "return 0 if the call to ESP returns 204" in {
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(0), 204)
+      givenEs2ClientsFoundFor("agent1",IR_SA, 1, batchResponse(0), 204)
+
+      await(connector.getClientCount("agent1")) shouldBe 0
+    }
+
+    "throw an exception if the call to ESP does not work" in {
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(0), 502)
+
+      val exception = intercept[RuntimeException] {
+        await(connector.getClientCount("agent1"))
+      }
+      exception.getMessage.contains("Error retrieving client list from") shouldBe true
+    }
+
   }
 }
