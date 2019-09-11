@@ -27,6 +27,7 @@ class AppConfig @Inject()(servicesConfig: ServicesConfig) {
   def getConf(key: String) = servicesConfig.getString(key)
 
   val clientCountMaxResults = servicesConfig.getInt("clientCount.maxRecords")
+  val clientCountBatchSize = servicesConfig.getInt("clientCount.batchSize")
 
   val authBaseUrl = servicesConfig.baseUrl("auth")
 

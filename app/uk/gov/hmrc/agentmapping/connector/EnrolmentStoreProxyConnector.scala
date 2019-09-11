@@ -46,33 +46,36 @@ class EnrolmentStoreProxyConnector @Inject()(appConfig: AppConfig, http: HttpCli
 
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
-  private val batchSize = appConfig.clientCountMaxResults
+  private val batchSize = appConfig.clientCountBatchSize
+  private val maxClientRelationships = appConfig.clientCountMaxResults
 
   private val espBaseUrl = appConfig.enrolmentStoreProxyBaseUrl
 
-  def getClientCount(userId: String)(implicit hc: HeaderCarrier): Future[Int] = {
+  private val HMCE_VATDEC_ORG = "HMCE-VATDEC-ORG"
+  private val IR_SA = "IR-SA"
 
-    val vatCountF = getClientCount(userId, "HMCE-VATDEC-ORG")
-    val irsaCountF = getClientCount(userId, "IR-SA")
-
+  def getClientCount(userId: String)(implicit hc: HeaderCarrier): Future[Int] =
     for {
-      vatCount  <- vatCountF
-      irService <- irsaCountF
-    } yield vatCount + irService
-  }
+      vatF  <- getClientCount(userId, HMCE_VATDEC_ORG)
+      irSaF <- getClientCount(userId, IR_SA, vatF)
+    } yield irSaF
 
-  private def getClientCount(userId: String, service: String)(implicit hc: HeaderCarrier): Future[Int] = {
+  private def getClientCount(userId: String, service: String, cumulativeCount: Int = 0)(
+    implicit hc: HeaderCarrier): Future[Int] = {
 
     @SuppressWarnings(Array("org.wartremover.warts.Recursion"))
-    def doGet(cumCount: Int = 0, startRecord: Int = 1): Future[Int] =
-      getDelegatedEnrolmentsCountFor(userId, startRecord, service)
-        .flatMap {
-          case (preFilteredCount, batchCount) =>
-            if (preFilteredCount < batchSize) {
-              batchCount + cumCount
+    def doGet(cumCount: Int = cumulativeCount, startRecord: Int = 1): Future[Int] = cumCount match {
+      case c if c >= maxClientRelationships => maxClientRelationships
+      case _ =>
+        getDelegatedEnrolmentsCountFor(userId, startRecord, service).flatMap {
+          case (prefilteredCount, filteredCount) =>
+            if (prefilteredCount < batchSize) {
+              filteredCount + cumCount
             } else
-              doGet(batchCount + cumCount, startRecord + batchCount)
+              doGet(filteredCount + cumCount, startRecord + batchSize)
         }
+
+    }
 
     doGet()
   }

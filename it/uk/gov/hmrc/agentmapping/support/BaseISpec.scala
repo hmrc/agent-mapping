@@ -23,7 +23,8 @@ abstract class BaseISpec extends UnitSpec with WireMockSupport with DataStreamSt
         "microservice.services.agent-subscription.port" -> wireMockPort,
         "metrics.enabled" -> true,
         "auditing.enabled" -> true,
-        "clientCount.maxRecords" -> 5,
+        "clientCount.maxRecords" -> 40,
+        "clientCount.batchSize" -> 7,
         "mongodb.uri" -> "mongodb://localhost:27017/test-agent-mapping",
         "auditing.consumer.baseUri.port"                -> wireMockPort,
         "migrate-repositories"                          -> "false"
