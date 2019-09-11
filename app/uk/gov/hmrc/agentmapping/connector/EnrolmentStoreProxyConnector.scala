@@ -63,11 +63,11 @@ class EnrolmentStoreProxyConnector @Inject()(appConfig: AppConfig, http: HttpCli
       case c if c >= maxClientRelationships => maxClientRelationships
       case _ =>
         getDelegatedEnrolmentsCountFor(userId, startRecord, service).flatMap {
-          case (prefilterteredCount, batchCount) =>
-            if (prefilterteredCount < batchSize) {
-              batchCount + cumCount
+          case (prefilteredCount, filteredCount) =>
+            if (prefilteredCount < batchSize) {
+              filteredCount + cumCount
             } else
-              doGet(batchCount + cumCount, startRecord + batchCount)
+              doGet(filteredCount + cumCount, startRecord + batchSize)
         }
 
     }

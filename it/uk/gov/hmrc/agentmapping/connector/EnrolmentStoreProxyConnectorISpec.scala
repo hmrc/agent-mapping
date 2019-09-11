@@ -31,7 +31,9 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
   private val HMCE_VATDEC_ORG = "HMCE-VATDEC-ORG"
   private val IR_SA = "IR-SA"
 
-  private def batchResponse(recordsToReturn: Int) = EnrolmentResponse(List.fill(recordsToReturn)(Enrolment("Activated")))
+  private def batchResponse(recordsToReturn: Int, active: Boolean = true) = {
+    EnrolmentResponse(List.fill(recordsToReturn)(if(active) Enrolment("Activated") else Enrolment("NotActivated")))
+  }
 
   "runEs2ForServices" should {
     s"return $maxRecordsToDisplay if the total records from $HMCE_VATDEC_ORG is higher than $maxRecordsToDisplay" in {
@@ -42,7 +44,6 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 22,  batchResponse(clientCountBatchSize), 200)
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 29,  batchResponse(clientCountBatchSize), 200)
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 36,  batchResponse(clientCountBatchSize), 200)
-
       await(connector.getClientCount("agent1")) shouldBe 40
     }
 
@@ -99,6 +100,16 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
       givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(clientCountBatchSize - 2), 200)
 
       await(connector.getClientCount("agent1")) shouldBe 5
+    }
+
+    s"return the count of only Activated records" in {
+
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1, batchResponse(clientCountBatchSize, false), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8, batchResponse(clientCountBatchSize - 2), 200)
+      givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(clientCountBatchSize, false), 200)
+      givenEs2ClientsFoundFor("agent1", IR_SA, 8, batchResponse(clientCountBatchSize - 2), 200)
+
+      await(connector.getClientCount("agent1")) shouldBe 10
     }
 
     "return 0 if the call to ESP returns 204" in {
