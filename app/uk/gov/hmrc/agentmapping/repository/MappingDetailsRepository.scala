@@ -45,6 +45,7 @@ class MappingDetailsRepository @Inject()(mongoComponent: ReactiveMongoComponent)
       Index(
         key = Seq("mappingDetails.authProviderId" -> IndexType.Ascending),
         name = Some("authProviderId"),
+        sparse = true,
         unique = true)
     )
 
