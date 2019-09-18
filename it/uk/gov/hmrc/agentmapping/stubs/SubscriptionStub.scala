@@ -23,4 +23,12 @@ trait SubscriptionStub {
           .withBody(s"""{"userMappings": ${Json.toJson(userMappings).toString()}}"""))
     )
 
+  def givenNoMappingsExistForAuthProviderId(authProviderId: AuthProviderId): StubMapping =
+    stubFor(
+      get(urlPathEqualTo(s"/agent-subscription/subscription/journey/id/${encodePathSegment(authProviderId.id)}"))
+        .willReturn(aResponse()
+          .withStatus(Status.OK)
+          .withBody(s"""{"userMappings": []}"""))
+    )
+
 }

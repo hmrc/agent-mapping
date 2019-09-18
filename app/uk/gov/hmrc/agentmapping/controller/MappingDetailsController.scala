@@ -22,12 +22,12 @@ import javax.inject.Inject
 import play.api.Logger
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
-import uk.gov.hmrc.agentmapping.model.{AuthProviderId, GGTag, MappingDetails, MappingDetailsRepositoryRecord, MappingDetailsRequest, UserMapping}
+import uk.gov.hmrc.agentmapping.auth.AuthActions
+import uk.gov.hmrc.agentmapping.connector.SubscriptionConnector
+import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository.MappingDetailsRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
-import uk.gov.hmrc.agentmapping.auth.AuthActions
-import uk.gov.hmrc.agentmapping.connector.SubscriptionConnector
 
 import scala.concurrent.{ExecutionContext, Future}
 
@@ -73,9 +73,12 @@ class MappingDetailsController @Inject()(
   def transferSubscriptionRecordToMappingDetails(arn: Arn): Action[AnyContent] =
     authorisedWithProviderId { implicit request => implicit providerId =>
       subscriptionConnector.getUserMappings(AuthProviderId(providerId)).flatMap {
-        case Some(userMappings) =>
+        case Some(userMappings) if userMappings.nonEmpty =>
           val record = MappingDetailsRepositoryRecord(arn, userMappings2MappingDetails(userMappings))
           repository.create(record).map(_ => Created)
+
+        case Some(userMappings) if userMappings.isEmpty =>
+          Future successful Ok("No user mappings found")
 
         case None => Future successful NotFound(s"no user mappings found for this auth provider id: $providerId")
       }
