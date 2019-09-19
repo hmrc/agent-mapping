@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentmapping.repository
 
 import javax.inject.Inject
 import org.joda.time.{DateTime, DateTimeZone}
+import org.slf4j.LoggerFactory
 import play.api.libs.json.Json.{JsValueWrapper, toJsFieldJsValueWrapper}
 import play.api.libs.json.{Format, Json}
 import play.modules.reactivemongo.ReactiveMongoComponent
@@ -29,6 +30,7 @@ import reactivemongo.api.indexes.IndexType.Ascending
 import reactivemongo.bson.{BSONDocument, BSONObjectID}
 import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
+import uk.gov.hmrc.agentmapping.repository.RepositoryTools._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.mongo.ReactiveRepository
@@ -57,6 +59,35 @@ trait RepositoryFunctions[T] {
   def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]]
 }
 
+/**
+  * A set of useful functions for dealing with Mongo repositories, collections and indexes
+  */
+object RepositoryTools {
+
+  def dropIndexIfExists[A, ID](rr: ReactiveRepository[A, ID], indexName: String)(
+    implicit ec: ExecutionContext): Future[Unit] = {
+
+    val logger = LoggerFactory.getLogger(rr.getClass)
+
+    rr.collection.indexesManager
+      .drop(indexName)
+      .map { numIndexesDropped =>
+        if (numIndexesDropped >= 0) {
+          logger.info(s"Successfully dropped old index $indexName")
+        } else {
+          logger.warn(s"Did not drop old index $indexName")
+        }
+      }
+      .recover {
+        case t: DefaultBSONCommandError if t.code.contains(27) =>
+          logger.info(s"IndexNotFound: Did not drop old index '$indexName' as it was not found")
+        case t =>
+          logger.warn(s"Did not drop old index '$indexName'", t)
+      }
+  }
+
+}
+
 abstract class BaseMappingRepository[T: Format: Manifest](
   collectionName: String,
   identifierKey: String,
@@ -81,35 +112,14 @@ abstract class BaseMappingRepository[T: Format: Manifest](
     find(Seq("utr" -> Some(utr)).map(option => option._1 -> toJsFieldJsValueWrapper(option._2.get)): _*)
 
   // TODO: Remove this overridden method once the service has been deployed and the indexes have been updated.
-  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] = {
-    // Drop the old "arnAndIdentifier" index as we will replace it with an "arnWithIdentifier" index with different options
-    // Drop the old "utrAndIdentifier" index as we will replace it with an "utrWithIdentifier" index with different options
-
-    def dropOldIndexIfExists(indexName: String) =
-      collection.indexesManager
-        .drop(indexName)
-        .map { numIndexesDropped =>
-          if (numIndexesDropped >= 0) {
-            logger.info(s"Successfully dropped old index $indexName")
-          } else {
-            logger.warn(s"Did not drop old index $indexName")
-          }
-        }
-        .recover {
-          case t: DefaultBSONCommandError if t.code.contains(27) =>
-            logger.info(s"IndexNotFound: Did not drop old index '$indexName' as it was not found")
-          case t =>
-            logger.warn(s"Did not drop old index '$indexName'", t)
-        }
-
+  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
     for {
-      _      <- dropOldIndexIfExists("utrAndIdentifier")
-      _      <- dropOldIndexIfExists("arnAndIdentifier")
+      _      <- dropIndexIfExists(this, "utrAndIdentifier")
+      _      <- dropIndexIfExists(this, "arnAndIdentifier")
       result <- super.ensureIndexes
     } yield result
-  }
 
-  override def indexes =
+  override def indexes: Seq[Index] =
     Seq(
       Index(
         Seq("arn" -> Ascending, identifierKey -> Ascending),
