@@ -22,12 +22,14 @@ import play.modules.reactivemongo.ReactiveMongoComponent
 import reactivemongo.api.commands.WriteResult
 import reactivemongo.api.indexes.{Index, IndexType}
 import reactivemongo.bson.BSONObjectID
+import reactivemongo.play.json.ImplicitBSONHandlers._
 import uk.gov.hmrc.agentmapping.model.{MappingDetails, MappingDetailsRepositoryRecord}
+import uk.gov.hmrc.agentmapping.repository.RepositoryTools._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.ReactiveRepository
 import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
-import reactivemongo.play.json.ImplicitBSONHandlers._
 
+import scala.collection.Seq
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -39,12 +41,21 @@ class MappingDetailsRepository @Inject()(mongoComponent: ReactiveMongoComponent)
       ReactiveMongoFormats.objectIdFormats
     ) {
 
+  /**
+    * Temporary override to change index configuration; once deployed, this can be removed
+    * */
+  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
+    for {
+      _      <- dropIndexIfExists(this, "authProviderId")
+      result <- super.ensureIndexes
+    } yield result
+
   override def indexes: Seq[Index] =
     Seq(
       Index(key = Seq("arn" -> IndexType.Ascending), name = Some("arn"), unique = true),
       Index(
         key = Seq("mappingDetails.authProviderId" -> IndexType.Ascending),
-        name = Some("authProviderId"),
+        name = Some("authProviderIdSparse"),
         sparse = true,
         unique = true)
     )

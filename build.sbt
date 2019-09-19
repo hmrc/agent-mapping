@@ -1,4 +1,3 @@
-import sbt.Tests.{Group, SubProcess}
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin._
 import uk.gov.hmrc.{SbtArtifactory, SbtAutoBuildPlugin}
 
