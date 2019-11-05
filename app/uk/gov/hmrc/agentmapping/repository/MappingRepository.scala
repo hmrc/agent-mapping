@@ -16,8 +16,9 @@
 
 package uk.gov.hmrc.agentmapping.repository
 
+import java.time.{LocalDateTime, ZoneOffset}
+
 import javax.inject.Inject
-import org.joda.time.{DateTime, DateTimeZone}
 import org.slf4j.LoggerFactory
 import play.api.libs.json.Json.{JsValueWrapper, toJsFieldJsValueWrapper}
 import play.api.libs.json.{Format, Json}
@@ -43,7 +44,8 @@ trait MappingRepository {
   def store(
     identifier: TaxIdentifier,
     identifierValue: String,
-    createdTime: Option[DateTime] = Some(DateTime.now(DateTimeZone.UTC)))(implicit ec: ExecutionContext): Future[Unit]
+    createdTime: Option[LocalDateTime] = Some(LocalDateTime.now(ZoneOffset.UTC)))(
+    implicit ec: ExecutionContext): Future[Unit]
 
   def updateUtrToArn(utr: Utr, arn: Arn)(implicit ec: ExecutionContext): Future[Unit]
 }
@@ -91,7 +93,7 @@ object RepositoryTools {
 abstract class BaseMappingRepository[T: Format: Manifest](
   collectionName: String,
   identifierKey: String,
-  wrap: (TaxIdentifier, String, Option[DateTime]) => T)(
+  wrap: (TaxIdentifier, String, Option[LocalDateTime]) => T)(
   implicit mongoComponent: ReactiveMongoComponent,
   ec: ExecutionContext)
     extends ReactiveRepository[T, BSONObjectID](
@@ -151,7 +153,8 @@ abstract class BaseMappingRepository[T: Format: Manifest](
   def store(
     identifier: TaxIdentifier,
     identifierValue: String,
-    createdTime: Option[DateTime] = Some(DateTime.now(DateTimeZone.UTC)))(implicit ec: ExecutionContext): Future[Unit] =
+    createdTime: Option[LocalDateTime] = Some(LocalDateTime.now(ZoneOffset.UTC)))(
+    implicit ec: ExecutionContext): Future[Unit] =
     insert(wrap(identifier, identifierValue, createdTime)).map(_ => ())
 
   def updateUtrToArn(utr: Utr, arn: Arn)(implicit ec: ExecutionContext): Future[Unit] = {

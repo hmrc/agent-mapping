@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentmapping.model
 
-import org.joda.time.DateTime
+import java.time.{Instant, LocalDateTime, ZoneOffset}
+
 import play.api.libs.json._
 import play.api.libs.json.Json.format
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
@@ -40,11 +41,20 @@ trait ArnToIdentifierMapping {
   def identifier: String
 }
 
-case class AgentReferenceMapping(businessId: TaxIdentifier, identifier: String, createdDate: Option[DateTime])
+case class AgentReferenceMapping(businessId: TaxIdentifier, identifier: String, createdDate: Option[LocalDateTime])
     extends ArnToIdentifierMapping
 
 object AgentReferenceMapping extends ReactiveMongoFormats {
-  implicit val dateFormat: Format[DateTime] = ReactiveMongoFormats.dateTimeFormats
+
+  implicit val dateTimeFormat: Format[LocalDateTime] = new Format[LocalDateTime] {
+    def writes(o: LocalDateTime): JsValue = Json.obj("$date" -> o.atZone(ZoneOffset.UTC).toInstant.toEpochMilli)
+    def reads(json: JsValue): JsResult[LocalDateTime] =
+      json \ "$date" match {
+        case JsDefined(JsNumber(millis)) =>
+          JsSuccess(LocalDateTime.ofInstant(Instant.ofEpochMilli(millis.longValue), ZoneOffset.UTC))
+        case _ => JsError("Invalid format for date")
+      }
+  }
 
   implicit val writes: Writes[AgentReferenceMapping] = new Writes[AgentReferenceMapping] {
     override def writes(o: AgentReferenceMapping): JsValue = o match {
@@ -64,7 +74,7 @@ object AgentReferenceMapping extends ReactiveMongoFormats {
       } else if ((json \ "utr").toOption.isDefined) {
         val utr = (json \ "utr").as[Utr]
         val identifier = (json \ "identifier").as[String]
-        val preCreatedDate = (json \ "preCreatedDate").asOpt[DateTime]
+        val preCreatedDate = (json \ "preCreatedDate").asOpt[LocalDateTime]
         JsSuccess(AgentReferenceMapping(utr, identifier, preCreatedDate))
       } else JsError("invalid json")
   }
