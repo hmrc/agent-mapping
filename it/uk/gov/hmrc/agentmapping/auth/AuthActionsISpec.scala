@@ -26,6 +26,12 @@ class AuthActionsISpec(implicit val ec: ExecutionContext) extends BaseISpec with
   val mockAuthConnector = mock[AuthConnector]
   val mockAuthActions = new AuthActions(mockAuthConnector, cc)
 
+  val newStrideId = "maintain_agent_relationships"
+  val terminateStrideId = "caat"
+
+  val newStrideEnrolment = Set(Enrolment(newStrideId))
+  val terminateStrideEnrolment = Set(Enrolment(terminateStrideId))
+
   override def beforeEach(): Unit = reset(mockAuthConnector)
 
   "BasicAuth" should {
@@ -108,10 +114,40 @@ class AuthActionsISpec(implicit val ec: ExecutionContext) extends BaseISpec with
     }
   }
 
+  "onlyStride" should {
+    implicit val hc = new HeaderCarrier
+
+    "return 200 for successful stride authentication" in {
+      authStub(onlyStride(terminateStrideEnrolment))
+
+      val response: Result = await(mockAuthActions.onlyStride(terminateStrideId)(strideAction).apply(fakeRequestAny))
+
+      status(response) shouldBe 200
+    }
+
+    "return 401 for unauthorised stride authentication" in {
+      authStub(onlyStride(newStrideEnrolment))
+
+      val response: Result = await(mockAuthActions.onlyStride(terminateStrideId)(strideAction).apply(fakeRequestAny))
+
+      status(response) shouldBe 401
+    }
+
+    "return 403 for unsuccessful stride authentication" in {
+      authStub(onlyStrideFail)
+
+      val response: Result = await(mockAuthActions.onlyStride(terminateStrideId)(strideAction).apply(fakeRequestAny))
+
+      status(response) shouldBe 403
+    }
+  }
+
   private val basicAction: Request[AnyContent] => Future[Result] = { implicit request => Future.successful(Ok)}
   private val authorisedWithEnrolmentsAction: Request[AnyContent] => Boolean => Future[Result] = { implicit request => eligibility => Future.successful(Ok(eligibility.toString))}
   private val authorisedAsAgentAction: Request[AnyContent] => Arn => Future[Result] = { implicit request => arn => Future.successful(Ok(arn.value))}
   private val authorisedWithAgentCodeAction: Request[AnyContent] => Set[Identifier] => String => Future[Result] = { implicit request => identifier => provider => Future.successful(Ok)}
+
+  val strideAction: Request[AnyContent] => Future[Result] = { implicit request => Future successful Ok }
 
   private def authStub[A](returnValue: Future[A]) =
     when(mockAuthConnector.authorise(any[Predicate](), any[Retrieval[A]])(any[HeaderCarrier], any[ExecutionContext])).thenReturn(returnValue)
@@ -125,6 +161,12 @@ class AuthActionsISpec(implicit val ec: ExecutionContext) extends BaseISpec with
   private val saEnrolment = Set(
     Enrolment("IR-SA-AGENT", Seq(EnrolmentIdentifier("sa", "00001")), state = "",
       delegatedAuthRule = None))
-  
+
+  val onlyStride: Set[Enrolment] => Future[Enrolments] =
+    strideEnrolments => Future successful Enrolments(strideEnrolments)
+
+  val onlyStrideFail: Future[Enrolments] =
+    Future failed new UnsupportedAuthProvider
+
 
 }

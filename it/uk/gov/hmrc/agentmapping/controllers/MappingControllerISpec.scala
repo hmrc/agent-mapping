@@ -633,7 +633,8 @@ sealed trait MappingControllerISpecSetup
             "auditing.consumer.baseUri.host"                -> wireMockHost,
             "auditing.consumer.baseUri.port"                -> wireMockPort,
             "application.router"                            -> "testOnlyDoNotUseInAppConf.Routes",
-            "migrate-repositories"                          -> "false"
+            "migrate-repositories"                          -> "false",
+            "termination.stride.enrolment"                  -> "caat"
           ))
       .overrides(new TestGuiceModule)
 

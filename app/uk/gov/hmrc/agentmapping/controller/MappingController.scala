@@ -24,6 +24,7 @@ import play.api.mvc._
 import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.auth.AuthActions
+import uk.gov.hmrc.agentmapping.config.AppConfig
 import uk.gov.hmrc.agentmapping.connector.{EnrolmentStoreProxyConnector, SubscriptionConnector}
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository._
@@ -36,6 +37,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
 class MappingController @Inject()(
+  appConfig: AppConfig,
   repositories: MappingRepositories,
   auditService: AuditService,
   subscriptionConnector: SubscriptionConnector,
@@ -46,6 +48,7 @@ class MappingController @Inject()(
 
   import auditService._
   import authActions._
+  import appConfig.terminationStrideRole
 
   def hasEligibleEnrolments: Action[AnyContent] =
     authorisedWithEnrolments { implicit request => hasEligibleEnrolments =>
@@ -148,12 +151,19 @@ class MappingController @Inject()(
       }
     }
 
+  private def deleteAgentRecords(arn: Arn) =
+    Future.sequence(repositories.map(_.delete(arn).map(_.n)))
+
   def delete(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    Future
-      .sequence(repositories.map(_.delete(arn)))
-      .map { _ =>
+    deleteAgentRecords(arn).map { _ =>
         NoContent
       }
+  }
+
+  def removeAgentMappings(arn: Arn): Action[AnyContent] = onlyStride(terminationStrideRole) { implicit request =>
+    deleteAgentRecords(arn).map(_.sum).map { result =>
+      Ok(Json.obj("arn" -> arn.value, "MappingRecordsDeleted" -> result))
+    }
   }
 
   def createPreSubscriptionMapping(utr: Utr): Action[AnyContent] =
