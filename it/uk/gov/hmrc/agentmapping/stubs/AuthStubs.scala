@@ -239,4 +239,32 @@ trait AuthStubs {
     stubFor(post(urlPathEqualTo(s"/auth/authorise")).willReturn(aResponse().withStatus(200).withBody("{}")))
     this
   }
+
+  def givenOnlyStrideStub(strideRole: String, strideUserId: String) = {
+    stubFor(
+      post(urlEqualTo("/auth/authorise"))
+        .withRequestBody(equalToJson(s"""
+                                        |{
+                                        |  "authorise": [
+                                        |    { "authProviders": ["PrivilegedApplication"] }
+                                        |  ],
+                                        |  "retrieve":["allEnrolments"]
+                                        |}""".stripMargin,
+          true, true))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withBody(s"""
+                         |{
+                         |"allEnrolments": [{
+                         |  "key": "$strideRole"
+                         |	}],
+                         |  "optionalCredentials": {
+                         |    "providerId": "$strideUserId",
+                         |    "providerType": "PrivilegedApplication"
+                         |  }
+                         |}""".stripMargin)
+        ))
+    this
+  }
 }

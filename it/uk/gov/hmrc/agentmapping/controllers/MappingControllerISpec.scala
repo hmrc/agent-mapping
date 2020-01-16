@@ -7,7 +7,7 @@ import com.google.inject.AbstractModule
 import org.scalatest.concurrent.ScalaFutures
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.json.JsValue
+import play.api.libs.json.{JsObject, JsValue, Json}
 import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.libs.ws.ahc.AhcWSClient
 import play.api.mvc.AnyContentAsEmpty
@@ -115,6 +115,9 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
 
   val deletePreSubscriptionMappingsRequest: String =
     s"/agent-mapping/mappings/pre-subscription/utr/${utr.value}"
+
+  def terminateAgentsMapping(arn: Arn): String =
+    s"/agent-mapping/agent/${arn.value}/terminate"
 
   case class TestFixture(legacyAgentEnrolmentType: LegacyAgentEnrolmentType, identifierKey: String, identifierValue: String) {
     val dbKey: String = legacyAgentEnrolmentType.dbKey
@@ -556,6 +559,27 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
     }
   }
 
+  trait TestSetup {
+    (Seq(AgentCodeTestFixture) ++ fixtures).foreach { f =>
+      repositories.get(f.legacyAgentEnrolmentType).store(registeredArn, f.identifierValue)
+    }
+  }
+
+  "removeMappingsForAgent" should {
+    "return 200 for successfully deleting all agent records" in new TestSetup {
+      givenOnlyStrideStub("caat", "12345")
+      val response = callDelete(terminateAgentsMapping(registeredArn))
+
+      response.status shouldBe 200
+      response.json.as[JsObject] shouldBe Json.obj("arn" -> s"${registeredArn.value}", "MappingRecordsDeleted" -> 10)
+    }
+
+    "return 400 for invalid ARN" in {
+      givenOnlyStrideStub("caat", "12345")
+      callDelete(terminateAgentsMapping(Arn("MARN01"))).status shouldBe 400
+    }
+  }
+
   private def givenUserIsAuthorisedFor(f: TestFixture): StubMapping =
     givenUserIsAuthorisedFor(
       f.legacyAgentEnrolmentType.key,
@@ -633,7 +657,8 @@ sealed trait MappingControllerISpecSetup
             "auditing.consumer.baseUri.host"                -> wireMockHost,
             "auditing.consumer.baseUri.port"                -> wireMockPort,
             "application.router"                            -> "testOnlyDoNotUseInAppConf.Routes",
-            "migrate-repositories"                          -> "false"
+            "migrate-repositories"                          -> "false",
+            "termination.stride.enrolment"                  -> "caat"
           ))
       .overrides(new TestGuiceModule)
 

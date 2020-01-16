@@ -35,7 +35,7 @@ abstract class BaseRepositoryISpec[
   override implicit lazy val app: Application = appBuilder.build()
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
-      .configure(Map("migrate-repositories" -> "false"))
+      .configure(Map("migrate-repositories" -> "false","termination.stride.enrolment" -> "caat"))
       .configure(mongoConfiguration)
 
   val arn1 = Arn("ARN00001")

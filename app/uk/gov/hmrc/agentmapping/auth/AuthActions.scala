@@ -16,10 +16,11 @@
 
 package uk.gov.hmrc.agentmapping.auth
 import javax.inject.{Inject, Singleton}
+import play.api.Logger
 import play.api.mvc._
 import uk.gov.hmrc.agentmapping.model.{AgentCode, Identifier, LegacyAgentEnrolmentType}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
+import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{agentCode, allEnrolments, authorisedEnrolments, credentials}
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
@@ -101,6 +102,25 @@ class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComp
       } recover {
         case _: NoActiveSession => Unauthorized
       }
+    }
+
+  def onlyStride(strideRole: String)(body: Request[AnyContent] => Future[Result])(
+    implicit ec: ExecutionContext): Action[AnyContent] =
+    Action.async { implicit request =>
+      authorised(AuthProviders(PrivilegedApplication))
+        .retrieve(allEnrolments) {
+          case allEnrols if allEnrols.enrolments.map(_.key).contains(strideRole) =>
+            body(request)
+          case _ =>
+            Logger(getClass).warn(
+              s"Unauthorized Discovered during Stride Authentication: Enrolment is Not a Stride Enrolment")
+            Future successful Unauthorized
+        }
+        .recover {
+          case e =>
+            Logger(getClass).warn(s"Error Discovered during Stride Authentication: ${e.getMessage}")
+            Forbidden
+        }
     }
 
   private def handleException(implicit ec: ExecutionContext, request: Request[_]): PartialFunction[Throwable, Result] = {

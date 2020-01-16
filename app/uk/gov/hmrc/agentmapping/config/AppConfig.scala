@@ -35,4 +35,6 @@ class AppConfig @Inject()(servicesConfig: ServicesConfig) {
 
   val agentSubscriptionBaseUrl = servicesConfig.baseUrl("agent-subscription")
 
+  val terminationStrideRole: String = servicesConfig.getString("termination.stride.enrolment")
+
 }
