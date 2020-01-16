@@ -156,11 +156,11 @@ class MappingController @Inject()(
 
   def delete(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     deleteAgentRecords(arn).map { _ =>
-        NoContent
-      }
+      NoContent
+    }
   }
 
-  def removeAgentMappings(arn: Arn): Action[AnyContent] = onlyStride(terminationStrideRole) { implicit request =>
+  def removeMappingsForAgent(arn: Arn): Action[AnyContent] = onlyStride(terminationStrideRole) { implicit request =>
     deleteAgentRecords(arn).map(_.sum).map { result =>
       Ok(Json.obj("arn" -> arn.value, "MappingRecordsDeleted" -> result))
     }
