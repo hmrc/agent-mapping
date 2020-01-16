@@ -560,7 +560,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
   }
 
   trait TestSetup {
-    fixtures.foreach { f =>
+    (Seq(AgentCodeTestFixture) ++ fixtures).foreach { f =>
       repositories.get(f.legacyAgentEnrolmentType).store(registeredArn, f.identifierValue)
     }
   }
@@ -571,7 +571,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
       val response = callDelete(terminateAgentsMapping(registeredArn))
 
       response.status shouldBe 200
-      response.json.as[JsObject] shouldBe Json.obj("arn" -> s"${registeredArn.value}", "MappingRecordsDeleted" -> 9)
+      response.json.as[JsObject] shouldBe Json.obj("arn" -> s"${registeredArn.value}", "MappingRecordsDeleted" -> 10)
     }
 
     "return 400 for invalid ARN" in {

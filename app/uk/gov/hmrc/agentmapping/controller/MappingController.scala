@@ -161,9 +161,16 @@ class MappingController @Inject()(
   }
 
   def removeMappingsForAgent(arn: Arn): Action[AnyContent] = onlyStride(terminationStrideRole) { implicit request =>
-    deleteAgentRecords(arn).map(_.sum).map { result =>
-      Ok(Json.obj("arn" -> arn.value, "MappingRecordsDeleted" -> result))
-    }
+    deleteAgentRecords(arn)
+      .map(_.sum)
+      .map { result =>
+        Ok(Json.obj("arn" -> arn.value, "MappingRecordsDeleted" -> result))
+      }
+      .recover {
+        case e =>
+          Logger(getClass).warn(s"Something has gone for $arn due to: ${e.getMessage}")
+          InternalServerError
+      }
   }
 
   def createPreSubscriptionMapping(utr: Utr): Action[AnyContent] =
