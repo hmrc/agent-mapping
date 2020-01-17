@@ -72,6 +72,11 @@ class MappingDetailsRepository @Inject()(mongoComponent: ReactiveMongoComponent)
     collection.update(ordered = false).one(Json.obj("arn" -> arn.value), updateOp).checkResult
   }
 
+  def removeMappingDetailsForAgent(arn: Arn)(implicit ec: ExecutionContext): Future[Int] = {
+    val query = Json.obj("arn" -> arn.value)
+    collection.delete().one(query).map(_.n)
+  }
+
   implicit class WriteResultChecker(future: Future[WriteResult]) {
     def checkResult(implicit ec: ExecutionContext): Future[Unit] = future.map { writeResult =>
       if (hasProblems(writeResult)) throw new RuntimeException(writeResult.toString)

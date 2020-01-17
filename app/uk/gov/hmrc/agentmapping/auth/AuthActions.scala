@@ -111,9 +111,9 @@ class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComp
         .retrieve(allEnrolments) {
           case allEnrols if allEnrols.enrolments.map(_.key).contains(strideRole) =>
             body(request)
-          case _ =>
+          case e: Enrolments =>
             Logger(getClass).warn(
-              s"Unauthorized Discovered during Stride Authentication: Enrolment is Not a Stride Enrolment")
+              s"Unauthorized Discovered during Stride Authentication: ${e.enrolments.map(enrol => enrol.key).mkString(",")}")
             Future successful Unauthorized
         }
         .recover {

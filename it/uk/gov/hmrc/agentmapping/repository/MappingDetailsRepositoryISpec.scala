@@ -82,5 +82,18 @@ class MappingDetailsRepositoryISpec extends UnitSpec with MongoSpecSupport with 
         updatedFind.get.mappingDetails(1) shouldBe newMappingDisplayDetails
       }
     }
+
+    "removeMappingDetailsForAgent" should {
+      "remove mapping details record for given arn" in {
+        await(repo.create(record))
+        val initialFind = await(repo.findByArn(arn))
+
+        await(repo.removeMappingDetailsForAgent(arn))
+        val removedArn = await(repo.findByArn(arn))
+
+        initialFind.get.mappingDetails.length shouldBe 1
+        removedArn shouldBe None
+      }
+    }
   }
 }
