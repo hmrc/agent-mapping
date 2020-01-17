@@ -39,6 +39,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class MappingController @Inject()(
   appConfig: AppConfig,
   repositories: MappingRepositories,
+  detailsRepository: MappingDetailsRepository,
   auditService: AuditService,
   subscriptionConnector: SubscriptionConnector,
   espConnector: EnrolmentStoreProxyConnector,
@@ -161,11 +162,10 @@ class MappingController @Inject()(
   }
 
   def removeMappingsForAgent(arn: Arn): Action[AnyContent] = onlyStride(terminationStrideRole) { implicit request =>
-    deleteAgentRecords(arn)
-      .map(_.sum)
-      .map { result =>
-        Ok(Json.obj("arn" -> arn.value, "MappingRecordsDeleted" -> result))
-      }
+    (for {
+      mappingRecords <- deleteAgentRecords(arn).map(_.sum)
+      detailRecords  <- detailsRepository.removeMappingDetailsForAgent(arn)
+    } yield Ok(Json.obj("arn" -> arn.value, "MappingRecordsDeleted" -> (mappingRecords + detailRecords))))
       .recover {
         case e =>
           Logger(getClass).warn(s"Something has gone for $arn due to: ${e.getMessage}")

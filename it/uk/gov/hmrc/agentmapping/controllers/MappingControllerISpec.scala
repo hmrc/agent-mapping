@@ -1,5 +1,8 @@
 package uk.gov.hmrc.agentmapping.controllers
 
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
@@ -14,7 +17,7 @@ import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmapping.audit.CreateMapping
 import uk.gov.hmrc.agentmapping.model.{AgentCharId, AgentRefNo, HmrcGtsAgentRef, HmrcMgdAgentRef, IRAgentReference, IRAgentReferenceCt, IRAgentReferencePaye, SdltStorn, VATAgentRefNo, _}
-import uk.gov.hmrc.agentmapping.repository.MappingRepositories
+import uk.gov.hmrc.agentmapping.repository.{MappingDetailsRepository, MappingRepositories}
 import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DataStreamStub, SubscriptionStub}
 import uk.gov.hmrc.agentmapping.support.{MongoApp, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
@@ -38,6 +41,14 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
   val IRSAAgentReference = "IRAgentReference"
   val AgentReferenceNo = "AgentRefNo"
   val authProviderId = AuthProviderId("testCredId")
+
+  private val ggTag = GGTag("1234")
+  private val count = 10
+  private val dateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
+  private val dateTime: LocalDateTime = LocalDateTime.parse("2019-10-10 12:00", dateTimeFormatter)
+  private val mappingDisplayDetails = MappingDetails(authProviderId, ggTag, count, dateTime)
+
+  private val record = MappingDetailsRepositoryRecord(registeredArn, Seq(mappingDisplayDetails))
 
   val url = s"http://localhost:$port"
   val wsClient = app.injector.instanceOf[WSClient]
@@ -561,8 +572,9 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
 
   trait TestSetup {
     (Seq(AgentCodeTestFixture) ++ fixtures).foreach { f =>
-      repositories.get(f.legacyAgentEnrolmentType).store(registeredArn, f.identifierValue)
+      await(repositories.get(f.legacyAgentEnrolmentType).store(registeredArn, f.identifierValue))
     }
+    await(detailsRepository.create(record))
   }
 
   "removeMappingsForAgent" should {
@@ -571,7 +583,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
       val response = callDelete(terminateAgentsMapping(registeredArn))
 
       response.status shouldBe 200
-      response.json.as[JsObject] shouldBe Json.obj("arn" -> s"${registeredArn.value}", "MappingRecordsDeleted" -> 10)
+      response.json.as[JsObject] shouldBe Json.obj("arn" -> s"${registeredArn.value}", "MappingRecordsDeleted" -> 11)
     }
 
     "return 400 for invalid ARN" in {
@@ -639,6 +651,7 @@ sealed trait MappingControllerISpecSetup
   implicit val fakeRequest: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("GET", "/agent-mapping/add-code")
 
   protected val repositories: MappingRepositories = app.injector.instanceOf[MappingRepositories]
+  protected val detailsRepository = app.injector.instanceOf[MappingDetailsRepository]
 
   val saRepo: repositories.Repository = repositories.get(IRAgentReference)
   val vatRepo = repositories.get(AgentRefNo)
