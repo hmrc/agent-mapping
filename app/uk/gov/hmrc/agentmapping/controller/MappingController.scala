@@ -161,13 +161,17 @@ class MappingController @Inject()(
     }
   }
 
-  def removeMappingsForAgent(arn: Arn): Action[AnyContent] = onlyStride(terminationStrideRole) { implicit request =>
-    (for {
-      mappingRecords <- deleteAgentRecords(arn).map(_.sum)
-      detailRecords  <- detailsRepository.removeMappingDetailsForAgent(arn)
-    } yield Ok(Json.obj("arn" -> arn.value, "MappingRecordsDeleted" -> (mappingRecords + detailRecords))))
-      .recover {
+  def removeMappingsForAgent(arn: Arn): Action[AnyContent] = onlyStride(terminationStrideRole) {
+    implicit request => creds =>
+      (for {
+        mappingRecords <- deleteAgentRecords(arn).map(_.sum)
+        detailRecords  <- detailsRepository.removeMappingDetailsForAgent(arn)
+      } yield {
+        auditService.sendTerminateMtdAgentMappings(arn, "Success", creds.providerId)
+        Ok(Json.obj("arn" -> arn.value, "MappingRecordsDeleted" -> (mappingRecords + detailRecords)))
+      }).recover {
         case e =>
+          auditService.sendTerminateMtdAgentMappings(arn, "Failed", creds.providerId, Some(e.getMessage))
           Logger(getClass).warn(s"Something has gone for $arn due to: ${e.getMessage}")
           InternalServerError
       }
