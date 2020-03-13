@@ -31,6 +31,8 @@ import scala.util.Try
 
 sealed abstract class AgentMappingEvent
 case object CreateMapping extends AgentMappingEvent
+case object TerminateMtdAgentMappings extends AgentMappingEvent
+
 @Singleton
 class AuditService @Inject()(val auditConnector: AuditConnector) {
 
@@ -50,6 +52,35 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
       )
     )
     ()
+  }
+
+  def sendTerminateMtdAgentMappings(arn: Arn, status: String, credId: String, failureReason: Option[String] = None)(
+    implicit hc: HeaderCarrier,
+    request: Request[Any],
+    ec: ExecutionContext): Future[Unit] = {
+    val details = failureReason match {
+      case Some(fr) =>
+        Seq(
+          "agentReferenceNumber" -> arn.value,
+          "status"               -> status,
+          "credId"               -> credId,
+          "authProvider"         -> "PrivilegedApplication",
+          "failureReason"        -> fr
+        )
+      case None =>
+        Seq(
+          "agentReferenceNumber" -> arn.value,
+          "status"               -> status,
+          "credId"               -> credId,
+          "authProvider"         -> "PrivilegedApplication"
+        )
+    }
+
+    auditEvent(
+      TerminateMtdAgentMappings,
+      "terminate-mtd-agent-mappings",
+      details
+    )
   }
 
   private[audit] def auditEvent(
