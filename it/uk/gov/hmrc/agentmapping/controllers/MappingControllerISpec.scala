@@ -11,8 +11,8 @@ import org.scalatest.concurrent.ScalaFutures
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsObject, JsValue, Json}
-import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.libs.ws.ahc.AhcWSClient
+import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmapping.audit.CreateMapping
@@ -583,7 +583,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
       val response = callDelete(terminateAgentsMapping(registeredArn))
 
       response.status shouldBe 200
-      response.json.as[JsObject] shouldBe Json.obj("arn" -> s"${registeredArn.value}", "MappingRecordsDeleted" -> 11)
+      response.json.as[JsObject] shouldBe Json.toJson[TerminationResponse](TerminationResponse(Seq(DeletionCount("agent-mapping", "all-regimes", 11))))
     }
 
     "return 400 for invalid ARN" in {

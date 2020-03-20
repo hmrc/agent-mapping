@@ -147,7 +147,7 @@ class AuthActionsISpec(implicit val ec: ExecutionContext) extends BaseISpec with
   private val authorisedAsAgentAction: Request[AnyContent] => Arn => Future[Result] = { implicit request => arn => Future.successful(Ok(arn.value))}
   private val authorisedWithAgentCodeAction: Request[AnyContent] => Set[Identifier] => String => Future[Result] = { implicit request => identifier => provider => Future.successful(Ok)}
 
-  val strideAction: Request[AnyContent] => Credentials => Future[Result] = { implicit request => _ => Future successful Ok }
+  val strideAction: Request[AnyContent] => Future[Result] = { implicit request => Future successful Ok }
 
   private def authStub[A](returnValue: Future[A]) =
     when(mockAuthConnector.authorise(any[Predicate](), any[Retrieval[A]])(any[HeaderCarrier], any[ExecutionContext])).thenReturn(returnValue)
