@@ -161,20 +161,19 @@ class MappingController @Inject()(
     }
   }
 
-  def removeMappingsForAgent(arn: Arn): Action[AnyContent] = onlyStride(terminationStrideRole) {
-    implicit request => creds =>
-      (for {
-        mappingRecords <- deleteAgentRecords(arn).map(_.sum)
-        detailRecords  <- detailsRepository.removeMappingDetailsForAgent(arn)
-      } yield {
-        auditService.sendTerminateMtdAgentMappings(arn, "Success", creds.providerId)
-        Ok(Json.obj("arn" -> arn.value, "MappingRecordsDeleted" -> (mappingRecords + detailRecords)))
-      }).recover {
-        case e =>
-          auditService.sendTerminateMtdAgentMappings(arn, "Failed", creds.providerId, Some(e.getMessage))
-          Logger(getClass).warn(s"Something has gone for $arn due to: ${e.getMessage}")
-          InternalServerError
-      }
+  def removeMappingsForAgent(arn: Arn): Action[AnyContent] = onlyStride(terminationStrideRole) { implicit request =>
+    (for {
+      mappingRecords <- deleteAgentRecords(arn).map(_.sum)
+      detailRecords  <- detailsRepository.removeMappingDetailsForAgent(arn)
+    } yield {
+      Ok(
+        Json.toJson[TerminationResponse](
+          TerminationResponse(Seq(DeletionCount(appConfig.appName, "all-regimes", mappingRecords + detailRecords)))))
+    }).recover {
+      case e =>
+        Logger(getClass).warn(s"Something has gone for $arn due to: ${e.getMessage}")
+        InternalServerError
+    }
   }
 
   def createPreSubscriptionMapping(utr: Utr): Action[AnyContent] =
