@@ -49,7 +49,6 @@ class MappingController @Inject()(
 
   import auditService._
   import authActions._
-  import appConfig.terminationStrideRole
 
   def hasEligibleEnrolments: Action[AnyContent] =
     authorisedWithEnrolments { implicit request => hasEligibleEnrolments =>
@@ -161,18 +160,20 @@ class MappingController @Inject()(
     }
   }
 
-  def removeMappingsForAgent(arn: Arn): Action[AnyContent] = onlyStride(terminationStrideRole) { implicit request =>
-    (for {
-      mappingRecords <- deleteAgentRecords(arn).map(_.sum)
-      detailRecords  <- detailsRepository.removeMappingDetailsForAgent(arn)
-    } yield {
-      Ok(
-        Json.toJson[TerminationResponse](
-          TerminationResponse(Seq(DeletionCount(appConfig.appName, "all-regimes", mappingRecords + detailRecords)))))
-    }).recover {
-      case e =>
-        Logger(getClass).warn(s"Something has gone for $arn due to: ${e.getMessage}")
-        InternalServerError
+  def removeMappingsForAgent(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    withBasicAuth(appConfig.expectedAuth) {
+      (for {
+        mappingRecords <- deleteAgentRecords(arn).map(_.sum)
+        detailRecords  <- detailsRepository.removeMappingDetailsForAgent(arn)
+      } yield {
+        Ok(
+          Json.toJson[TerminationResponse](
+            TerminationResponse(Seq(DeletionCount(appConfig.appName, "all-regimes", mappingRecords + detailRecords)))))
+      }).recover {
+        case e =>
+          Logger(getClass).warn(s"Something has gone for $arn due to: ${e.getMessage}")
+          InternalServerError
+      }
     }
   }
 

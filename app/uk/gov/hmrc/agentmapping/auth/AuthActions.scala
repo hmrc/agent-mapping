@@ -15,20 +15,24 @@
  */
 
 package uk.gov.hmrc.agentmapping.auth
+import java.nio.charset.StandardCharsets.UTF_8
+import java.util.Base64
+
 import javax.inject.{Inject, Singleton}
 import play.api.Logger
 import play.api.mvc._
-import uk.gov.hmrc.agentmapping.model.{AgentCode, Identifier, LegacyAgentEnrolmentType}
+import uk.gov.hmrc.agentmapping.model.{AgentCode, BasicAuthentication, Identifier, LegacyAgentEnrolmentType}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{agentCode, allEnrolments, authorisedEnrolments, credentials}
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
 import uk.gov.hmrc.play.HeaderCarrierConverter.fromHeadersAndSession
 import uk.gov.hmrc.play.bootstrap.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.matching.Regex
 
 @Singleton
 class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComponents)
@@ -102,6 +106,26 @@ class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComp
       } recover {
         case _: NoActiveSession => Unauthorized
       }
+    }
+
+  val basicAuthHeader: Regex = "Basic (.+)".r
+  val decodedAuth: Regex = "(.+):(.+)".r
+
+  private def decodeFromBase64(encodedString: String): String =
+    try {
+      new String(Base64.getDecoder.decode(encodedString), UTF_8)
+    } catch { case _: Throwable => "" }
+
+  def withBasicAuth(expectedAuth: BasicAuthentication)(body: => Future[Result])(
+    implicit request: Request[_]): Future[Result] =
+    request.headers.get(HeaderNames.authorisation) match {
+      case Some(basicAuthHeader(encodedAuthHeader)) =>
+        decodeFromBase64(encodedAuthHeader) match {
+          case decodedAuth(username, password) if (BasicAuthentication(username, password) == expectedAuth) =>
+            body
+          case _ => Future successful Unauthorized
+        }
+      case _ => Future successful Unauthorized
     }
 
   def onlyStride(strideRole: String)(body: Request[AnyContent] => Future[Result])(

@@ -1,7 +1,9 @@
 package uk.gov.hmrc.agentmapping.controllers
 
+import java.nio.charset.StandardCharsets.UTF_8
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
+import java.util.Base64
 
 import akka.actor.ActorSystem
 import akka.stream.ActorMaterializer
@@ -23,7 +25,7 @@ import uk.gov.hmrc.agentmapping.support.{MongoApp, WireMockSupport}
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.auth.core.{AffinityGroup, Enrolment, EnrolmentIdentifier}
 import uk.gov.hmrc.domain
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
 import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -87,9 +89,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
     }
   }
 
-
-
-
+  def basicAuth(string: String): String = Base64.getEncoder.encodeToString(string.getBytes(UTF_8))
 
   val hasEligibleRequest: String =
     s"/agent-mapping/mappings/eligibility"
@@ -579,8 +579,10 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
 
   "removeMappingsForAgent" should {
     "return 200 for successfully deleting all agent records" in new TestSetup {
-      givenOnlyStrideStub("caat", "12345")
-      val response = callDelete(terminateAgentsMapping(registeredArn))
+      val response = wsClient.url(s"$url${terminateAgentsMapping(registeredArn)}")
+        .addHttpHeaders(HeaderNames.authorisation -> s"Basic ${basicAuth("username:password")}")
+        .delete
+        .futureValue
 
       response.status shouldBe 200
       response.json.as[JsObject] shouldBe Json.toJson[TerminationResponse](TerminationResponse(Seq(DeletionCount("agent-mapping", "all-regimes", 11))))
