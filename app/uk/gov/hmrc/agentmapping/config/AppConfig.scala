@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentmapping.config
 
 import javax.inject.{Inject, Singleton}
+import uk.gov.hmrc.agentmapping.model.BasicAuthentication
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 @Singleton
@@ -36,5 +37,12 @@ class AppConfig @Inject()(servicesConfig: ServicesConfig) {
   val agentSubscriptionBaseUrl = servicesConfig.baseUrl("agent-subscription")
 
   val terminationStrideRole: String = servicesConfig.getString("termination.stride.enrolment")
+
+  def expectedAuth: BasicAuthentication = {
+    val username = servicesConfig.getString("agent-termination.username")
+    val password = servicesConfig.getString("agent-termination.password")
+
+    BasicAuthentication(username, password)
+  }
 
 }
