@@ -63,13 +63,13 @@ lazy val wartRemoverSettings = {
 }
 
 lazy val compileDeps = Seq(
-  "uk.gov.hmrc" %% "bootstrap-play-26" % "0.45.0",
-  "uk.gov.hmrc" %% "auth-client" % "2.27.0-play-26",
-  "uk.gov.hmrc" %% "agent-mtd-identifiers" % "0.16.0-play-26",
-  "uk.gov.hmrc" %% "simple-reactivemongo" % "7.30.0-play-26",
-  "uk.gov.hmrc" %% "mongo-lock" % "6.23.0-play-26",
-  "com.typesafe.play" %% "play-json" % "2.6.0",
-  "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "4.3.0",
+  "uk.gov.hmrc" %% "bootstrap-backend-play-27" % "2.24.0",
+  "uk.gov.hmrc" %% "auth-client" % "3.0.0-play-27",
+  "uk.gov.hmrc" %% "agent-mtd-identifiers" % "0.19.0-play-27",
+  "uk.gov.hmrc" %% "simple-reactivemongo" % "7.30.0-play-27",
+  "uk.gov.hmrc" %% "mongo-lock" % "6.23.0-play-27",
+  "com.typesafe.play" %% "play-json" % "2.7.0",
+  "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "4.4.0",
   ws
 )
 
@@ -82,18 +82,18 @@ def testDeps(scope: String) = Seq(
   "uk.gov.hmrc" %% "hmrctest" % "3.9.0-play-26" % scope,
   "org.scalatest" %% "scalatest" % "3.0.8" % scope,
   "org.mockito" % "mockito-core" % "2.18.0" % scope,
-  "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % scope,
-  "com.github.tomakehurst" % "wiremock-jre8" % "2.23.2" % scope,
-  "uk.gov.hmrc" %% "reactivemongo-test" % "4.21.0-play-26" % scope
+  "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.3" % scope,
+  "com.github.tomakehurst" % "wiremock-jre8" % "2.27.1" % scope,
+  "uk.gov.hmrc" %% "reactivemongo-test" % "4.21.0-play-27" % scope
 )
 
 lazy val root = (project in file("."))
   .settings(
     name := "agent-mapping",
     organization := "uk.gov.hmrc",
-    scalaVersion := "2.11.11",
+    scalaVersion := "2.12.10",
     scalacOptions ++= Seq(
-      "-Xfatal-warnings",
+      //"-Xfatal-warnings",
       "-Xlint:-missing-interpolator,_",
       "-Yno-adapted-args",
       "-Ywarn-value-discard",
