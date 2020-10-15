@@ -19,7 +19,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.util.Base64
 
 import javax.inject.{Inject, Singleton}
-import play.api.{Logger, Logging}
+import play.api.Logging
 import play.api.mvc._
 import uk.gov.hmrc.agentmapping.model.{AgentCode, BasicAuthentication, Identifier, LegacyAgentEnrolmentType}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
@@ -145,13 +145,13 @@ class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComp
           case allEnrols if allEnrols.enrolments.map(_.key).contains(strideRole) =>
             body(request)
           case e =>
-            Logger(getClass).warn(
+            logger.warn(
               s"Unauthorized Discovered during Stride Authentication: ${e.enrolments.map(enrol => enrol.key).mkString(",")}")
             Future successful Unauthorized
         }
         .recover {
           case e =>
-            Logger(getClass).warn(s"Error Discovered during Stride Authentication: ${e.getMessage}")
+            logger.warn(s"Error Discovered during Stride Authentication: ${e.getMessage}")
             Forbidden
         }
     }

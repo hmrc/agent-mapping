@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentmapping.controller
 
 import javax.inject.{Inject, Singleton}
-import play.api.{Logger, Logging}
+import play.api.Logging
 import play.api.libs.json.Json.toJson
 import play.api.libs.json._
 import play.api.mvc._
@@ -108,7 +108,7 @@ class MappingController @Inject()(
             case arn: Arn => sendCreateMappingAuditEvent(arn, identifier, ggCredId, duplicate = true)
             case _        => ()
           }
-          Logger(getClass).warn(s"Duplicated mapping attempt for ${identifier.enrolmentType}")
+          logger.warn(s"Duplicated mapping attempt for ${identifier.enrolmentType}")
           true
       }
 
@@ -168,7 +168,7 @@ class MappingController @Inject()(
             TerminationResponse(Seq(DeletionCount(appConfig.appName, "all-regimes", mappingRecords + detailRecords)))))
       }).recover {
         case e =>
-          Logger(getClass).warn(s"Something has gone for $arn due to: ${e.getMessage}")
+          logger.warn(s"Something has gone for $arn due to: ${e.getMessage}")
           InternalServerError
       }
     }
