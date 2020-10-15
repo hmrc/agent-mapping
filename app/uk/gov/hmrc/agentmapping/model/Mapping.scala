@@ -47,7 +47,7 @@ object AgentReferenceMapping extends ReactiveMongoFormats {
   implicit val dateFormat: Format[DateTime] = ReactiveMongoFormats.dateTimeFormats
 
   implicit val writes: Writes[AgentReferenceMapping] = new Writes[AgentReferenceMapping] {
-    override def writes(o: AgentReferenceMapping): JsValue = o match {
+    override def writes(o: AgentReferenceMapping): JsValue = (o: @unchecked) match {
       case AgentReferenceMapping(Arn(arn), identifier, _) =>
         Json.obj("arn" -> arn, "identifier" -> identifier)
       case AgentReferenceMapping(Utr(utr), identifier, Some(createdDate)) =>

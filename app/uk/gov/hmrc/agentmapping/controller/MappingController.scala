@@ -17,7 +17,7 @@
 package uk.gov.hmrc.agentmapping.controller
 
 import javax.inject.{Inject, Singleton}
-import play.api.Logger
+import play.api.{Logger, Logging}
 import play.api.libs.json.Json.toJson
 import play.api.libs.json._
 import play.api.mvc._
@@ -45,13 +45,14 @@ class MappingController @Inject()(
   espConnector: EnrolmentStoreProxyConnector,
   cc: ControllerComponents,
   val authActions: AuthActions)(implicit val ec: ExecutionContext)
-    extends BackendController(cc) {
+    extends BackendController(cc)
+    with Logging {
 
   import auditService._
   import authActions._
 
   def hasEligibleEnrolments: Action[AnyContent] =
-    authorisedWithEnrolments { implicit request => hasEligibleEnrolments =>
+    authorisedWithEnrolments { request => hasEligibleEnrolments =>
       Future.successful(Ok(Json.obj("hasEligibleEnrolments" -> hasEligibleEnrolments)))
     }
 
@@ -69,7 +70,7 @@ class MappingController @Inject()(
                                    val identifiers = createIdentifiersFromUserMappings(mappings)
                                    createMapping(arn, identifiers)
                                  case None =>
-                                   Logger.error(
+                                   logger.error(
                                      "no subscription journey record found when attempting to create mappings")
                                    Future successful NoContent
                                }
@@ -112,49 +113,45 @@ class MappingController @Inject()(
       }
 
   def findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] = Action.async {
-    implicit request =>
-      repositories.get(IRAgentReference).findBy(arn) map { matches =>
-        implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("saAgentReference")
-        if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
-        else NotFound
-      }
+    repositories.get(IRAgentReference).findBy(arn) map { matches =>
+      implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("saAgentReference")
+      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+      else NotFound
+    }
   }
 
   def findVatMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] = Action.async {
-    implicit request =>
-      repositories.get(AgentRefNo).findBy(arn) map { matches =>
-        implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("vrn")
-        if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
-        else NotFound
-      }
+    repositories.get(AgentRefNo).findBy(arn) map { matches =>
+      implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("vrn")
+      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+      else NotFound
+    }
   }
 
-  def findAgentCodeMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] =
-    Action.async { implicit request =>
-      repositories.get(AgentCode).findBy(arn) map { matches =>
-        implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("agentCode")
-        if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
-        else NotFound
-      }
+  def findAgentCodeMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] = Action.async {
+    repositories.get(AgentCode).findBy(arn) map { matches =>
+      implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("agentCode")
+      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+      else NotFound
     }
+  }
 
-  def findMappings(key: String, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] =
-    Action.async { implicit request =>
-      LegacyAgentEnrolmentType.findByDbKey(key) match {
-        case Some(service) =>
-          repositories.get(service).findBy(arn) map { matches =>
-            if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
-            else NotFound
-          }
-        case None =>
-          Future.successful(BadRequest(s"No service found for the key $key"))
-      }
+  def findMappings(key: String, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] = Action.async {
+    LegacyAgentEnrolmentType.findByDbKey(key) match {
+      case Some(service) =>
+        repositories.get(service).findBy(arn) map { matches =>
+          if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+          else NotFound
+        }
+      case None =>
+        Future.successful(BadRequest(s"No service found for the key $key"))
     }
+  }
 
   private def deleteAgentRecords(arn: Arn) =
     Future.sequence(repositories.map(_.delete(arn).map(_.n)))
 
-  def delete(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+  def delete(arn: Arn): Action[AnyContent] = Action.async {
     deleteAgentRecords(arn).map { _ =>
       NoContent
     }
@@ -182,7 +179,7 @@ class MappingController @Inject()(
       createMapping(utr, identifiers)
     }
 
-  def deletePreSubscriptionMapping(utr: Utr): Action[AnyContent] = basicAuth { implicit request =>
+  def deletePreSubscriptionMapping(utr: Utr): Action[AnyContent] = basicAuth { request =>
     Future
       .sequence(repositories.map(_.delete(utr)))
       .map { _ =>
@@ -191,7 +188,7 @@ class MappingController @Inject()(
   }
 
   def createPostSubscriptionMapping(utr: Utr): Action[AnyContent] =
-    authorisedAsSubscribedAgent { implicit request => arn =>
+    authorisedAsSubscribedAgent { request => arn =>
       repositories.updateUtrToArn(arn, utr).map(_ => Ok)
     }
 

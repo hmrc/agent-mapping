@@ -115,7 +115,6 @@ class AuthActionsISpec(implicit val ec: ExecutionContext) extends BaseISpec with
   }
 
   "onlyStride" should {
-    implicit val hc = new HeaderCarrier
 
     "return 200 for successful stride authentication" in {
       authStub(onlyStride(terminateStrideEnrolment))
@@ -142,12 +141,12 @@ class AuthActionsISpec(implicit val ec: ExecutionContext) extends BaseISpec with
     }
   }
 
-  private val basicAction: Request[AnyContent] => Future[Result] = { implicit request => Future.successful(Ok)}
-  private val authorisedWithEnrolmentsAction: Request[AnyContent] => Boolean => Future[Result] = { implicit request => eligibility => Future.successful(Ok(eligibility.toString))}
-  private val authorisedAsAgentAction: Request[AnyContent] => Arn => Future[Result] = { implicit request => arn => Future.successful(Ok(arn.value))}
-  private val authorisedWithAgentCodeAction: Request[AnyContent] => Set[Identifier] => String => Future[Result] = { implicit request => identifier => provider => Future.successful(Ok)}
+  private val basicAction: Request[AnyContent] => Future[Result] = { request => Future.successful(Ok)}
+  private val authorisedWithEnrolmentsAction: Request[AnyContent] => Boolean => Future[Result] = { request => eligibility => Future.successful(Ok(eligibility.toString))}
+  private val authorisedAsAgentAction: Request[AnyContent] => Arn => Future[Result] = { request => arn => Future.successful(Ok(arn.value))}
+  private val authorisedWithAgentCodeAction: Request[AnyContent] => Set[Identifier] => String => Future[Result] = { request => identifier => provider => Future.successful(Ok)}
 
-  val strideAction: Request[AnyContent] => Future[Result] = { implicit request => Future successful Ok }
+  val strideAction: Request[AnyContent] => Future[Result] = { request => Future successful Ok }
 
   private def authStub[A](returnValue: Future[A]) =
     when(mockAuthConnector.authorise(any[Predicate](), any[Retrieval[A]])(any[HeaderCarrier], any[ExecutionContext])).thenReturn(returnValue)

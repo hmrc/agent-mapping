@@ -67,41 +67,41 @@ class MappingRepositories @Inject()(
 }
 
 @Singleton
-class IRSAAGENTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent, ec: ExecutionContext)
+class IRSAAGENTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
     extends NewMappingRepository("IR-SA-AGENT")
 
 @Singleton
-class NewAgentCodeMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent, ec: ExecutionContext)
+class NewAgentCodeMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
     extends NewMappingRepository("AgentCode")
 
 @Singleton
-class HMCEVATAGNTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent, ec: ExecutionContext)
+class HMCEVATAGNTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
     extends NewMappingRepository("HMCE-VAT-AGNT")
 
 @Singleton
-class HMRCCHARAGENTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent, ec: ExecutionContext)
+class HMRCCHARAGENTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
     extends NewMappingRepository("HMRC-CHAR-AGENT")
 
 @Singleton
-class HMRCGTSAGNTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent, ec: ExecutionContext)
+class HMRCGTSAGNTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
     extends NewMappingRepository("HMRC-GTS-AGNT")
 
 @Singleton
-class HMRCMGDAGNTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent, ec: ExecutionContext)
+class HMRCMGDAGNTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
     extends NewMappingRepository("HMRC-MGD-AGNT")
 
 @Singleton
-class HMRCNOVRNAGNTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent, ec: ExecutionContext)
+class HMRCNOVRNAGNTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
     extends NewMappingRepository("HMRC-NOVRN-AGNT")
 
 @Singleton
-class IRCTAGENTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent, ec: ExecutionContext)
+class IRCTAGENTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
     extends NewMappingRepository("IR-CT-AGENT")
 
 @Singleton
-class IRPAYEAGENTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent, ec: ExecutionContext)
+class IRPAYEAGENTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
     extends NewMappingRepository("IR-PAYE-AGENT")
 
 @Singleton
-class IRSDLTAGENTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent, ec: ExecutionContext)
+class IRSDLTAGENTMappingRepository @Inject()(implicit mongoComponent: ReactiveMongoComponent)
     extends NewMappingRepository("IR-SDLT-AGENT")

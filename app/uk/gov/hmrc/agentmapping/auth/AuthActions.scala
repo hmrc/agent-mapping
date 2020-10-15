@@ -19,7 +19,7 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.util.Base64
 
 import javax.inject.{Inject, Singleton}
-import play.api.Logger
+import play.api.{Logger, Logging}
 import play.api.mvc._
 import uk.gov.hmrc.agentmapping.model.{AgentCode, BasicAuthentication, Identifier, LegacyAgentEnrolmentType}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
@@ -29,7 +29,7 @@ import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{agentCode, allEnrolments, a
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
 import uk.gov.hmrc.play.HeaderCarrierConverter.fromHeadersAndSession
-import uk.gov.hmrc.play.bootstrap.controller.BackendController
+import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
@@ -37,7 +37,8 @@ import scala.util.matching.Regex
 @Singleton
 class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComponents)
     extends BackendController(cc)
-    with AuthorisedFunctions {
+    with AuthorisedFunctions
+    with Logging {
 
   private type HasEligibleEnrolments = Boolean
   private type ProviderId = String
@@ -124,15 +125,15 @@ class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComp
           case decodedAuth(username, password) =>
             if (BasicAuthentication(username, password) == expectedAuth) body
             else {
-              Logger.warn("Authorization header found in the request but invalid username or password")
+              logger.warn("Authorization header found in the request but invalid username or password")
               Future successful Unauthorized
             }
           case _ =>
-            Logger.warn("Authorization header found in the request but its not in the expected format")
+            logger.warn("Authorization header found in the request but its not in the expected format")
             Future successful Unauthorized
         }
       case _ =>
-        Logger.warn("No Authorization header found in the request for agent termination")
+        logger.warn("No Authorization header found in the request for agent termination")
         Future successful Unauthorized
     }
 
@@ -155,7 +156,7 @@ class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComp
         }
     }
 
-  private def handleException(implicit ec: ExecutionContext, request: Request[_]): PartialFunction[Throwable, Result] = {
+  private def handleException(): PartialFunction[Throwable, Result] = {
     case _: NoActiveSession        => Unauthorized
     case _: AuthorisationException => Forbidden
   }
