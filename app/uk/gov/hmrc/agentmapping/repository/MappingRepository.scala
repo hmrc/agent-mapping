@@ -91,9 +91,7 @@ object RepositoryTools {
 abstract class BaseMappingRepository[T: Format: Manifest](
   collectionName: String,
   identifierKey: String,
-  wrap: (TaxIdentifier, String, Option[DateTime]) => T)(
-  implicit mongoComponent: ReactiveMongoComponent,
-  ec: ExecutionContext)
+  wrap: (TaxIdentifier, String, Option[DateTime]) => T)(implicit mongoComponent: ReactiveMongoComponent)
     extends ReactiveRepository[T, BSONObjectID](
       collectionName,
       mongoComponent.mongoConnector.db,
@@ -174,9 +172,7 @@ abstract class BaseMappingRepository[T: Format: Manifest](
     remove("utr" -> utr.value)
 }
 
-abstract class NewMappingRepository @Inject()(serviceName: String)(
-  implicit mongoComponent: ReactiveMongoComponent,
-  ec: ExecutionContext)
+abstract class NewMappingRepository @Inject()(serviceName: String)(implicit mongoComponent: ReactiveMongoComponent)
     extends BaseMappingRepository(
       s"agent-mapping-${serviceName.toLowerCase}",
       "identifier",

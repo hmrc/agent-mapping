@@ -19,7 +19,7 @@ package uk.gov.hmrc.agentmapping.controller
 import java.time.LocalDateTime
 
 import javax.inject.Inject
-import play.api.Logger
+import play.api.{Logging}
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
 import uk.gov.hmrc.agentmapping.auth.AuthActions
@@ -36,7 +36,8 @@ class MappingDetailsController @Inject()(
   val authActions: AuthActions,
   cc: ControllerComponents,
   subscriptionConnector: SubscriptionConnector)(implicit val ec: ExecutionContext)
-    extends BackendController(cc) {
+    extends BackendController(cc)
+    with Logging {
 
   import authActions._
 
@@ -52,7 +53,7 @@ class MappingDetailsController @Inject()(
         repository.findByArn(arn).flatMap {
           case Some(record) =>
             if (record.mappingDetails.exists(m => m.authProviderId == mappingDetailsRequest.authProviderId)) {
-              Logger.error("already mapped")
+              logger.error("already mapped")
               Future successful Conflict
             } else repository.updateMappingDisplayDetails(arn, details).map(_ => Ok)
 
@@ -63,7 +64,7 @@ class MappingDetailsController @Inject()(
       }
     }
 
-  def findRecordByArn(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+  def findRecordByArn(arn: Arn): Action[AnyContent] = Action.async { request =>
     repository.findByArn(arn).map {
       case Some(record) => Ok(Json.toJson(record))
       case None         => NotFound(s"no record found for this arn: $arn")

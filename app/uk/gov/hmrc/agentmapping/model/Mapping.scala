@@ -52,6 +52,7 @@ object AgentReferenceMapping extends ReactiveMongoFormats {
         Json.obj("arn" -> arn, "identifier" -> identifier)
       case AgentReferenceMapping(Utr(utr), identifier, Some(createdDate)) =>
         Json.obj("utr" -> utr, "identifier" -> identifier, "preCreatedDate" -> createdDate)
+      case _ => throw new Exception(s"Unknown AgentReferenceMapping type: $o")
     }
   }
 

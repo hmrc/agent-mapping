@@ -4,15 +4,11 @@ package uk.gov.hmrc.agentmapping.stubs
 import com.github.tomakehurst.wiremock.client.WireMock._
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentmapping.config.AppConfig
-import uk.gov.hmrc.agentmapping.connector.{Enrolment, EnrolmentResponse}
+import uk.gov.hmrc.agentmapping.connector.EnrolmentResponse
 
 trait EnrolmentStoreStubs {
 
   val appConfig: AppConfig
-
-  private def clientListUrl(service: String, userId: String, startRecord: Int, maxClientSize: Int): String = {
-    s"enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated&service=$service&start-record=$startRecord&max-records=$maxClientSize"
-  }
 
   def givenEs2ClientsFoundFor(userId: String,
                               service: String,
