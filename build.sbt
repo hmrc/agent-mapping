@@ -63,7 +63,7 @@ lazy val wartRemoverSettings = {
 }
 
 lazy val compileDeps = Seq(
-  "uk.gov.hmrc" %% "bootstrap-backend-play-27" % "2.24.0",
+  "uk.gov.hmrc" %% "bootstrap-backend-play-27" % "4.3.0",
   "uk.gov.hmrc" %% "auth-client" % "3.0.0-play-27",
   "uk.gov.hmrc" %% "agent-mtd-identifiers" % "0.19.0-play-27",
   "uk.gov.hmrc" %% "simple-reactivemongo" % "7.30.0-play-27",
@@ -105,11 +105,10 @@ lazy val root = (project in file("."))
       "-P:silencer:pathFilters=views;routes"),
     PlayKeys.playDefaultPort := 9439,
     resolvers := Seq(
-      Resolver.bintrayRepo("hmrc", "releases"),
-      Resolver.bintrayRepo("hmrc", "release-candidates"),
-      Resolver.typesafeRepo("releases"),
-      Resolver.jcenterRepo
+      Resolver.typesafeRepo("releases")
     ),
+    resolvers += "HMRC-open-artefacts-maven" at "https://open.artefacts.tax.service.gov.uk/maven2",
+    resolvers += Resolver.url("HMRC-open-artefacts-ivy", url("https://open.artefacts.tax.service.gov.uk/ivy2"))(Resolver.ivyStylePatterns),
     libraryDependencies ++= tmpMacWorkaround ++ compileDeps ++ testDeps("test") ++ testDeps("it"),
     libraryDependencies ++= Seq(
       compilerPlugin("com.github.ghik" % "silencer-plugin" % "1.4.4" cross CrossVersion.full),
