@@ -28,7 +28,7 @@ import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{agentCode, allEnrolments, authorisedEnrolments, credentials}
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
-import uk.gov.hmrc.play.HeaderCarrierConverter.fromHeadersAndSession
+import uk.gov.hmrc.play.http.HeaderCarrierConverter.fromRequest
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -46,7 +46,7 @@ class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComp
   def authorisedWithEnrolments(body: Request[AnyContent] => HasEligibleEnrolments => Future[Result])(
     implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
-      implicit val hc: HeaderCarrier = fromHeadersAndSession(request.headers, None)
+      implicit val hc: HeaderCarrier = fromRequest(request)
 
       authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
         .retrieve(allEnrolments)(allEnrolments => body(request)(captureIdentifiersFrom(allEnrolments).nonEmpty))
@@ -54,7 +54,7 @@ class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComp
 
   def authorisedWithAgentCode(body: Request[AnyContent] => Set[Identifier] => ProviderId => Future[Result])(
     implicit ec: ExecutionContext): Action[AnyContent] = Action.async { implicit request =>
-    implicit val hc: HeaderCarrier = fromHeadersAndSession(request.headers, None)
+    implicit val hc: HeaderCarrier = fromRequest(request)
 
     authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
       .retrieve(credentials and agentCode and allEnrolments) {
@@ -82,7 +82,7 @@ class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComp
   def authorisedAsSubscribedAgent(body: Request[AnyContent] => Arn => Future[Result])(
     implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
-      implicit val hc: HeaderCarrier = fromHeadersAndSession(request.headers, None)
+      implicit val hc: HeaderCarrier = fromRequest(request)
 
       authorised(
         Enrolment("HMRC-AS-AGENT")
@@ -100,7 +100,7 @@ class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComp
 
   def basicAuth(body: Request[AnyContent] => Future[Result])(implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
-      implicit val hc: HeaderCarrier = fromHeadersAndSession(request.headers, None)
+      implicit val hc: HeaderCarrier = fromRequest(request)
 
       authorised() {
         body(request)
