@@ -8,7 +8,7 @@ import play.api.test.FakeRequest
 import play.twirl.api.HtmlFormat
 import uk.gov.hmrc.agentmapping.stubs.DataStreamStub
 import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.HeaderCarrierConverter
+import uk.gov.hmrc.play.http.HeaderCarrierConverter
 import uk.gov.hmrc.play.test.UnitSpec
 
 abstract class BaseISpec extends UnitSpec with WireMockSupport with DataStreamStub with MetricTestSupport with ScalaFutures {
@@ -46,7 +46,7 @@ abstract class BaseISpec extends UnitSpec with WireMockSupport with DataStreamSt
 
   protected def htmlEscapedMessage(key: String): String = HtmlFormat.escape(Messages(key)).toString
 
-  implicit def hc(implicit request: FakeRequest[_]): HeaderCarrier = HeaderCarrierConverter.fromHeadersAndSession(request.headers, Some(request.session))
+  implicit def hc(implicit request: FakeRequest[_]): HeaderCarrier = HeaderCarrierConverter.fromRequestAndSession(request, request.session)
 
 
 }
