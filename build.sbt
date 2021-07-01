@@ -1,5 +1,4 @@
 import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin._
-import uk.gov.hmrc.{SbtArtifactory, SbtAutoBuildPlugin}
 
 lazy val scoverageSettings = {
   import scoverage.ScoverageKeys
@@ -63,13 +62,13 @@ lazy val wartRemoverSettings = {
 }
 
 lazy val compileDeps = Seq(
-  "uk.gov.hmrc" %% "bootstrap-backend-play-27" % "4.3.0",
-  "uk.gov.hmrc" %% "auth-client" % "3.0.0-play-27",
-  "uk.gov.hmrc" %% "agent-mtd-identifiers" % "0.23.0-play-27",
+  "uk.gov.hmrc" %% "bootstrap-backend-play-27" % "5.6.0",
+  "uk.gov.hmrc" %% "auth-client" % "5.6.0-play-27",
+  "uk.gov.hmrc" %% "agent-mtd-identifiers" % "0.25.0-play-27",
   "uk.gov.hmrc" %% "simple-reactivemongo" % "8.0.0-play-27",
   "uk.gov.hmrc" %% "mongo-lock" % "7.0.0-play-27",
   "com.typesafe.play" %% "play-json" % "2.7.0",
-  "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "4.4.0",
+  "uk.gov.hmrc" %% "agent-kenshoo-monitoring" % "4.7.0-play-27",
   ws
 )
 
@@ -109,6 +108,7 @@ lazy val root = (project in file("."))
     ),
     resolvers += "HMRC-open-artefacts-maven" at "https://open.artefacts.tax.service.gov.uk/maven2",
     resolvers += Resolver.url("HMRC-open-artefacts-ivy", url("https://open.artefacts.tax.service.gov.uk/ivy2"))(Resolver.ivyStylePatterns),
+    resolvers += "HMRC-local-artefacts-maven" at "https://artefacts.tax.service.gov.uk/artifactory/hmrc-releases-local",
     libraryDependencies ++= tmpMacWorkaround ++ compileDeps ++ testDeps("test") ++ testDeps("it"),
     libraryDependencies ++= Seq(
       compilerPlugin("com.github.ghik" % "silencer-plugin" % "1.4.4" cross CrossVersion.full),
@@ -131,6 +131,6 @@ lazy val root = (project in file("."))
     scalafmtOnCompile in IntegrationTest := true
   )
   .settings(wartRemoverSettings: _*)
-  .enablePlugins(PlayScala, SbtAutoBuildPlugin, SbtGitVersioning, SbtDistributablesPlugin, SbtArtifactory)
+  .enablePlugins(PlayScala, SbtDistributablesPlugin)
 
 inConfig(IntegrationTest)(scalafmtCoreSettings)

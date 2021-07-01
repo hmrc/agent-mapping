@@ -320,7 +320,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
     "return bad request when the ARN is invalid" in {
       val response = callPut(s"/agent-mapping/mappings/arn/A_BAD_ARN", None)
       response.status shouldBe 400
-      (response.json \ "message").as[String] shouldBe "bad request"
+      (response.json \ "message").as[String] shouldBe "bad request, cause: REDACTED"
     }
 
     "return unauthenticated" when {
