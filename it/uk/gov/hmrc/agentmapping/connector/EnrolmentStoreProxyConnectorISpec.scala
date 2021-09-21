@@ -48,7 +48,7 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 22,  batchResponse(clientCountBatchSize), 200)
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 29,  batchResponse(clientCountBatchSize), 200)
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 36,  batchResponse(clientCountBatchSize), 200)
-      await(connector.getClientCount("agent1")) shouldBe 40
+      connector.getClientCount("agent1").futureValue shouldBe 40
     }
 
     s"return $maxRecordsToDisplay if the total records from $HMCE_VATDEC_ORG alone is lower than $maxRecordsToDisplay but not when combined with $IR_SA" in {
@@ -61,7 +61,7 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
       givenEs2ClientsFoundFor("agent1", IR_SA, 22, batchResponse(clientCountBatchSize), 200)
       givenEs2ClientsFoundFor("agent1", IR_SA, 29, batchResponse(clientCountBatchSize - 4), 200)
 
-      await(connector.getClientCount("agent1")) shouldBe 40
+      connector.getClientCount("agent1").futureValue shouldBe 40
 
     }
 
@@ -74,7 +74,7 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
       givenEs2ClientsFoundFor("agent1", IR_SA, 8, batchResponse(clientCountBatchSize), 200)
       givenEs2ClientsFoundFor("agent1", IR_SA, 15, batchResponse(clientCountBatchSize -1), 200)
 
-      await(connector.getClientCount("agent1")) shouldBe 40
+      connector.getClientCount("agent1").futureValue shouldBe 40
 
     }
 
@@ -85,7 +85,7 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 15,  batchResponse(clientCountBatchSize - 1), 200)
       givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(0), 200)
 
-      await(connector.getClientCount("agent1")) shouldBe 20
+      connector.getClientCount("agent1").futureValue shouldBe 20
     }
 
     s"return the actual number of records when the total from $HMCE_VATDEC_ORG and $IR_SA is less than $maxRecordsToDisplay" in {
@@ -95,7 +95,7 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 15,  batchResponse(clientCountBatchSize - 1), 200)
       givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(clientCountBatchSize - 2), 200)
 
-      await(connector.getClientCount("agent1")) shouldBe 25
+      connector.getClientCount("agent1").futureValue shouldBe 25
     }
 
     s"return the actual number of records when there are only records from $IR_SA and is less than $maxRecordsToDisplay" in {
@@ -103,7 +103,7 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(0), 200)
       givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(clientCountBatchSize - 2), 200)
 
-      await(connector.getClientCount("agent1")) shouldBe 5
+      connector.getClientCount("agent1").futureValue shouldBe 5
     }
 
     s"return the count of only Activated records" in {
@@ -113,21 +113,21 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
       givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(clientCountBatchSize, false), 200)
       givenEs2ClientsFoundFor("agent1", IR_SA, 8, batchResponse(clientCountBatchSize - 2), 200)
 
-      await(connector.getClientCount("agent1")) shouldBe 22
+      connector.getClientCount("agent1").futureValue shouldBe 22
     }
 
     "return 0 if the call to ESP returns 204" in {
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(0), 204)
       givenEs2ClientsFoundFor("agent1",IR_SA, 1, batchResponse(0), 204)
 
-      await(connector.getClientCount("agent1")) shouldBe 0
+      connector.getClientCount("agent1").futureValue shouldBe 0
     }
 
     "throw an exception if the call to ESP does not work" in {
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(0), 502)
 
       val exception = intercept[RuntimeException] {
-        await(connector.getClientCount("agent1"))
+        connector.getClientCount("agent1").futureValue
       }
       exception.getMessage.contains("Error retrieving client list from") shouldBe true
     }

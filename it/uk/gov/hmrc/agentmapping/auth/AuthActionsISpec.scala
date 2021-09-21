@@ -1,11 +1,14 @@
 package uk.gov.hmrc.agentmapping.auth
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.{reset, when}
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.Application
+import play.api.mvc.ControllerComponents
 import play.api.mvc.Results._
 import play.api.mvc._
 import play.api.test.FakeRequest
+import play.api.test.Helpers.{contentAsString, defaultAwaitTimeout, status}
 import uk.gov.hmrc.agentmapping.model.Identifier
 import uk.gov.hmrc.agentmapping.support.BaseISpec
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
@@ -16,7 +19,7 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class AuthActionsISpec(implicit val ec: ExecutionContext) extends BaseISpec with MockitoSugar  {
+class AuthActionsISpec(implicit val ec: ExecutionContext) extends BaseISpec with MockitoSugar with ScalaFutures {
 
   lazy val app: Application = appBuilder.build()
 
@@ -35,7 +38,7 @@ class AuthActionsISpec(implicit val ec: ExecutionContext) extends BaseISpec with
   override def beforeEach(): Unit = reset(mockAuthConnector)
 
   "BasicAuth" should {
-    def response = await(mockAuthActions.basicAuth(basicAction).apply(fakeRequestAny))
+    def response = mockAuthActions.basicAuth(basicAction).apply(fakeRequestAny)
     "return 200 if the user has a valid auth token" in {
       authStub[Unit](Future.successful(EmptyRetrieval).map(_ => ()))
 
@@ -50,37 +53,37 @@ class AuthActionsISpec(implicit val ec: ExecutionContext) extends BaseISpec with
   }
 
   "AuthorisedWithEnrolments" should {
-    def response = await(mockAuthActions.authorisedWithEnrolments(authorisedWithEnrolmentsAction).apply(fakeRequestAny))
+    def response = mockAuthActions.authorisedWithEnrolments(authorisedWithEnrolmentsAction).apply(fakeRequestAny)
 
     "return 200 and true if the user has eligible enrolments" in {
       authStub[Enrolments](Future.successful(Enrolments(saEnrolment)))
 
       status(response) shouldBe 200
-      bodyOf(response) shouldBe "true"
+      contentAsString(response) shouldBe "true"
     }
 
     "return 200 and false if the user has ineligible enrolments" in {
       authStub[Enrolments](Future.successful(Enrolments(agentEnrolment)))
 
       status(response) shouldBe 200
-      bodyOf(response) shouldBe "false"
+      contentAsString(response) shouldBe "false"
     }
 
     "return 200 and false if the user has no enrolments1" in {
       authStub[Enrolments](Future.successful(Enrolments(Set.empty)))
 
       status(response) shouldBe 200
-      bodyOf(response) shouldBe "false"
+      contentAsString(response) shouldBe "false"
     }
   }
 
   "AuthorisedAsAgent" should {
-    def response = await(mockAuthActions.authorisedAsSubscribedAgent(authorisedAsAgentAction).apply(fakeRequestAny))
+    def response = mockAuthActions.authorisedAsSubscribedAgent(authorisedAsAgentAction).apply(fakeRequestAny)
 
     "return 200 and arn if the user has HMRC-AS-AGENT enrolment" in {
       authStub[Enrolments](Future.successful(Enrolments(agentEnrolment)))
       status(response) shouldBe 200
-      bodyOf(response) shouldBe "AARN001"
+      contentAsString(response) shouldBe "AARN001"
     }
 
     "return 403 if the user does not have HMRC-AS-AGENT enrolment" in {
@@ -90,7 +93,7 @@ class AuthActionsISpec(implicit val ec: ExecutionContext) extends BaseISpec with
   }
 
   "AuthorisedWithAgentCode" should {
-    def response = await(mockAuthActions.authorisedWithAgentCode(authorisedWithAgentCodeAction).apply(fakeRequestAny))
+    def response = mockAuthActions.authorisedWithAgentCode(authorisedWithAgentCodeAction).apply(fakeRequestAny)
 
     "return 200 for users with an agent code and validenrolments" in {
       authStub[~[~[Credentials, Option[String]], Enrolments]](Future.successful(
@@ -119,7 +122,7 @@ class AuthActionsISpec(implicit val ec: ExecutionContext) extends BaseISpec with
     "return 200 for successful stride authentication" in {
       authStub(onlyStride(terminateStrideEnrolment))
 
-      val response: Result = await(mockAuthActions.onlyStride(terminateStrideId)(strideAction).apply(fakeRequestAny))
+      val response: Future[Result] = mockAuthActions.onlyStride(terminateStrideId)(strideAction).apply(fakeRequestAny)
 
       status(response) shouldBe 200
     }
@@ -127,7 +130,7 @@ class AuthActionsISpec(implicit val ec: ExecutionContext) extends BaseISpec with
     "return 401 for unauthorised stride authentication" in {
       authStub(onlyStride(newStrideEnrolment))
 
-      val response: Result = await(mockAuthActions.onlyStride(terminateStrideId)(strideAction).apply(fakeRequestAny))
+      val response: Future[Result] = mockAuthActions.onlyStride(terminateStrideId)(strideAction).apply(fakeRequestAny)
 
       status(response) shouldBe 401
     }
@@ -135,7 +138,7 @@ class AuthActionsISpec(implicit val ec: ExecutionContext) extends BaseISpec with
     "return 403 for unsuccessful stride authentication" in {
       authStub(onlyStrideFail)
 
-      val response: Result = await(mockAuthActions.onlyStride(terminateStrideId)(strideAction).apply(fakeRequestAny))
+      val response: Future[Result] = mockAuthActions.onlyStride(terminateStrideId)(strideAction).apply(fakeRequestAny)
 
       status(response) shouldBe 403
     }

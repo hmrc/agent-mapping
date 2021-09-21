@@ -19,17 +19,25 @@ package uk.gov.hmrc.agentmapping.audit
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.verify
-import org.scalatest.concurrent.Eventually
+import org.scalatest.OptionValues
+import org.scalatest.concurrent.{Eventually, ScalaFutures}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.test.FakeRequest
 import uk.gov.hmrc.http.{Authorization, HeaderCarrier, RequestId, SessionId}
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
-import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext
 
-class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
+class AuditServiceSpec
+    extends AnyWordSpecLike
+    with Matchers
+    with OptionValues
+    with ScalaFutures
+    with MockitoSugar
+    with Eventually {
   "auditEvent" should {
     "send an event with the correct fields" in {
       val mockConnector = mock[AuditConnector]
@@ -42,15 +50,16 @@ class AuditServiceSpec extends UnitSpec with MockitoSugar with Eventually {
 
       implicit val ec = ExecutionContext.Implicits.global
 
-      await(
-        service.auditEvent(
+      service
+        .auditEvent(
           CreateMapping,
           "transaction name",
           Seq(
             "extra1"               -> "first extra detail",
             "extra2"               -> "second extra detail",
             "agentReferenceNumber" -> "GARN0000247")
-        )(hc, ec, FakeRequest("GET", "/path")))
+        )(hc, ec, FakeRequest("GET", "/path"))
+        .futureValue
 
       eventually {
         val captor = ArgumentCaptor.forClass(classOf[DataEvent])

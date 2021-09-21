@@ -2,8 +2,10 @@ package uk.gov.hmrc.agentmapping.support
 
 import com.codahale.metrics.MetricRegistry
 import com.kenshoo.play.metrics.Metrics
-import org.scalatest.{Matchers, Suite}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.Suite
 import play.api.Application
+
 import scala.collection.JavaConverters._
 
 trait MetricTestSupport {
