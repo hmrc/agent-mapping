@@ -4,12 +4,13 @@ import java.nio.charset.StandardCharsets.UTF_8
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Base64
-
 import akka.actor.ActorSystem
-import akka.stream.ActorMaterializer
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import com.google.inject.AbstractModule
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsObject, JsValue, Json}
@@ -26,7 +27,6 @@ import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.auth.core.{AffinityGroup, Enrolment, EnrolmentIdentifier}
 import uk.gov.hmrc.domain
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
-import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
@@ -358,12 +358,12 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
 
   "update enrolment for post-subscription" should {
     "return 200 when succeeds" in {
-      await(saRepo.store(utr, "A1111A"))
+      saRepo.store(utr, "A1111A").futureValue
       givenUserIsAuthorisedAsAgent(registeredArn.value)
 
       callPut(updatePostSubscriptionMappingRequest, None).status shouldBe 200
 
-      val updatedMapping = await(saRepo.findAll())
+      val updatedMapping = saRepo.findAll().futureValue
       updatedMapping.size shouldBe 1
       updatedMapping.head.businessId.value shouldBe registeredArn.value
     }
@@ -371,7 +371,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
     "return 200 when user does not have mappings" in {
       givenUserIsAuthorisedAsAgent(registeredArn.value)
 
-      await(saRepo.findAll()).size shouldBe 0
+      saRepo.findAll().futureValue.size shouldBe 0
 
       callPut(updatePostSubscriptionMappingRequest, None).status shouldBe 200
     }
@@ -391,8 +391,8 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
 
   "find mapping requests" should {
     "return 200 status with a json body representing the mappings that match the supplied arn" in {
-      await(saRepo.store(registeredArn, "A1111A"))
-      await(saRepo.store(registeredArn, "A1111B"))
+      saRepo.store(registeredArn, "A1111A").futureValue
+      saRepo.store(registeredArn, "A1111B").futureValue
 
       val response = callGet(findMappingsRequest)
 
@@ -402,8 +402,8 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
     }
 
     "return 200 status with a json body representing the mappings that match the supplied arn for sa" in {
-      await(saRepo.store(registeredArn, "A1111A"))
-      await(saRepo.store(registeredArn, "A1111B"))
+      saRepo.store(registeredArn, "A1111A").futureValue
+      saRepo.store(registeredArn, "A1111B").futureValue
 
       val response = callGet(findSAMappingsRequest)
 
@@ -413,8 +413,8 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
     }
 
     "return 200 status with a json body representing the mappings that match the supplied arn for vat" in {
-      await(vatRepo.store(registeredArn, "101747696"))
-      await(vatRepo.store(registeredArn, "101747641"))
+      vatRepo.store(registeredArn, "101747696").futureValue
+      vatRepo.store(registeredArn, "101747641").futureValue
 
       val response = callGet(findVATMappingsRequest)
 
@@ -426,8 +426,8 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
     }
 
     "return 200 status with a json body representing the mappings that match the supplied arn for agent code" in {
-      await(agentCodeRepo.store(registeredArn, "ABCDE1"))
-      await(agentCodeRepo.store(registeredArn, "ABCDE2"))
+      agentCodeRepo.store(registeredArn, "ABCDE1").futureValue
+      agentCodeRepo.store(registeredArn, "ABCDE2").futureValue
 
       val response = callGet(findAgentCodeMappingsRequest)
 
@@ -449,8 +449,8 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
     ).foreach { f =>
       s"return 200 status with a json body representing the mappings that match the supplied arn for ${f.dbKey}" in {
         val repo = repositories.get(f.legacyAgentEnrolmentType)
-        await(repo.store(registeredArn, "ABCDE123456"))
-        await(repo.store(registeredArn, "ABCDE298980"))
+        repo.store(registeredArn, "ABCDE123456").futureValue
+        repo.store(registeredArn, "ABCDE298980").futureValue
 
         val response = callGet(findMappingsRequestByKey(f.dbKey))
 
@@ -481,9 +481,9 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
 
   "delete" should {
     "return no content when a record is deleted" in {
-      await(saRepo.store(registeredArn, "foo"))
-      await(vatRepo.store(registeredArn, "foo"))
-      await(agentCodeRepo.store(registeredArn, "foo"))
+      saRepo.store(registeredArn, "foo").futureValue
+      vatRepo.store(registeredArn, "foo").futureValue
+      agentCodeRepo.store(registeredArn, "foo").futureValue
 
       val foundResponse = callGet(findMappingsRequest)
       foundResponse.status shouldBe 200
@@ -504,15 +504,15 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
   "delete records with utr for pre-subscription" should {
     "return no content when a record is deleted" in {
       isLoggedIn
-      await(saRepo.store(utr, "foo"))
+      saRepo.store(utr, "foo").futureValue
 
-      val foundResponse = await(saRepo.findAll())
+      val foundResponse = saRepo.findAll().futureValue
       foundResponse.size shouldBe 1
 
       val deleteResponse = callDelete(deletePreSubscriptionMappingsRequest)
       deleteResponse.status shouldBe 204
 
-      val notFoundResponse = await(saRepo.findAll())
+      val notFoundResponse = saRepo.findAll().futureValue
       notFoundResponse.size shouldBe 0
     }
 
@@ -572,9 +572,9 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
 
   trait TestSetup {
     (Seq(AgentCodeTestFixture) ++ fixtures).foreach { f =>
-      await(repositories.get(f.legacyAgentEnrolmentType).store(registeredArn, f.identifierValue))
+      repositories.get(f.legacyAgentEnrolmentType).store(registeredArn, f.identifierValue).futureValue
     }
-    await(detailsRepository.create(record))
+    detailsRepository.create(record).futureValue
   }
 
   "removeMappingsForAgent" should {
@@ -639,15 +639,18 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
 }
 
 sealed trait MappingControllerISpecSetup
-    extends UnitSpec
+    extends AnyWordSpecLike
+    with Matchers
+    with OptionValues
     with MongoApp
     with WireMockSupport
     with AuthStubs
     with DataStreamStub
-    with SubscriptionStub {
+    with SubscriptionStub
+    with ScalaFutures {
 
   implicit val actorSystem: ActorSystem = ActorSystem()
-  implicit val materializer: ActorMaterializer = ActorMaterializer()
+//  implicit val materializer: Materializer = Materializer.()
   implicit val client: WSClient = AhcWSClient()
   implicit val hc: HeaderCarrier = HeaderCarrier()
   implicit val fakeRequest: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("GET", "/agent-mapping/add-code")
@@ -683,7 +686,7 @@ sealed trait MappingControllerISpecSetup
 
   override def beforeEach() {
     super.beforeEach()
-    await(Future.sequence(repositories.map(_.ensureIndexes)))
+    Future.sequence(repositories.map(_.ensureIndexes)).futureValue
     givenAuditConnector()
     ()
   }

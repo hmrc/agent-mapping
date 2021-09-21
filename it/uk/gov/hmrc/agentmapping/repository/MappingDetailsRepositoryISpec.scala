@@ -1,19 +1,22 @@
 package uk.gov.hmrc.agentmapping.repository
 
+import org.scalatest.OptionValues
+import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
+
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentmapping.model.{AuthProviderId, GGTag, MappingDetails, MappingDetailsRepositoryRecord}
 import uk.gov.hmrc.agentmapping.support.MongoApp
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.MongoSpecSupport
-import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class MappingDetailsRepositoryISpec extends UnitSpec with MongoSpecSupport with MongoApp {
+class MappingDetailsRepositoryISpec  extends AnyWordSpecLike with Matchers with OptionValues with ScalaFutures with MongoSpecSupport with MongoApp {
 
   override implicit lazy val app: Application = appBuilder.build()
   protected def appBuilder: GuiceApplicationBuilder =
@@ -25,7 +28,7 @@ class MappingDetailsRepositoryISpec extends UnitSpec with MongoSpecSupport with 
 
   override def beforeEach(): Unit =
     super.beforeEach()
-  //await(repo.ensureIndexes)
+  //repo.ensureIndexes.futureValue
 
   override def afterEach(): Unit =
     super.afterEach()
@@ -43,21 +46,21 @@ class MappingDetailsRepositoryISpec extends UnitSpec with MongoSpecSupport with 
   "MappingDisplayRepository" should {
     "create and findByArn" should {
       "create a record into the database and find it" in {
-        await(repo.create(record))
-        val createdRecord = await(repo.findByArn(arn))
+        repo.create(record).futureValue
+        val createdRecord = repo.findByArn(arn).futureValue
         createdRecord.get.mappingDetails.head shouldBe mappingDisplayDetails
       }
 
       "ignore creation if trying to create another record with the same arn" in {
         val newRecordSameArn =
           MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, GGTag("2345"), 5, dateTime)))
-        await(repo.create(record))
-        await(repo.create(newRecordSameArn))
-        await(repo.findByArn(arn)).get.mappingDetails.head shouldBe mappingDisplayDetails
+        repo.create(record).futureValue
+        repo.create(newRecordSameArn).futureValue
+        repo.findByArn(arn).futureValue.get.mappingDetails.head shouldBe mappingDisplayDetails
       }
 
       "return none if the record is not there" in {
-        val emptyRecord = await(repo.findByArn(arn))
+        val emptyRecord = repo.findByArn(arn).futureValue
         emptyRecord shouldBe None
       }
     }
@@ -70,11 +73,11 @@ class MappingDetailsRepositoryISpec extends UnitSpec with MongoSpecSupport with 
           20,
           LocalDateTime.parse("2019-11-11 13:00", dateTimeFormatter))
 
-        await(repo.create(record))
-        val initialFind = repo.findByArn(arn)
+        repo.create(record).futureValue
+        val initialFind = repo.findByArn(arn).futureValue
 
-        await(repo.updateMappingDisplayDetails(arn, newMappingDisplayDetails))
-        val updatedFind = repo.findByArn(arn)
+        repo.updateMappingDisplayDetails(arn, newMappingDisplayDetails).futureValue
+        val updatedFind = repo.findByArn(arn).futureValue
 
         initialFind.get.mappingDetails.length shouldBe 1
         updatedFind.get.mappingDetails.length shouldBe 2
@@ -85,11 +88,11 @@ class MappingDetailsRepositoryISpec extends UnitSpec with MongoSpecSupport with 
 
     "removeMappingDetailsForAgent" should {
       "remove mapping details record for given arn" in {
-        await(repo.create(record))
-        val initialFind = await(repo.findByArn(arn))
+        repo.create(record).futureValue
+        val initialFind = repo.findByArn(arn).futureValue
 
-        await(repo.removeMappingDetailsForAgent(arn))
-        val removedArn = await(repo.findByArn(arn))
+        repo.removeMappingDetailsForAgent(arn).futureValue
+        val removedArn = repo.findByArn(arn).futureValue
 
         initialFind.get.mappingDetails.length shouldBe 1
         removedArn shouldBe None

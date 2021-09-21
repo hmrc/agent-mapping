@@ -1,5 +1,9 @@
 package uk.gov.hmrc.agentmapping.repository
 
+import org.scalatest.OptionValues
+import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import reactivemongo.api.commands.WriteResult
@@ -8,7 +12,6 @@ import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.support.MongoApp
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.play.test.UnitSpec
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.ClassTag
@@ -30,7 +33,7 @@ class IRSDLTAGENTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferen
 
 abstract class BaseRepositoryISpec[
   T <: ArnToIdentifierMapping, R <: MappingRepository with RepositoryFunctions[T]: ClassTag]
-    extends UnitSpec with MongoApp {
+  extends AnyWordSpecLike with Matchers with OptionValues with ScalaFutures with MongoApp with IntegrationPatience {
 
   override implicit lazy val app: Application = appBuilder.build()
   protected def appBuilder: GuiceApplicationBuilder =
@@ -51,14 +54,13 @@ abstract class BaseRepositoryISpec[
 
   override def beforeEach() {
     super.beforeEach()
-    await(repository.ensureIndexes)
+    repository.ensureIndexes.futureValue
     ()
   }
 
   private val repoName = repository.getClass.getSimpleName
 
   s"$repoName" should {
-
     behave like checkMapping(arn1, Seq(reference1, reference2))
     behave like checkMapping(utr1, Seq(reference1, reference2))
 
@@ -67,9 +69,9 @@ abstract class BaseRepositoryISpec[
       val reference2 = references.last
 
       s"create a mapping for {${businessId.getClass.getSimpleName}}" in {
-        await(repository.store(businessId, reference1))
+        repository.store(businessId, reference1).futureValue
 
-        val result = await(repository.find())
+        val result = repository.find().futureValue
 
         result.size shouldBe 1
         result.head.businessId.value shouldBe businessId.value
@@ -77,20 +79,19 @@ abstract class BaseRepositoryISpec[
       }
 
       s"not allow duplicate mappings to be created for the same {${businessId.getClass.getSimpleName} and identifier" in {
-        await(repository.store(businessId, reference1))
+        repository.store(businessId, reference1).futureValue
 
-        val e = intercept[DatabaseException] {
-          await(repository.store(businessId, reference1))
-        }
+        val e = repository.store(businessId, reference1).failed.futureValue
 
+        e shouldBe a[DatabaseException]
         e.getMessage() should include("E11000")
       }
 
       s"allow more than one identifier to be mapped to the same {${businessId.getClass.getSimpleName}" in {
-        await(repository.store(businessId, reference1))
-        await(repository.store(businessId, reference2))
+        repository.store(businessId, reference1).futureValue
+        repository.store(businessId, reference2).futureValue
 
-        val result = await(repository.find())
+        val result = repository.find().futureValue
 
         result.size shouldBe 2
         result.head.businessId.value shouldBe businessId.value
@@ -101,97 +102,97 @@ abstract class BaseRepositoryISpec[
     }
 
     "find all mappings for Arn" in {
-        await(repository.store(arn1, reference1))
-        await(repository.store(arn1, reference2))
-        await(repository.store(arn2, reference2))
+        repository.store(arn1, reference1).futureValue
+        repository.store(arn1, reference2).futureValue
+        repository.store(arn2, reference2).futureValue
 
-        val result: List[ArnToIdentifierMapping] = await(repository.findBy(arn1))
+        val result: List[ArnToIdentifierMapping] = repository.findBy(arn1).futureValue
 
         result.size shouldBe 2
       }
 
       "return an empty list when no match is found for Arn" in {
-        await(repository.store(arn1, reference1))
-        val result = await(repository.findBy(arn2))
+        repository.store(arn1, reference1).futureValue
+        val result = repository.findBy(arn2).futureValue
         result.size shouldBe 0
       }
 
     "delete a matching records by Arn" in {
-      await(repository.store(arn1, reference1))
-      await(repository.store(arn2, reference2))
+      repository.store(arn1, reference1).futureValue
+      repository.store(arn2, reference2).futureValue
 
-      val mappings: List[ArnToIdentifierMapping] = await(repository.findAll())
+      val mappings: List[ArnToIdentifierMapping] = repository.findAll().futureValue
       mappings.size shouldBe 2
 
-      val result: WriteResult = await(repository.delete(arn1))
+      val result: WriteResult = repository.delete(arn1).futureValue
       result.code shouldBe None
 
-      val mappingsAfterDelete: List[ArnToIdentifierMapping] = await(repository.findAll())
+      val mappingsAfterDelete: List[ArnToIdentifierMapping] = repository.findAll().futureValue
       mappingsAfterDelete.size shouldBe 1
     }
 
     "do not fail delete when no matching records exist for Arn" in {
-      val mappings: List[ArnToIdentifierMapping] = await(repository.findAll())
+      val mappings: List[ArnToIdentifierMapping] = repository.findAll().futureValue
       mappings.size shouldBe 0
 
-      val result: WriteResult = await(repository.delete(arn1))
+      val result: WriteResult = repository.delete(arn1).futureValue
       result.code shouldBe None
     }
 
     "find all mappings for Utr" in {
-      await(repository.store(utr1, reference1))
-      await(repository.store(utr1, reference2))
-      await(repository.store(utr2, reference2))
+      repository.store(utr1, reference1).futureValue
+      repository.store(utr1, reference2).futureValue
+      repository.store(utr2, reference2).futureValue
 
-      val result: List[ArnToIdentifierMapping] = await(repository.findBy(utr1))
+      val result: List[ArnToIdentifierMapping] = repository.findBy(utr1).futureValue
 
       result.size shouldBe 2
     }
 
     "return an empty list when no match is found for Utr" in {
-      await(repository.store(utr1, reference1))
-      val result = await(repository.findBy(utr2))
+      repository.store(utr1, reference1).futureValue
+      val result = repository.findBy(utr2).futureValue
       result.size shouldBe 0
     }
 
     "delete a matching records by Utr" in {
-      await(repository.store(utr1, reference1))
-      await(repository.store(utr2, reference2))
+      repository.store(utr1, reference1).futureValue
+      repository.store(utr2, reference2).futureValue
 
-      val mappings: List[ArnToIdentifierMapping] = await(repository.findAll())
+      val mappings: List[ArnToIdentifierMapping] = repository.findAll().futureValue
       mappings.size shouldBe 2
 
-      val result: WriteResult = await(repository.delete(utr1))
+      val result: WriteResult = repository.delete(utr1).futureValue
       result.code shouldBe None
 
-      val mappingsAfterDelete: List[ArnToIdentifierMapping] = await(repository.findAll())
+      val mappingsAfterDelete: List[ArnToIdentifierMapping] = repository.findAll().futureValue
       mappingsAfterDelete.size shouldBe 1
     }
 
     "do not fail delete when no matching records exist for Utr" in {
-      val mappings: List[ArnToIdentifierMapping] = await(repository.findAll())
+      val mappings: List[ArnToIdentifierMapping] = repository.findAll().futureValue
       mappings.size shouldBe 0
 
-      val result: WriteResult = await(repository.delete(utr1))
+      val result: WriteResult = repository.delete(utr1).futureValue
       result.code shouldBe None
     }
 
     "update records with utr to arn" in {
-      await(repository.store(utr1, reference1))
+      repository.store(utr1, reference1).futureValue
 
-      val mappings: List[ArnToIdentifierMapping] = await(repository.findAll())
+      val mappings: List[ArnToIdentifierMapping] = repository.findAll().futureValue
       mappings.size shouldBe 1
 
-      await(repository.updateUtrToArn(utr1, arn1))
+      repository.updateUtrToArn(utr1, arn1).futureValue
 
-      val updatedMappings: List[ArnToIdentifierMapping] = await(repository.findAll())
+      val updatedMappings: List[ArnToIdentifierMapping] = repository.findAll().futureValue
       updatedMappings.size shouldBe 1
 
       updatedMappings.head.businessId shouldBe arn1
       updatedMappings.head.identifier shouldBe reference1
 
-      await(repository.findBy(arn1)) shouldBe List(updatedMappings.head)
-      await(repository.findBy(utr1)) shouldBe List.empty
+      repository.findBy(arn1).futureValue shouldBe List(updatedMappings.head)
+      repository.findBy(utr1).futureValue shouldBe List.empty
     }
   }
 }

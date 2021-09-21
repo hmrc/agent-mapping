@@ -1,6 +1,9 @@
 package uk.gov.hmrc.agentmapping.support
 
+import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.Application
 import play.api.i18n.{Lang, Messages, MessagesApi}
 import play.api.inject.guice.GuiceApplicationBuilder
@@ -9,9 +12,8 @@ import play.twirl.api.HtmlFormat
 import uk.gov.hmrc.agentmapping.stubs.DataStreamStub
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.http.HeaderCarrierConverter
-import uk.gov.hmrc.play.test.UnitSpec
 
-abstract class BaseISpec extends UnitSpec with WireMockSupport with DataStreamStub with MetricTestSupport with ScalaFutures {
+abstract class BaseISpec extends AnyWordSpecLike with Matchers with OptionValues with WireMockSupport with DataStreamStub with MetricTestSupport with ScalaFutures {
 
   def app: Application
 
