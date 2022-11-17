@@ -32,8 +32,6 @@ final case class MappingDetails(authProviderId: AuthProviderId, ggTag: GGTag, co
 
 object MappingDetails {
 
-  import MongoLocalDateTimeFormat._
-
   implicit val mongoDisplayDetailsFormat: OFormat[MappingDetails] = (
     (JsPath \ "authProviderId").format[AuthProviderId] and
       (JsPath \ "ggTag").format[GGTag] and

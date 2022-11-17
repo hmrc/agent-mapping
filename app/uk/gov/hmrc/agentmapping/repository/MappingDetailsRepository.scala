@@ -16,74 +16,62 @@
 
 package uk.gov.hmrc.agentmapping.repository
 
-import javax.inject.{Inject, Singleton}
-import play.api.libs.json.Json
-import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.commands.WriteResult
-import reactivemongo.api.indexes.{Index, IndexType}
-import reactivemongo.bson.BSONObjectID
-import reactivemongo.play.json.ImplicitBSONHandlers._
+import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Indexes.ascending
+import org.mongodb.scala.model.{IndexModel, IndexOptions, Updates}
+import play.api.Logging
 import uk.gov.hmrc.agentmapping.model.{MappingDetails, MappingDetailsRepositoryRecord}
-import uk.gov.hmrc.agentmapping.repository.RepositoryTools._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
+import javax.inject.{Inject, Singleton}
 import scala.collection.Seq
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class MappingDetailsRepository @Inject()(mongoComponent: ReactiveMongoComponent)
-    extends ReactiveRepository[MappingDetailsRepositoryRecord, BSONObjectID](
+class MappingDetailsRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
+    extends PlayMongoRepository[MappingDetailsRepositoryRecord](
+      mongoComponent = mongo,
       collectionName = "mapping-details",
-      mongoComponent.mongoConnector.db,
-      MappingDetailsRepositoryRecord.mappingDisplayRepositoryFormat,
-      ReactiveMongoFormats.objectIdFormats
-    ) {
-
-  /**
-    * Temporary override to change index configuration; once deployed, this can be removed
-    * */
-  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
-    for {
-      _      <- dropIndexIfExists(this, "authProviderId")
-      result <- super.ensureIndexes
-    } yield result
-
-  override def indexes: Seq[Index] =
-    Seq(
-      Index(key = Seq("arn" -> IndexType.Ascending), name = Some("arn"), unique = true),
-      Index(
-        key = Seq("mappingDetails.authProviderId" -> IndexType.Ascending),
-        name = Some("authProviderIdSparse"),
-        sparse = true,
-        unique = true)
+      domainFormat = MappingDetailsRepositoryRecord.mappingDisplayRepositoryFormat,
+      indexes = Seq(
+        IndexModel(ascending("arn"), IndexOptions().name("arn").unique(true)),
+        IndexModel(
+          ascending("mappingDetails.authProviderId"),
+          IndexOptions()
+            .name("authProviderIdSparse")
+            .sparse(true)
+            .unique(true))
+      ),
+      replaceIndexes = false
     )
+    with Logging {
 
-  def create(mappingDisplayRepositoryRecord: MappingDetailsRepositoryRecord)(
-    implicit ec: ExecutionContext): Future[Unit] =
-    collection.insert(ordered = false).one(mappingDisplayRepositoryRecord).checkResult
+  def create(mappingDisplayRepositoryRecord: MappingDetailsRepositoryRecord): Future[Unit] =
+    collection
+      .insertOne(mappingDisplayRepositoryRecord)
+      .toFuture()
+      .map(insertOneResult => if (!insertOneResult.wasAcknowledged()) throw new RuntimeException(s"$insertOneResult"))
 
-  def findByArn(arn: Arn)(implicit ec: ExecutionContext): Future[Option[MappingDetailsRepositoryRecord]] =
-    find("arn" -> arn).map(_.headOption)
+  def findByArn(arn: Arn): Future[Option[MappingDetailsRepositoryRecord]] =
+    collection
+      .find(equal("arn", arn.value))
+      .headOption()
 
-  def updateMappingDisplayDetails(arn: Arn, newMapping: MappingDetails)(implicit ec: ExecutionContext): Future[Unit] = {
-    val updateOp = Json.obj("$addToSet" -> (Json.obj("mappingDetails" -> newMapping)))
-    collection.update(ordered = false).one(Json.obj("arn" -> arn.value), updateOp).checkResult
-  }
+  def updateMappingDisplayDetails(arn: Arn, newMapping: MappingDetails): Future[Unit] =
+    collection
+      .updateOne(equal("arn", arn.value), Updates.addToSet("mappingDetails", newMapping))
+      .toFuture()
+      .map {
+        case result if result.getMatchedCount == 1L => ()
+        case e                                      => logger.error(s"Unknown error occurred when updating mapping details ${e.wasAcknowledged()}.")
+      }
 
-  def removeMappingDetailsForAgent(arn: Arn)(implicit ec: ExecutionContext): Future[Int] = {
-    val query = Json.obj("arn" -> arn.value)
-    collection.delete().one(query).map(_.n)
-  }
+  def removeMappingDetailsForAgent(arn: Arn)(implicit ec: ExecutionContext): Future[Int] =
+    collection
+      .deleteOne(equal("arn", arn))
+      .toFuture()
+      .map(deleteResult => deleteResult.getDeletedCount.toInt)
 
-  implicit class WriteResultChecker(future: Future[WriteResult]) {
-    def checkResult(implicit ec: ExecutionContext): Future[Unit] = future.map { writeResult =>
-      if (hasProblems(writeResult)) throw new RuntimeException(writeResult.toString)
-      else ()
-    }
-  }
-
-  private def hasProblems(writeResult: WriteResult): Boolean =
-    !writeResult.ok || writeResult.writeErrors.nonEmpty || writeResult.writeConcernError.isDefined
 }

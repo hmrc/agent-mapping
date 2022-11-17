@@ -1,14 +1,13 @@
 package uk.gov.hmrc.agentmapping.controllers
 
 import java.time.LocalDateTime
-
 import org.scalatest.Suite
 import org.scalatestplus.play.ServerProvider
 import play.api.libs.json.{JsValue, Json}
 import play.api.mvc.Request
 import play.api.test.FakeRequest
 import play.mvc.Http.Status
-import play.api.test.Helpers.{status, contentAsJson, defaultAwaitTimeout}
+import play.api.test.Helpers.{contentAsJson, defaultAwaitTimeout, status}
 import uk.gov.hmrc.agentmapping.controller.MappingDetailsController
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository.MappingDetailsRepository
@@ -16,30 +15,35 @@ import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, SubscriptionStub}
 import uk.gov.hmrc.agentmapping.support.ServerBaseISpec
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class MappingDetailsControllerISpec extends ServerBaseISpec with AuthStubs with SubscriptionStub {
+class MappingDetailsControllerISpec extends ServerBaseISpec with AuthStubs with SubscriptionStub
+  with DefaultPlayMongoRepositorySupport[MappingDetailsRepositoryRecord] {
+
 
   this: Suite with ServerProvider =>
 
   val arn: Arn = Arn("TARN0000001")
 
-  val controller: MappingDetailsController = app.injector.instanceOf[MappingDetailsController]
+  override protected val repository: MappingDetailsRepository = new MappingDetailsRepository(mongoComponent)
 
-  protected val repository: MappingDetailsRepository = app.injector.instanceOf[MappingDetailsRepository]
-
-  override def beforeEach() {
-    super.beforeEach()
-    repository.drop.futureValue
-    ()
+  val overrides = new TestGuiceModule{
+    override def configure(): Unit = {
+      bind(classOf[MappingDetailsRepository]).toInstance(repository)
+    }
   }
+
+  override implicit val patience = patienceConfig
+
+  lazy val controller: MappingDetailsController = app.injector.instanceOf[MappingDetailsController]
 
   "MappingDetailsController" should {
 
     val authProviderId = AuthProviderId("cred-123")
     val ggTag = GGTag("1234")
-    val count = 10
+    val c = 10
 
     "POST /mappings/details/arn/:arn" should {
 
@@ -54,7 +58,7 @@ class MappingDetailsControllerISpec extends ServerBaseISpec with AuthStubs with 
 
         repository.findByArn(arn).futureValue.get.arn shouldBe arn
         repository.findByArn(arn).futureValue.get should matchRecordIgnoringDateTime(
-          MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, count, LocalDateTime.now()))))
+          MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, c, LocalDateTime.now()))))
       }
 
       "update a records mappings when it does exist" in {
@@ -63,7 +67,7 @@ class MappingDetailsControllerISpec extends ServerBaseISpec with AuthStubs with 
           Json.parse(s"""{"authProviderId": "cred-456", "ggTag": "5678", "count": 20}"""))
 
         repository.create(
-          MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, count, LocalDateTime.now())))).futureValue
+          MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, c, LocalDateTime.now())))).futureValue
 
         val result = controller.createOrUpdateRecord(arn)(request)
 
@@ -75,7 +79,7 @@ class MappingDetailsControllerISpec extends ServerBaseISpec with AuthStubs with 
           MappingDetailsRepositoryRecord(
             arn,
             Seq(
-              MappingDetails(authProviderId, ggTag, count, LocalDateTime.now()),
+              MappingDetails(authProviderId, ggTag, c, LocalDateTime.now()),
               MappingDetails(AuthProviderId("cred-456"), GGTag("5678"), 20, LocalDateTime.now()))
           ))
       }
@@ -86,7 +90,7 @@ class MappingDetailsControllerISpec extends ServerBaseISpec with AuthStubs with 
           Json.parse(s"""{"authProviderId": "cred-123", "ggTag": "1234", "count": 10}"""))
 
         repository.create(
-          MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, count, LocalDateTime.now())))).futureValue
+          MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, c, LocalDateTime.now())))).futureValue
 
         val result = controller.createOrUpdateRecord(arn)(request)
 
@@ -98,14 +102,14 @@ class MappingDetailsControllerISpec extends ServerBaseISpec with AuthStubs with 
       "find and return record if it exists for the arn" in {
 
         repository.create(
-          MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, count, LocalDateTime.now())))).futureValue
+          MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, c, LocalDateTime.now())))).futureValue
 
         val result =
           controller.findRecordByArn(arn)(FakeRequest("GET", "agent-mapping/mappings/details/arn/:arn"))
 
         status(result) shouldBe Status.OK
         contentAsJson(result).as[MappingDetailsRepositoryRecord] should matchRecordIgnoringDateTime(
-          MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, count, LocalDateTime.now()))))
+          MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, c, LocalDateTime.now()))))
       }
 
       "return not found if there is not record found for the arn" in {

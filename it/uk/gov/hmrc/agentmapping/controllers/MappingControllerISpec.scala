@@ -1,9 +1,5 @@
 package uk.gov.hmrc.agentmapping.controllers
 
-import java.nio.charset.StandardCharsets.UTF_8
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Base64
 import akka.actor.ActorSystem
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import com.google.inject.AbstractModule
@@ -11,6 +7,7 @@ import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.{JsObject, JsValue, Json}
@@ -19,17 +16,20 @@ import play.api.libs.ws.{WSClient, WSResponse}
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmapping.audit.CreateMapping
-import uk.gov.hmrc.agentmapping.model.{AgentCharId, AgentRefNo, HmrcGtsAgentRef, HmrcMgdAgentRef, IRAgentReference, IRAgentReferenceCt, IRAgentReferencePaye, SdltStorn, VATAgentRefNo, _}
-import uk.gov.hmrc.agentmapping.repository.{MappingDetailsRepository, MappingRepositories}
+import uk.gov.hmrc.agentmapping.model._
+import uk.gov.hmrc.agentmapping.repository._
 import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DataStreamStub, SubscriptionStub}
-import uk.gov.hmrc.agentmapping.support.{MongoApp, WireMockSupport}
+import uk.gov.hmrc.agentmapping.support.WireMockSupport
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.auth.core.{AffinityGroup, Enrolment, EnrolmentIdentifier}
 import uk.gov.hmrc.domain
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
+import uk.gov.hmrc.mongo.test.MongoSupport
 
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Future
+import java.nio.charset.StandardCharsets.UTF_8
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Base64
 
 class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutures {
 
@@ -57,21 +57,21 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
 
   def callPost(path: String, body: JsValue): WSResponse = {
     wsClient.url(s"$url$path")
-      .addHttpHeaders("Content-Type" -> "application/json")
+      .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
       .post(body)
       .futureValue
   }
 
   def callGet(path: String): WSResponse = {
     wsClient.url(s"$url$path")
-      .addHttpHeaders("Content-Type" -> "application/json")
+      .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
       .get
       .futureValue
   }
 
   def callDelete(path: String): WSResponse = {
     wsClient.url(s"$url$path")
-      .addHttpHeaders("Content-Type" -> "application/json")
+      .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
       .delete
       .futureValue
   }
@@ -79,11 +79,12 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
   def callPut(path: String, body: Option[String]): WSResponse = {
     if (body.isDefined) {
       wsClient.url(s"$url$path")
-        .addHttpHeaders("Content-Type" -> "application/json")
+        .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
         .put(body.get)
         .futureValue
     } else {
       wsClient.url(s"$url$path")
+        .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
         .execute("PUT")
         .futureValue
     }
@@ -640,53 +641,75 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
 
 sealed trait MappingControllerISpecSetup
     extends AnyWordSpecLike
+      with GuiceOneServerPerSuite
     with Matchers
     with OptionValues
-    with MongoApp
     with WireMockSupport
     with AuthStubs
     with DataStreamStub
     with SubscriptionStub
-    with ScalaFutures {
+    with ScalaFutures
+    with MongoSupport
+    {
 
   implicit val actorSystem: ActorSystem = ActorSystem()
-//  implicit val materializer: Materializer = Materializer.()
   implicit val client: WSClient = AhcWSClient()
   implicit val hc: HeaderCarrier = HeaderCarrier()
   implicit val fakeRequest: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("GET", "/agent-mapping/add-code")
 
-  protected val repositories: MappingRepositories = app.injector.instanceOf[MappingRepositories]
-  protected val detailsRepository = app.injector.instanceOf[MappingDetailsRepository]
+      import scala.concurrent.ExecutionContext.Implicits.global
 
-  val saRepo: repositories.Repository = repositories.get(IRAgentReference)
-  val vatRepo = repositories.get(AgentRefNo)
-  val agentCodeRepo = repositories.get(AgentCode)
+      val mongo = mongoComponent
 
-  override implicit lazy val app: Application = appBuilder.build()
+  protected val detailsRepository = new MappingDetailsRepository(mongo)
 
-  protected def appBuilder: GuiceApplicationBuilder =
+            val newAgentCodeMappingRepository     = new NewAgentCodeMappingRepository(mongo)
+            val iRSAAGENTMappingRepository        = new IRSAAGENTMappingRepository(mongo)
+            val hMCEVATAGNTMappingRepository      = new HMCEVATAGNTMappingRepository(mongo)
+            val hMRCCHARAGENTMappingRepository    = new HMRCCHARAGENTMappingRepository(mongo)
+            val hMRCGTSAGNTMappingRepository      = new HMRCGTSAGNTMappingRepository(mongo)
+            val hMRCMGDAGNTMappingRepository      = new HMRCMGDAGNTMappingRepository(mongo)
+            val hMRCNOVRNAGNTMappingRepository    = new HMRCNOVRNAGNTMappingRepository(mongo)
+            val iRCTAGENTMappingRepository        = new IRCTAGENTMappingRepository(mongo)
+            val iRPAYEAGENTMappingRepository      = new IRPAYEAGENTMappingRepository(mongo)
+            val iRSDLTAGENTMappingRepository      = new IRSDLTAGENTMappingRepository(mongo)
+
+      protected lazy val repositories: MappingRepositories = new MappingRepositories(
+        newAgentCodeMappingRepository, hMCEVATAGNTMappingRepository, iRSAAGENTMappingRepository,
+        hMRCCHARAGENTMappingRepository, hMRCGTSAGNTMappingRepository, hMRCMGDAGNTMappingRepository,
+        hMRCNOVRNAGNTMappingRepository, iRCTAGENTMappingRepository, iRPAYEAGENTMappingRepository,
+        iRSDLTAGENTMappingRepository)
+
+  val saRepo: repositories.Repository = iRSAAGENTMappingRepository//repositories.get(IRAgentReference)
+  val vatRepo =  hMCEVATAGNTMappingRepository   //repositories.get(AgentRefNo)
+  val agentCodeRepo =  newAgentCodeMappingRepository //repositories.get(AgentCode)
+
+  protected def appBuilder: GuiceApplicationBuilder = {
     new GuiceApplicationBuilder()
       .configure(
-        mongoConfiguration ++
-          Map(
-            "microservice.services.auth.port"               -> wireMockPort,
-            "microservice.services.agent-subscription.port" -> wireMockPort,
-            "microservice.services.agent-subscription.host" -> wireMockHost,
-            "auditing.consumer.baseUri.host"                -> wireMockHost,
-            "auditing.consumer.baseUri.port"                -> wireMockPort,
-            "application.router"                            -> "testOnlyDoNotUseInAppConf.Routes",
-            "migrate-repositories"                          -> "false",
-            "termination.stride.enrolment"                  -> "caat"
-          ))
+        Map(
+          "microservice.services.auth.port" -> wireMockPort,
+          "microservice.services.agent-subscription.port" -> wireMockPort,
+          "microservice.services.agent-subscription.host" -> wireMockHost,
+          "auditing.consumer.baseUri.host" -> wireMockHost,
+          "auditing.consumer.baseUri.port" -> wireMockPort,
+          "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
+          "migrate-repositories" -> "false",
+          "termination.stride.enrolment" -> "caat"
+        ))
       .overrides(new TestGuiceModule)
-
-  private class TestGuiceModule extends AbstractModule {
-    override def configure(): Unit = {}
   }
 
-  override def beforeEach() {
+      override implicit lazy val app: Application = appBuilder.build()
+
+  private class TestGuiceModule extends AbstractModule {
+    override def configure(): Unit = {
+      bind(classOf[MappingRepositories]).toInstance(repositories)
+    }
+  }
+
+  override def beforeEach() = {
     super.beforeEach()
-    Future.sequence(repositories.map(_.ensureIndexes)).futureValue
     givenAuditConnector()
     ()
   }
