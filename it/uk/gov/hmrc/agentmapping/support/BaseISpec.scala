@@ -13,7 +13,7 @@ import uk.gov.hmrc.agentmapping.stubs.DataStreamStub
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
-abstract class BaseISpec extends AnyWordSpecLike with Matchers with OptionValues with WireMockSupport with DataStreamStub with MetricTestSupport with ScalaFutures {
+abstract class BaseISpec extends AnyWordSpecLike with  Matchers with OptionValues with WireMockSupport with DataStreamStub with MetricTestSupport with ScalaFutures {
 
   def app: Application
 

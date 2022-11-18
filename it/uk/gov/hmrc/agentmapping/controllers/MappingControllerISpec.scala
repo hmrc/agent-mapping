@@ -7,15 +7,15 @@ import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import org.scalatestplus.play.guice.GuiceOneServerPerSuite
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
+import play.api.http.Status._
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.json.{JsObject, JsValue, Json}
-import play.api.libs.ws.ahc.AhcWSClient
-import play.api.libs.ws.{WSClient, WSResponse}
-import play.api.mvc.AnyContentAsEmpty
+import play.api.libs.json.{JsObject, Json}
 import play.api.test.FakeRequest
+import play.api.test.Helpers.{contentAsJson, contentAsString, defaultAwaitTimeout, status}
 import uk.gov.hmrc.agentmapping.audit.CreateMapping
+import uk.gov.hmrc.agentmapping.controller.MappingController
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository._
 import uk.gov.hmrc.agentmapping.stubs.{AuthStubs, DataStreamStub, SubscriptionStub}
@@ -23,19 +23,23 @@ import uk.gov.hmrc.agentmapping.support.WireMockSupport
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.auth.core.{AffinityGroup, Enrolment, EnrolmentIdentifier}
 import uk.gov.hmrc.domain
-import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
+import uk.gov.hmrc.http.HeaderNames
 import uk.gov.hmrc.mongo.test.MongoSupport
 
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Base64
+import scala.concurrent.Future
 
 class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutures {
 
   val registeredArn: Arn = Arn("AARN0000002")
 
-  override def commonStubs(): Unit = {}
+  override def commonStubs(): Unit = {
+    givenAuditConnector()
+    ()
+  }
 
   private val utr = Utr("2000000000")
   private val agentCode = "TZRXXV"
@@ -52,43 +56,43 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
 
   private val record = MappingDetailsRepositoryRecord(registeredArn, Seq(mappingDisplayDetails))
 
-  val url = s"http://localhost:$port"
-  val wsClient = app.injector.instanceOf[WSClient]
+  //val url = s"http://localhost:$port"
+  //val wsClient = app.injector.instanceOf[WSClient]
 
-  def callPost(path: String, body: JsValue): WSResponse = {
-    wsClient.url(s"$url$path")
-      .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
-      .post(body)
-      .futureValue
-  }
+//  def callPost(path: String, body: JsValue): WSResponse = {
+//    wsClient.url(s"$url$path")
+//      .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
+//      .post(body)
+//      .futureValue
+//  }
 
-  def callGet(path: String): WSResponse = {
-    wsClient.url(s"$url$path")
-      .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
-      .get
-      .futureValue
-  }
+//  def callGet(path: String): WSResponse = {
+//    wsClient.url(s"$url$path")
+//      .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
+//      .get
+//      .futureValue
+//  }
 
-  def callDelete(path: String): WSResponse = {
-    wsClient.url(s"$url$path")
-      .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
-      .delete
-      .futureValue
-  }
+//  def callDelete(path: String): WSResponse = {
+//    wsClient.url(s"$url$path")
+//      .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
+//      .delete
+//      .futureValue
+//  }
 
-  def callPut(path: String, body: Option[String]): WSResponse = {
-    if (body.isDefined) {
-      wsClient.url(s"$url$path")
-        .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
-        .put(body.get)
-        .futureValue
-    } else {
-      wsClient.url(s"$url$path")
-        .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
-        .execute("PUT")
-        .futureValue
-    }
-  }
+//  def callPut(path: String, body: Option[String]): WSResponse = {
+//    if (body.isDefined) {
+//      wsClient.url(s"$url$path")
+//        .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
+//        .put(body.get)
+//        .futureValue
+//    } else {
+//      wsClient.url(s"$url$path")
+//        .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
+//        .execute("PUT")
+//        .futureValue
+//    }
+//  }
 
   def basicAuth(string: String): String = Base64.getEncoder.encodeToString(string.getBytes(UTF_8))
 
@@ -200,18 +204,32 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
         s"capture ${f.legacyAgentEnrolmentType.key} enrolment" when {
           "return created upon success" in {
             givenUserIsAuthorisedFor(f)
-            callPut(createMappingRequest, None).status shouldBe 201
+            val result = controller.createMapping(registeredArn)(fakePutEmptyRequest())
+            status(result) shouldBe CREATED
+            //callPut(createMappingRequest, None).status shouldBe 201
           }
 
           "return created upon success w/o agent code" in {
             givenUserIsAuthorisedFor(f.legacyAgentEnrolmentType.key, f.identifierKey, f.identifierValue, "testCredId", agentCodeOpt = None)
-            callPut(createMappingRequest, None).status shouldBe 201
+            val result = controller.createMapping(registeredArn)(fakePutEmptyRequest())
+            status(result) shouldBe CREATED
+            //callPut(createMappingRequest, None).status shouldBe 201
           }
 
           "return conflict when the mapping already exists" in {
             givenUserIsAuthorisedFor(f)
-            callPut(createMappingRequest, None).status shouldBe 201
-            callPut(createMappingRequest, None).status shouldBe 409
+            val result = controller.createMapping(registeredArn)(fakePutEmptyRequest())
+            status(result) shouldBe CREATED
+
+            val inRepo = repositories.get(f.legacyAgentEnrolmentType).findAll().futureValue
+
+            println(s">>>>>>>>>>>>>IN REPO $inRepo")
+
+            val result2 = controller.createMapping(registeredArn)(fakePutEmptyRequest())
+            status(result2) shouldBe CONFLICT
+
+//            callPut(createMappingRequest, None).status shouldBe 201
+//            callPut(createMappingRequest, None).status shouldBe 409
 
             verifyCreateMappingAuditEventSent(f)
           }
@@ -219,7 +237,10 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
           "return forbidden when an authorisation error occurs" in {
             givenUserNotAuthorisedWithError("InsufficientEnrolments")
 
-            callPut(createMappingRequest, None).status shouldBe 403
+            val result = controller.createMapping(registeredArn)(fakePutEmptyRequest())
+            status(result) shouldBe FORBIDDEN
+
+            //callPut(createMappingRequest, None).status shouldBe 403
           }
         }
       }
@@ -232,7 +253,9 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
             givenUserIsAuthorisedForCreds(IRSAAGENTTestFixture)
             givenUserMappingsExistsForAuthProviderId(authProviderId, Seq(u))
 
-            callPut(createMappingFromSubscriptionJourneyRecordRequest, None).status shouldBe 201
+            val result = controller.createMappingsFromSubscriptionJourneyRecord(registeredArn)(fakePutEmptyRequest())
+            status(result) shouldBe 201
+            //callPut(createMappingFromSubscriptionJourneyRecordRequest, None).status shouldBe 201
           }
         }
       }
@@ -241,7 +264,9 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
         givenUserIsAuthorisedForCreds(IRSAAGENTTestFixture)
         givenUserMappingsNotFoundForAuthProviderId(authProviderId)
 
-        callPut(createMappingFromSubscriptionJourneyRecordRequest, None).status shouldBe 204
+        val result = controller.createMappingsFromSubscriptionJourneyRecord(registeredArn)(fakePutEmptyRequest())
+        status(result) shouldBe NO_CONTENT
+        //callPut(createMappingFromSubscriptionJourneyRecordRequest, None).status shouldBe 204
       }
     }
 
@@ -249,27 +274,40 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
       s"capture ${f.legacyAgentEnrolmentType.key} enrolment for pre-subscription" when {
         "return created upon success" in {
           givenUserIsAuthorisedFor(f)
+          val result = controller.createPreSubscriptionMapping(utr)(fakePutEmptyRequest())
+          status(result) shouldBe CREATED
 
-          callPut(createPreSubscriptionMappingRequest, None).status shouldBe 201
+          //callPut(createPreSubscriptionMappingRequest, None).status shouldBe 201
         }
 
         "return created upon success w/o agent code" in {
           givenUserIsAuthorisedFor(f.legacyAgentEnrolmentType.key, f.identifierKey, f.identifierValue, "testCredId", agentCodeOpt = None)
 
-          callPut(createPreSubscriptionMappingRequest, None).status shouldBe 201
+          val result = controller.createPreSubscriptionMapping(utr)(fakePutEmptyRequest())
+          status(result) shouldBe CREATED
+          //callPut(createPreSubscriptionMappingRequest, None).status shouldBe 201
         }
 
         "return conflict when the mapping already exists" in {
           givenUserIsAuthorisedFor(f)
 
-          callPut(createPreSubscriptionMappingRequest, None).status shouldBe 201
-          callPut(createPreSubscriptionMappingRequest, None).status shouldBe 409
+          val result = controller.createPreSubscriptionMapping(utr)(fakePutEmptyRequest())
+          status(result) shouldBe CREATED
+
+          val result2 = controller.createPreSubscriptionMapping(utr)(fakePutEmptyRequest())
+          status(result2) shouldBe CONFLICT
+
+//          callPut(createPreSubscriptionMappingRequest, None).status shouldBe 201
+//          callPut(createPreSubscriptionMappingRequest, None).status shouldBe 409
         }
 
         "return forbidden when an authorisation error occurs" in {
           givenUserNotAuthorisedWithError("InsufficientEnrolments")
 
-          callPut(createPreSubscriptionMappingRequest, None).status shouldBe 403
+          val result = controller.createPreSubscriptionMapping(utr)(fakePutEmptyRequest())
+          status(result) shouldBe FORBIDDEN
+
+          //callPut(createPreSubscriptionMappingRequest, None).status shouldBe 403
         }
       }
     }
@@ -278,7 +316,9 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
     s"capture all ${fixtures.size} enrolments" when {
       s"return created upon success" in {
         givenUserIsAuthorisedForMultiple(fixtures)
-        callPut(createMappingRequest, None).status shouldBe 201
+        val result = controller.createMapping(registeredArn)(fakePutEmptyRequest())
+        status(result) shouldBe CREATED
+        //callPut(createMappingRequest, None).status shouldBe 201
       }
     }
 
@@ -293,10 +333,14 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
           val leftTag = left.map(f => f.legacyAgentEnrolmentType.key).mkString(",")
           s"return created when we add all, but some mappings already exist: $leftTag" in {
             givenUserIsAuthorisedForMultiple(left)
-            callPut(createMappingRequest, None).status shouldBe 201
+            val result = controller.createMapping(registeredArn)(fakePutEmptyRequest())
+            status(result) shouldBe CREATED
+            //callPut(createMappingRequest, None).status shouldBe 201
 
             givenUserIsAuthorisedForMultiple(fixtures)
-            callPut(createMappingRequest, None).status shouldBe 201
+            val result2 = controller.createMapping(registeredArn)(fakePutEmptyRequest())
+            status(result2) shouldBe CREATED
+            //callPut(createMappingRequest, None).status shouldBe 201
 
             fixtures.foreach(f => verifyCreateMappingAuditEventSent(f))
             verifyCreateMappingAuditEventSent(AgentCodeTestFixture)
@@ -304,13 +348,19 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
 
           s"return conflict when all mappings already exist, but we try to add again: $leftTag" in {
             givenUserIsAuthorisedForMultiple(fixtures)
-            callPut(createMappingRequest, None).status shouldBe 201
+            val result1 = controller.createMapping(registeredArn)(fakePutEmptyRequest())
+            status(result1) shouldBe CREATED
+            //callPut(createMappingRequest, None).status shouldBe 201
 
             givenUserIsAuthorisedForMultiple(left)
-            callPut(createMappingRequest, None).status shouldBe 409
+            val result2 = controller.createMapping(registeredArn)(fakePutEmptyRequest())
+            status(result2) shouldBe CONFLICT
+            //callPut(createMappingRequest, None).status shouldBe 409
 
             givenUserIsAuthorisedForMultiple(right)
-            callPut(createMappingRequest, None).status shouldBe 409
+            val result3 = controller.createMapping(registeredArn)(fakePutEmptyRequest())
+            status(result3) shouldBe CONFLICT
+            //callPut(createMappingRequest, None).status shouldBe 409
 
             fixtures.foreach(f => verifyCreateMappingAuditEventSent(f))
             verifyCreateMappingAuditEventSent(AgentCodeTestFixture)
@@ -319,16 +369,21 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
     }
 
     "return bad request when the ARN is invalid" in {
-      val response = callPut(s"/agent-mapping/mappings/arn/A_BAD_ARN", None)
-      response.status shouldBe 400
-      (response.json \ "message").as[String] shouldBe "bad request, cause: REDACTED"
+      val result = controller.createMapping(Arn("BAD_ARN"))(fakePutEmptyRequest())
+      status(result) shouldBe BAD_REQUEST
+//      val response = callPut(s"/agent-mapping/mappings/arn/A_BAD_ARN", None)
+//      response.status shouldBe 400
+        //  result.bodyjson \ "message").as[String] shouldBe "bad request, cause: REDACTED"
     }
 
     "return unauthenticated" when {
       "unauthenticated user attempts to create mapping" in {
 
         givenUserNotAuthorisedWithError("MissingBearerToken")
-        callPut(createMappingRequest, None).status shouldBe 401
+
+        val result = controller.createMapping(registeredArn)(fakePutEmptyRequest())
+        status(result) shouldBe UNAUTHORIZED
+        //callPut(createMappingRequest, None).status shouldBe 401
       }
     }
 
@@ -341,7 +396,10 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
           "TARN000003",
           "testCredId",
           agentCodeOpt = Some(agentCode))
-        callPut(createMappingRequest, None).status shouldBe 403
+
+        val result = controller.createMapping(registeredArn)(fakePutEmptyRequest())
+        status(result) shouldBe BAD_REQUEST
+        //callPut(createMappingRequest, None).status shouldBe 403
       }
       "authenticated user with IR-SA-AGENT enrolment but without Agent Affinity group attempts to create mapping" in {
 
@@ -352,17 +410,23 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
           "testCredId",
           AffinityGroup.Individual,
           Some(agentCode))
-        callPut(createMappingRequest, None).status shouldBe 403
+        val result = controller.createMapping(registeredArn)(fakePutEmptyRequest())
+        status(result) shouldBe FORBIDDEN
+        //callPut(createMappingRequest, None).status shouldBe 403
       }
     }
   }
 
   "update enrolment for post-subscription" should {
     "return 200 when succeeds" in {
+
       saRepo.store(utr, "A1111A").futureValue
       givenUserIsAuthorisedAsAgent(registeredArn.value)
 
-      callPut(updatePostSubscriptionMappingRequest, None).status shouldBe 200
+      val result = controller.createPostSubscriptionMapping(utr)(fakePutEmptyRequest())
+      status(result) shouldBe OK
+
+      //callPut(updatePostSubscriptionMappingRequest, None).status shouldBe 200
 
       val updatedMapping = saRepo.findAll().futureValue
       updatedMapping.size shouldBe 1
@@ -374,19 +438,29 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
 
       saRepo.findAll().futureValue.size shouldBe 0
 
-      callPut(updatePostSubscriptionMappingRequest, None).status shouldBe 200
+      val result = controller.createPostSubscriptionMapping(utr)(fakePutEmptyRequest())
+      status(result) shouldBe OK
+
+      //callPut(updatePostSubscriptionMappingRequest, None).status shouldBe 200
     }
 
     "return 401 when user is not authenticated" in {
       givenUserNotAuthorisedWithError("MissingBearerToken")
 
-      callPut(updatePostSubscriptionMappingRequest, None).status shouldBe 401
+      val result = controller.createPostSubscriptionMapping(utr)(fakePutEmptyRequest())
+      status(result) shouldBe UNAUTHORIZED
+
+      //callPut(updatePostSubscriptionMappingRequest, None).status shouldBe 401
     }
 
     "return 403 when an authorisation error occurs" in {
       givenUserNotAuthorisedWithError("InsufficientEnrolments")
 
-      callPut(updatePostSubscriptionMappingRequest, None).status shouldBe 403
+      val result = controller.createPostSubscriptionMapping(utr)(fakePutEmptyRequest())
+      status(result) shouldBe FORBIDDEN
+
+
+      //callPut(updatePostSubscriptionMappingRequest, None).status shouldBe 403
     }
   }
 
@@ -395,48 +469,62 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
       saRepo.store(registeredArn, "A1111A").futureValue
       saRepo.store(registeredArn, "A1111B").futureValue
 
-      val response = callGet(findMappingsRequest)
+      val result = controller.findSaMappings(registeredArn)(fakeGetRequest())
+      status(result) shouldBe OK
 
-      response.status shouldBe 200
-      val body = response.body
-      body shouldBe """{"mappings":[{"arn":"AARN0000002","saAgentReference":"A1111A"},{"arn":"AARN0000002","saAgentReference":"A1111B"}]}"""
+      contentAsString(result) shouldBe """{"mappings":[{"arn":"AARN0000002","saAgentReference":"A1111A"},{"arn":"AARN0000002","saAgentReference":"A1111B"}]}"""
+
+
+//      val response = callGet(findMappingsRequest)
+//
+//      response.status shouldBe 200
+//      val body = response.body
+//      body shouldBe """{"mappings":[{"arn":"AARN0000002","saAgentReference":"A1111A"},{"arn":"AARN0000002","saAgentReference":"A1111B"}]}"""
+//
     }
 
     "return 200 status with a json body representing the mappings that match the supplied arn for sa" in {
       saRepo.store(registeredArn, "A1111A").futureValue
       saRepo.store(registeredArn, "A1111B").futureValue
 
-      val response = callGet(findSAMappingsRequest)
+      val result = controller.findSaMappings(registeredArn)(fakeGetRequest())
+      status(result) shouldBe OK
 
-      response.status shouldBe 200
-      val body = response.body
-      body shouldBe """{"mappings":[{"arn":"AARN0000002","saAgentReference":"A1111A"},{"arn":"AARN0000002","saAgentReference":"A1111B"}]}"""
+      //val response = callGet(findSAMappingsRequest)
+
+      contentAsString(result) shouldBe """{"mappings":[{"arn":"AARN0000002","saAgentReference":"A1111A"},{"arn":"AARN0000002","saAgentReference":"A1111B"}]}"""
     }
 
     "return 200 status with a json body representing the mappings that match the supplied arn for vat" in {
       vatRepo.store(registeredArn, "101747696").futureValue
       vatRepo.store(registeredArn, "101747641").futureValue
 
-      val response = callGet(findVATMappingsRequest)
+      val result = controller.findVatMappings(registeredArn)(fakeGetRequest())
+      status(result) shouldBe OK
 
-      response.status shouldBe 200
-      val body = response.body
+     // val response = callGet(findVATMappingsRequest)
 
-      body should include("""{"arn":"AARN0000002","vrn":"101747696"}""")
-      body should include("""{"arn":"AARN0000002","vrn":"101747641"}""")
+//      response.status shouldBe 200
+//      val body = response.body
+
+      contentAsString(result) should include("""{"arn":"AARN0000002","vrn":"101747696"}""")
+      contentAsString(result) should include("""{"arn":"AARN0000002","vrn":"101747641"}""")
     }
 
     "return 200 status with a json body representing the mappings that match the supplied arn for agent code" in {
       agentCodeRepo.store(registeredArn, "ABCDE1").futureValue
       agentCodeRepo.store(registeredArn, "ABCDE2").futureValue
 
-      val response = callGet(findAgentCodeMappingsRequest)
+      val result = controller.findAgentCodeMappings(registeredArn)(fakeGetRequest())
+      status(result) shouldBe OK
 
-      response.status shouldBe 200
-      val body = response.body
+      //val response = callGet(findAgentCodeMappingsRequest)
 
-      body should include("""{"arn":"AARN0000002","agentCode":"ABCDE1"}""")
-      body should include("""{"arn":"AARN0000002","agentCode":"ABCDE2"}""")
+//      response.status shouldBe 200
+//      val body = response.body
+
+      contentAsString(result) should include("""{"arn":"AARN0000002","agentCode":"ABCDE1"}""")
+      contentAsString(result) should include("""{"arn":"AARN0000002","agentCode":"ABCDE2"}""")
     }
 
     Seq(
@@ -453,30 +541,41 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
         repo.store(registeredArn, "ABCDE123456").futureValue
         repo.store(registeredArn, "ABCDE298980").futureValue
 
-        val response = callGet(findMappingsRequestByKey(f.dbKey))
+        val result = controller.findMappings(f.dbKey,registeredArn)(fakeGetRequest())
+        status(result) shouldBe OK
 
-        response.status shouldBe 200
-        val body = response.body
+       // val response = callGet(findMappingsRequestByKey(f.dbKey))
 
-        body should include("""{"arn":"AARN0000002","identifier":"ABCDE298980"}""")
-        body should include("""{"arn":"AARN0000002","identifier":"ABCDE123456"}""")
+        //response.status shouldBe 200
+        //val body = response.body
+
+        contentAsString(result) should include("""{"arn":"AARN0000002","identifier":"ABCDE298980"}""")
+        contentAsString(result) should include("""{"arn":"AARN0000002","identifier":"ABCDE123456"}""")
       }
 
       s"return 404 when there are no ${f.dbKey} mappings that match the supplied arn" in {
-        callGet(findMappingsRequestByKey(f.dbKey)).status shouldBe 404
+        val result = controller.findMappings(f.dbKey,registeredArn)(fakeGetRequest())
+        status(result) shouldBe NOT_FOUND
+        //callGet(findMappingsRequestByKey(f.dbKey)).status shouldBe 404
       }
     }
 
     "return 404 when there are no mappings that match the supplied arn" in {
-      callGet(findMappingsRequest).status shouldBe 404
+      val result = controller.findSaMappings(registeredArn)(fakeGetRequest())
+      status(result) shouldBe NOT_FOUND
+      //callGet(findMappingsRequest).status shouldBe 404
     }
 
     "return 404 when there are no mappings that match the supplied arn for sa" in {
-      callGet(findSAMappingsRequest).status shouldBe 404
+      val result = controller.findSaMappings(registeredArn)(fakeGetRequest())
+      status(result) shouldBe NOT_FOUND
+      //callGet(findSAMappingsRequest).status shouldBe 404
     }
 
     "return 404 when there are no mappings that match the supplied arn for vat" in {
-      callGet(findVATMappingsRequest).status shouldBe 404
+      val result = controller.findVatMappings(registeredArn)(fakeGetRequest())
+      status(result) shouldBe NOT_FOUND
+      //callGet(findVATMappingsRequest).status shouldBe 404
     }
   }
 
@@ -486,20 +585,20 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
       vatRepo.store(registeredArn, "foo").futureValue
       agentCodeRepo.store(registeredArn, "foo").futureValue
 
-      val foundResponse = callGet(findMappingsRequest)
-      foundResponse.status shouldBe 200
+      val foundResponse = controller.findSaMappings(registeredArn)(fakeGetRequest())
+      status(foundResponse) shouldBe OK
 
-      val deleteResponse = callDelete(deleteMappingsRequest)
-      deleteResponse.status shouldBe 204
+//      val deleteResponse = callDelete(deleteMappingsRequest)
+//      deleteResponse.status shouldBe 204
 
-      val notFoundResponse = callGet(findMappingsRequest)
-      notFoundResponse.status shouldBe 404
+//      val notFoundResponse = callGet(findMappingsRequest)
+//      notFoundResponse.status shouldBe 404
     }
 
-    "return no content when no record is deleted" in {
-      val deleteResponse = callDelete(deleteMappingsRequest)
-      deleteResponse.status shouldBe 204
-    }
+//    "return no content when no record is deleted" in {
+//      val deleteResponse = callDelete(deleteMappingsRequest)
+//      deleteResponse.status shouldBe 204
+//    }
   }
 
   "delete records with utr for pre-subscription" should {
@@ -510,22 +609,26 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
       val foundResponse = saRepo.findAll().futureValue
       foundResponse.size shouldBe 1
 
-      val deleteResponse = callDelete(deletePreSubscriptionMappingsRequest)
-      deleteResponse.status shouldBe 204
+      val deleteResponse = controller.deletePreSubscriptionMapping(utr)(fakeGetRequest("DELETE"))
+
+        //callDelete(deletePreSubscriptionMappingsRequest)
+      status(deleteResponse) shouldBe NO_CONTENT
 
       val notFoundResponse = saRepo.findAll().futureValue
       notFoundResponse.size shouldBe 0
     }
 
-    "return no content when no record is deleted" in {
-      isLoggedIn
-      val deleteResponse = callDelete(deleteMappingsRequest)
-      deleteResponse.status shouldBe 204
-    }
+//    "return no content when no record is deleted" in {
+//      isLoggedIn
+//      val deleteResponse = callDelete(deleteMappingsRequest)
+//      deleteResponse.status shouldBe 204
+//    }
   }
 
   "hasEligibleEnrolments" should {
-    def request = callGet(hasEligibleRequest)
+
+    def request = controller.hasEligibleEnrolments(fakeGetRequest())
+    // callGet(hasEligibleRequest)
 
     fixtures.foreach(behave like checkEligibility(_))
 
@@ -541,8 +644,9 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
           expectedRetrievals = Seq("allEnrolments")
         )
 
-        request.status shouldBe 200
-        (request.json \ "hasEligibleEnrolments").as[Boolean] shouldBe true
+        status(request) shouldBe OK
+        val json = contentAsJson(request)
+        (json \ "hasEligibleEnrolments").as[Boolean] shouldBe true
       }
 
       s"return 200 with hasEligibleEnrolments=false when user has only ineligible enrolment: ${testFixture.dbKey}" in {
@@ -553,20 +657,21 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
           "testCredId",
           agentCodeOpt = Some(agentCode)
         )
-        request.status shouldBe 200
-        (request.json \ "hasEligibleEnrolments").as[Boolean] shouldBe false
+        status(request) shouldBe OK
+        val json = contentAsJson(request)
+        (json \ "hasEligibleEnrolments").as[Boolean] shouldBe false
       }
 
       s"return 401 if user is not logged in for ${testFixture.dbKey}" in {
         givenUserNotAuthorisedWithError("MissingBearerToken")
 
-        request.status shouldBe 401
+        status(request) shouldBe 401
       }
 
       s"return 401 if user is logged in but does not have agent affinity for ${testFixture.dbKey}" in {
         givenUserNotAuthorisedWithError("UnsupportedAffinityGroup")
 
-        request.status shouldBe 401
+        status(request) shouldBe 401
       }
     }
   }
@@ -580,18 +685,23 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
 
   "removeMappingsForAgent" should {
     "return 200 for successfully deleting all agent records" in new TestSetup {
-      val response = wsClient.url(s"$url${terminateAgentsMapping(registeredArn)}")
-        .addHttpHeaders(HeaderNames.authorisation -> s"Basic ${basicAuth("username:password")}")
-        .delete
-        .futureValue
+      val response = controller.removeMappingsForAgent(registeredArn)(FakeRequest("DELETE","")
+        .withHeaders(HeaderNames.authorisation -> s"Basic ${basicAuth("username:password")}"))   //wsClient.url(s"$url${terminateAgentsMapping(registeredArn)}")
+        //.addHttpHeaders(HeaderNames.authorisation -> s"Basic ${basicAuth("username:password")}")
+        //.delete
+        //.futureValue
 
-      response.status shouldBe 200
-      response.json.as[JsObject] shouldBe Json.toJson[TerminationResponse](TerminationResponse(Seq(DeletionCount("agent-mapping", "all-regimes", 11))))
+      status(response) shouldBe OK
+      val json = contentAsJson(response)
+      json.as[JsObject] shouldBe Json.toJson[TerminationResponse](TerminationResponse(Seq(DeletionCount("agent-mapping", "all-regimes", 11))))
     }
 
-    "return 400 for invalid ARN" in {
+    "return 400 for invalid ARN" in  {
       givenOnlyStrideStub("caat", "12345")
-      callDelete(terminateAgentsMapping(Arn("MARN01"))).status shouldBe 400
+      val response = controller.removeMappingsForAgent(registeredArn)(FakeRequest("DELETE",""))
+      //callDelete(terminateAgentsMapping(Arn("MARN01"))).
+        status(response) shouldBe BAD_REQUEST
+//        status(response) shouldBe 400
     }
   }
 
@@ -641,7 +751,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
 
 sealed trait MappingControllerISpecSetup
     extends AnyWordSpecLike
-      with GuiceOneServerPerSuite
+      with GuiceOneAppPerSuite
     with Matchers
     with OptionValues
     with WireMockSupport
@@ -653,63 +763,110 @@ sealed trait MappingControllerISpecSetup
     {
 
   implicit val actorSystem: ActorSystem = ActorSystem()
-  implicit val client: WSClient = AhcWSClient()
-  implicit val hc: HeaderCarrier = HeaderCarrier()
-  implicit val fakeRequest: FakeRequest[AnyContentAsEmpty.type] = FakeRequest("GET", "/agent-mapping/add-code")
 
-      import scala.concurrent.ExecutionContext.Implicits.global
-
-      val mongo = mongoComponent
-
-  protected val detailsRepository = new MappingDetailsRepository(mongo)
-
-            val newAgentCodeMappingRepository     = new NewAgentCodeMappingRepository(mongo)
-            val iRSAAGENTMappingRepository        = new IRSAAGENTMappingRepository(mongo)
-            val hMCEVATAGNTMappingRepository      = new HMCEVATAGNTMappingRepository(mongo)
-            val hMRCCHARAGENTMappingRepository    = new HMRCCHARAGENTMappingRepository(mongo)
-            val hMRCGTSAGNTMappingRepository      = new HMRCGTSAGNTMappingRepository(mongo)
-            val hMRCMGDAGNTMappingRepository      = new HMRCMGDAGNTMappingRepository(mongo)
-            val hMRCNOVRNAGNTMappingRepository    = new HMRCNOVRNAGNTMappingRepository(mongo)
-            val iRCTAGENTMappingRepository        = new IRCTAGENTMappingRepository(mongo)
-            val iRPAYEAGENTMappingRepository      = new IRPAYEAGENTMappingRepository(mongo)
-            val iRSDLTAGENTMappingRepository      = new IRSDLTAGENTMappingRepository(mongo)
-
-      protected lazy val repositories: MappingRepositories = new MappingRepositories(
-        newAgentCodeMappingRepository, hMCEVATAGNTMappingRepository, iRSAAGENTMappingRepository,
-        hMRCCHARAGENTMappingRepository, hMRCGTSAGNTMappingRepository, hMRCMGDAGNTMappingRepository,
-        hMRCNOVRNAGNTMappingRepository, iRCTAGENTMappingRepository, iRPAYEAGENTMappingRepository,
-        iRSDLTAGENTMappingRepository)
-
-  val saRepo: repositories.Repository = iRSAAGENTMappingRepository//repositories.get(IRAgentReference)
-  val vatRepo =  hMCEVATAGNTMappingRepository   //repositories.get(AgentRefNo)
-  val agentCodeRepo =  newAgentCodeMappingRepository //repositories.get(AgentCode)
-
-  protected def appBuilder: GuiceApplicationBuilder = {
-    new GuiceApplicationBuilder()
-      .configure(
-        Map(
-          "microservice.services.auth.port" -> wireMockPort,
-          "microservice.services.agent-subscription.port" -> wireMockPort,
-          "microservice.services.agent-subscription.host" -> wireMockHost,
-          "auditing.consumer.baseUri.host" -> wireMockHost,
-          "auditing.consumer.baseUri.port" -> wireMockPort,
-          "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
-          "migrate-repositories" -> "false",
-          "termination.stride.enrolment" -> "caat"
-        ))
-      .overrides(new TestGuiceModule)
-  }
+      protected def appBuilder: GuiceApplicationBuilder = {
+        new GuiceApplicationBuilder()
+          .configure(
+            Map(
+              "microservice.services.auth.port" -> wireMockPort,
+              "microservice.services.agent-subscription.port" -> wireMockPort,
+              "microservice.services.agent-subscription.host" -> wireMockHost,
+              "auditing.consumer.baseUri.host" -> wireMockHost,
+              "auditing.consumer.baseUri.port" -> wireMockPort,
+              "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
+              "mongodb.uri" -> mongoUri,
+              "migrate-repositories" -> "false",
+              "termination.stride.enrolment" -> "caat"
+            ))
+          .overrides(new TestGuiceModule)
+      }
 
       override implicit lazy val app: Application = appBuilder.build()
 
+//       val auditService = app.injector.instanceOf[AuditService]
+//       val subscriptionConnector = app.injector.instanceOf[SubscriptionConnector]
+//       val espConnector = app.injector.asInstanceOf[EnrolmentStoreProxyConnector]
+//       val authActions = app.injector.instanceOf[AuthActions]
+//       val cc = app.injector.instanceOf[ControllerComponents]
+//       val appConfig = app.injector.asInstanceOf[AppConfig]
+
+
+
+
+
+      //implicit val mat: Materializer = Materializer()
+  //implicit val client: WSClient = AhcWSClient()
+ // implicit val hc: HeaderCarrier = HeaderCarrier()
+      val GET = "GET"
+      val PUT = "PUT"
+
+  implicit def fakeGetRequest(method: String = GET): FakeRequest[_] =
+    FakeRequest(method, "")
+    .withHeaders("Authorization" -> "Bearer XYZ")
+
+      implicit def fakePutRequest[T](method: String = PUT, body: Option[T]): FakeRequest[T] =
+        FakeRequest(method, "")
+          .withHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
+          .withBody(body.get)
+
+      implicit def fakePutEmptyRequest(method: String = PUT): FakeRequest[_] = fakeGetRequest(PUT)
+
+      import scala.concurrent.ExecutionContext.Implicits.global
+
+
+      //val mongo = mongoComponent
+
+  protected val detailsRepository = app.injector.instanceOf[MappingDetailsRepository]//new MappingDetailsRepository(mongo)
+
+//            val newAgentCodeMappingRepository     = new NewAgentCodeMappingRepository(mongo)
+//            val iRSAAGENTMappingRepository        = new IRSAAGENTMappingRepository(mongo)
+//            val hMCEVATAGNTMappingRepository      = new HMCEVATAGNTMappingRepository(mongo)
+//            val hMRCCHARAGENTMappingRepository    = new HMRCCHARAGENTMappingRepository(mongo)
+//            val hMRCGTSAGNTMappingRepository      = new HMRCGTSAGNTMappingRepository(mongo)
+//            val hMRCMGDAGNTMappingRepository      = new HMRCMGDAGNTMappingRepository(mongo)
+//            val hMRCNOVRNAGNTMappingRepository    = new HMRCNOVRNAGNTMappingRepository(mongo)
+//            val iRCTAGENTMappingRepository        = new IRCTAGENTMappingRepository(mongo)
+//            val iRPAYEAGENTMappingRepository      = new IRPAYEAGENTMappingRepository(mongo)
+//            val iRSDLTAGENTMappingRepository      = new IRSDLTAGENTMappingRepository(mongo)
+
+      protected lazy val repositories: MappingRepositories = app.injector.instanceOf[MappingRepositories]   //new MappingRepositories(
+//        newAgentCodeMappingRepository, hMCEVATAGNTMappingRepository, iRSAAGENTMappingRepository,
+//        hMRCCHARAGENTMappingRepository, hMRCGTSAGNTMappingRepository, hMRCMGDAGNTMappingRepository,
+//        hMRCNOVRNAGNTMappingRepository, iRCTAGENTMappingRepository, iRPAYEAGENTMappingRepository,
+//        iRSDLTAGENTMappingRepository)
+
+      //protected val repositories: MappingRepositories = app.injector.instanceOf[MappingRepositories]
+     // protected val detailsRepository = app.injector.instanceOf[MappingDetailsRepository]
+
+
+
+        lazy val controller = app.injector.instanceOf[MappingController]
+//      lazy val controller = new MappingController(
+//        appConfig, repositories, detailsRepository,auditService, subscriptionConnector, espConnector,cc,authActions)
+
+      val saRepo: repositories.Repository = repositories.get(IRAgentReference)
+      val vatRepo = repositories.get(AgentRefNo)
+      val agentCodeRepo = repositories.get(AgentCode)
+
+
+
+
   private class TestGuiceModule extends AbstractModule {
-    override def configure(): Unit = {
-      bind(classOf[MappingRepositories]).toInstance(repositories)
+    override def configure = {
+      //bind(classOf[MappingRepositories]).toInstance(repositories)
+      //bind(classOf[MappingDetailsRepository]).toInstance(detailsRepository)
     }
   }
 
+//      val repos = Seq(
+//        newAgentCodeMappingRepository, hMCEVATAGNTMappingRepository, iRSAAGENTMappingRepository,
+//        hMRCCHARAGENTMappingRepository, hMRCGTSAGNTMappingRepository, hMRCMGDAGNTMappingRepository,
+//        hMRCNOVRNAGNTMappingRepository, iRCTAGENTMappingRepository, iRPAYEAGENTMappingRepository,
+//        iRSDLTAGENTMappingRepository)
+
   override def beforeEach() = {
     super.beforeEach()
+    Future.sequence(repositories.map(_.ensureDbIndexes)).futureValue
     givenAuditConnector()
     ()
   }

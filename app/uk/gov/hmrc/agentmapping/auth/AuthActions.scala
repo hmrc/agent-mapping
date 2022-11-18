@@ -48,7 +48,12 @@ class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComp
       implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
 
       authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
-        .retrieve(allEnrolments)(allEnrolments => body(request)(captureIdentifiersFrom(allEnrolments).nonEmpty))
+        .retrieve(allEnrolments) {
+          case allEnrolments => body(request)(captureIdentifiersFrom(allEnrolments).nonEmpty)
+        }
+        .recover {
+          case e: AuthorisationException => Unauthorized
+        }
     }
 
   def authorisedWithAgentCode(body: Request[AnyContent] => Set[Identifier] => ProviderId => Future[Result])(

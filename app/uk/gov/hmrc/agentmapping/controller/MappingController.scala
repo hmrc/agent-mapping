@@ -198,6 +198,8 @@ class MappingController @Inject()(
     request: Request[AnyContent],
     providerId: String): Future[Result] = {
 
+    println(s"REQUEST >>>>>>>>>>>$businessId")
+
     val mappingResults: Set[Future[Boolean]] = identifiers
       .map(identifier => createMappingInRepository(businessId, identifier, providerId))
 

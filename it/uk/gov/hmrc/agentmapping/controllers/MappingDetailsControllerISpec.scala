@@ -1,13 +1,12 @@
 package uk.gov.hmrc.agentmapping.controllers
 
-import java.time.LocalDateTime
-import org.scalatest.Suite
-import org.scalatestplus.play.ServerProvider
 import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.Request
+import play.api.mvc.{ControllerComponents, Request}
 import play.api.test.FakeRequest
-import play.mvc.Http.Status
 import play.api.test.Helpers.{contentAsJson, defaultAwaitTimeout, status}
+import play.mvc.Http.Status
+import uk.gov.hmrc.agentmapping.auth.AuthActions
+import uk.gov.hmrc.agentmapping.connector.SubscriptionConnector
 import uk.gov.hmrc.agentmapping.controller.MappingDetailsController
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository.MappingDetailsRepository
@@ -17,29 +16,24 @@ import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
+import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class MappingDetailsControllerISpec extends ServerBaseISpec with AuthStubs with SubscriptionStub
   with DefaultPlayMongoRepositorySupport[MappingDetailsRepositoryRecord] {
 
-
-  this: Suite with ServerProvider =>
+  override val patience: PatienceConfig = patienceConfig
 
   val arn: Arn = Arn("TARN0000001")
 
-  override protected val repository: MappingDetailsRepository = new MappingDetailsRepository(mongoComponent)
+  override protected val repository: MappingDetailsRepository =
+    new MappingDetailsRepository(mongoComponent)
 
-  val overrides = new TestGuiceModule{
-    override def configure(): Unit = {
-      bind(classOf[MappingDetailsRepository]).toInstance(repository)
-    }
-  }
+  val authActions = app.injector.instanceOf[AuthActions]
+  val cc = app.injector.instanceOf[ControllerComponents]
+  val subscriptionConnector = app.injector.instanceOf[SubscriptionConnector]
 
-  override implicit val patience = patienceConfig
-
-  lazy val controller: MappingDetailsController = app.injector.instanceOf[MappingDetailsController]
-
-  "MappingDetailsController" should {
+  lazy val controller: MappingDetailsController = new MappingDetailsController(repository, authActions, cc, subscriptionConnector)
 
     val authProviderId = AuthProviderId("cred-123")
     val ggTag = GGTag("1234")
@@ -51,6 +45,7 @@ class MappingDetailsControllerISpec extends ServerBaseISpec with AuthStubs with 
 
         val request: Request[JsValue] = FakeRequest("POST", "agent-mapping/mappings/details/arn/:arn").withBody(
           Json.parse(s"""{"authProviderId": "cred-123", "ggTag": "1234", "count": 10}"""))
+          .withHeaders("Authorization" -> "Bearer XYZ")
 
         val result = controller.createOrUpdateRecord(arn)(request)
 
@@ -88,6 +83,7 @@ class MappingDetailsControllerISpec extends ServerBaseISpec with AuthStubs with 
 
         val request: Request[JsValue] = FakeRequest("POST", "agent-mapping/mappings/details/arn/:arn").withBody(
           Json.parse(s"""{"authProviderId": "cred-123", "ggTag": "1234", "count": 10}"""))
+          .withHeaders("Authorization" -> "Bearer XYZ")
 
         repository.create(
           MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, c, LocalDateTime.now())))).futureValue
@@ -105,7 +101,8 @@ class MappingDetailsControllerISpec extends ServerBaseISpec with AuthStubs with 
           MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, c, LocalDateTime.now())))).futureValue
 
         val result =
-          controller.findRecordByArn(arn)(FakeRequest("GET", "agent-mapping/mappings/details/arn/:arn"))
+          controller.findRecordByArn(arn)(FakeRequest("GET", "agent-mapping/mappings/details/arn/:arn")
+            .withHeaders("Authorization" -> "Bearer XYZ"))
 
         status(result) shouldBe Status.OK
         contentAsJson(result).as[MappingDetailsRepositoryRecord] should matchRecordIgnoringDateTime(
@@ -115,7 +112,8 @@ class MappingDetailsControllerISpec extends ServerBaseISpec with AuthStubs with 
       "return not found if there is not record found for the arn" in {
 
         val result =
-          controller.findRecordByArn(arn)(FakeRequest("GET", "agent-mapping/mappings/details/arn/:arn"))
+          controller.findRecordByArn(arn)(FakeRequest("GET", "agent-mapping/mappings/details/arn/:arn")
+            .withHeaders("Authorization" -> "Bearer XYZ"))
 
         status(result) shouldBe Status.NOT_FOUND
       }
@@ -131,7 +129,8 @@ class MappingDetailsControllerISpec extends ServerBaseISpec with AuthStubs with 
         givenNoMappingsExistForAuthProviderId(AuthProviderId("cred-123"))
 
         val result = controller.transferSubscriptionRecordToMappingDetails(arn)(
-          FakeRequest("PUT", "agent-mapping/mappings/task-list/details/arn/:arn"))
+          FakeRequest("PUT", "agent-mapping/mappings/task-list/details/arn/:arn")
+            .withHeaders("Authorization" -> "Bearer XYZ"))
 
         status(result) shouldBe Status.OK
 
@@ -167,7 +166,8 @@ class MappingDetailsControllerISpec extends ServerBaseISpec with AuthStubs with 
         )
 
         val result = controller.transferSubscriptionRecordToMappingDetails(arn)(
-          FakeRequest("PUT", "agent-mapping/mappings/task-list/details/arn/:arn"))
+          FakeRequest("PUT", "agent-mapping/mappings/task-list/details/arn/:arn")
+            .withHeaders("Authorization" -> "Bearer XYZ"))
 
         status(result) shouldBe Status.CREATED
         repository.findByArn(arn).futureValue.get should matchRecordIgnoringDateTime(
@@ -186,10 +186,10 @@ class MappingDetailsControllerISpec extends ServerBaseISpec with AuthStubs with 
         givenUserMappingsNotFoundForAuthProviderId(AuthProviderId("cred-123"))
 
         val result = controller.transferSubscriptionRecordToMappingDetails(arn)(
-          FakeRequest("PUT", "agent-mapping/mappings/task-list/details/arn/:arn"))
+          FakeRequest("PUT", "agent-mapping/mappings/task-list/details/arn/:arn")
+            .withHeaders("Authorization" -> "Bearer XYZ"))
 
         status(result) shouldBe Status.NOT_FOUND
       }
     }
-  }
 }

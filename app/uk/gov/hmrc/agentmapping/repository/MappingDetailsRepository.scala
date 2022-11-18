@@ -16,14 +16,16 @@
 
 package uk.gov.hmrc.agentmapping.repository
 
+import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.{IndexModel, IndexOptions, Updates}
 import play.api.Logging
+import play.api.libs.json.Format
 import uk.gov.hmrc.agentmapping.model.{MappingDetails, MappingDetailsRepositoryRecord}
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
+import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
 import javax.inject.{Inject, Singleton}
 import scala.collection.Seq
@@ -44,7 +46,11 @@ class MappingDetailsRepository @Inject()(mongo: MongoComponent)(implicit ec: Exe
             .sparse(true)
             .unique(true))
       ),
-      replaceIndexes = false
+      replaceIndexes = true,
+      extraCodecs = Seq(
+        Codecs.playFormatCodec(MappingDetails.mongoDisplayDetailsFormat),
+        Codecs.playFormatCodec(Format(Arn.arnReads, Arn.arnWrites)),
+      )
     )
     with Logging {
 
@@ -52,7 +58,11 @@ class MappingDetailsRepository @Inject()(mongo: MongoComponent)(implicit ec: Exe
     collection
       .insertOne(mappingDisplayRepositoryRecord)
       .toFuture()
-      .map(insertOneResult => if (!insertOneResult.wasAcknowledged()) throw new RuntimeException(s"$insertOneResult"))
+      .map(_ => ())
+      .recover {
+        case e: MongoWriteException =>
+          logger.warn(s"Error trying to insert a mapping details record ${e.getError}")
+      }
 
   def findByArn(arn: Arn): Future[Option[MappingDetailsRepositoryRecord]] =
     collection

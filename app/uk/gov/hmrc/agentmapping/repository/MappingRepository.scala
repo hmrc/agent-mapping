@@ -51,7 +51,15 @@ trait RepositoryFunctions[T] {
   def findAll(): Future[Seq[T]]
   def delete(arn: Arn): Future[DeleteResult]
   def delete(utr: Utr): Future[DeleteResult]
-  def ensureIndexes: Future[Seq[String]]
+  def ensureDbIndexes(implicit ec: ExecutionContext): Future[Seq[String]]
+}
+
+object RepositoryTools {
+
+  def dropIndexIfExists[A](rr: PlayMongoRepository[A], indexName: String)(implicit ec: ExecutionContext): Future[Unit] =
+    rr.collection.dropIndex(indexName).toFuture().map(_ => ()).recover {
+      case ex: Exception => println(s"index could not be found")
+    }
 }
 
 abstract class BaseMappingRepository[T: Format: Manifest](
@@ -100,6 +108,15 @@ abstract class BaseMappingRepository[T: Format: Manifest](
   override def find(key: String, value: String): Future[Seq[T]] =
     collection.find(equal(key, value)).toFuture()
 
+  import RepositoryTools._
+  // TODO: Remove this overridden method once the service has been deployed and the indexes have been updated.
+  override def ensureDbIndexes(implicit ec: ExecutionContext): Future[Seq[String]] =
+    for {
+      _      <- dropIndexIfExists(this, "utrAndIdentifier")
+      _      <- dropIndexIfExists(this, "arnAndIdentifier")
+      result <- super.ensureIndexes
+    } yield result
+
   override def findBy(arn: Arn): Future[Seq[T]] =
     collection.find(equal("arn", arn.value)).toFuture()
 
@@ -112,11 +129,13 @@ abstract class BaseMappingRepository[T: Format: Manifest](
   override def store(
     identifier: TaxIdentifier,
     identifierValue: String,
-    createdTime: Option[LocalDateTime] = Some(LocalDateTime.now())): Future[Unit] =
+    createdTime: Option[LocalDateTime] = Some(LocalDateTime.now())): Future[Unit] = {
+    println(s"STORES CALLED >>>>>>>>>>$identifier value $identifierValue")
     collection
       .insertOne(wrap(identifier, identifierValue, createdTime))
       .toFuture()
-      .map(_ => ())
+      .map(res => println(s">>>>>>>>>>>>>>>>>>>>>>>>>>>>>INSERTED ONE RES $res"))
+  }
 
   override def updateUtrToArn(utr: Utr, arn: Arn): Future[Unit] =
     collection
