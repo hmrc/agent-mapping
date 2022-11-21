@@ -45,9 +45,7 @@ case class AgentReferenceMapping(businessId: TaxIdentifier, identifier: String, 
 
 object AgentReferenceMapping {
 
-  import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats.localDateTimeFormat
-
-  implicit val dateFormat: Format[LocalDateTime] = localDateTimeFormat
+  import MongoLocalDateTimeFormat._
 
   implicit val writes: Writes[AgentReferenceMapping] = new Writes[AgentReferenceMapping] {
     override def writes(o: AgentReferenceMapping): JsValue = o match {
