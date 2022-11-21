@@ -16,22 +16,22 @@
 
 package uk.gov.hmrc.agentmapping.model
 
-import org.joda.time.DateTime
 import play.api.libs.json._
 import play.api.libs.json.Json.format
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+
+import java.time.LocalDateTime
 
 case class Mapping(arn: String, identifiers: Seq[Identifier])
 
-object Mapping extends ReactiveMongoFormats {
+object Mapping {
   implicit val formats: Format[Mapping] = format[Mapping]
 }
 
-case class AgentReferenceMappings(mappings: List[AgentReferenceMapping])
+case class AgentReferenceMappings(mappings: Seq[AgentReferenceMapping])
 
-object AgentReferenceMappings extends ReactiveMongoFormats {
+object AgentReferenceMappings {
   implicit val formats: Format[AgentReferenceMappings] = format[AgentReferenceMappings]
 }
 
@@ -40,11 +40,12 @@ trait ArnToIdentifierMapping {
   def identifier: String
 }
 
-case class AgentReferenceMapping(businessId: TaxIdentifier, identifier: String, createdDate: Option[DateTime])
+case class AgentReferenceMapping(businessId: TaxIdentifier, identifier: String, createdDate: Option[LocalDateTime])
     extends ArnToIdentifierMapping
 
-object AgentReferenceMapping extends ReactiveMongoFormats {
-  implicit val dateFormat: Format[DateTime] = ReactiveMongoFormats.dateTimeFormats
+object AgentReferenceMapping {
+
+  import MongoLocalDateTimeFormat._
 
   implicit val writes: Writes[AgentReferenceMapping] = new Writes[AgentReferenceMapping] {
     override def writes(o: AgentReferenceMapping): JsValue = o match {
@@ -65,7 +66,7 @@ object AgentReferenceMapping extends ReactiveMongoFormats {
       } else if ((json \ "utr").toOption.isDefined) {
         val utr = (json \ "utr").as[Utr]
         val identifier = (json \ "identifier").as[String]
-        val preCreatedDate = (json \ "preCreatedDate").asOpt[DateTime]
+        val preCreatedDate = (json \ "preCreatedDate").asOpt[LocalDateTime]
         JsSuccess(AgentReferenceMapping(utr, identifier, preCreatedDate))
       } else JsError("invalid json")
   }

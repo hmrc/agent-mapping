@@ -13,7 +13,7 @@ import uk.gov.hmrc.agentmapping.stubs.DataStreamStub
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
-abstract class BaseISpec extends AnyWordSpecLike with Matchers with OptionValues with WireMockSupport with DataStreamStub with MetricTestSupport with ScalaFutures {
+abstract class BaseISpec extends AnyWordSpecLike with  Matchers with OptionValues with WireMockSupport with DataStreamStub with MetricTestSupport with ScalaFutures {
 
   def app: Application
 
@@ -23,8 +23,8 @@ abstract class BaseISpec extends AnyWordSpecLike with Matchers with OptionValues
         "microservice.services.auth.port" -> wireMockPort,
         "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
         "microservice.services.agent-subscription.port" -> wireMockPort,
-        "metrics.enabled" -> true,
-        "auditing.enabled" -> true,
+        "metrics.enabled" -> false,
+        "auditing.enabled" -> false,
         "clientCount.maxRecords" -> 40,
         "clientCount.batchSize" -> 7,
         "mongodb.uri" -> "mongodb://localhost:27017/test-agent-mapping",

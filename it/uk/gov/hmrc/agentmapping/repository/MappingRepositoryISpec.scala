@@ -1,45 +1,93 @@
 package uk.gov.hmrc.agentmapping.repository
 
-import org.scalatest.OptionValues
+import com.kenshoo.play.metrics.PlayModule
+import org.mongodb.scala.MongoWriteException
+import org.mongodb.scala.result.DeleteResult
+import org.scalatest.{BeforeAndAfterAll, OptionValues}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import reactivemongo.api.commands.WriteResult
-import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.model._
-import uk.gov.hmrc.agentmapping.support.MongoApp
+import uk.gov.hmrc.agentmapping.support.MetricTestSupport
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.ClassTag
 
-class IRSAAGENTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, IRSAAGENTMappingRepository]
+class IRSAAGENTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, IRSAAGENTMappingRepository] with
+  DefaultPlayMongoRepositorySupport[AgentReferenceMapping] with BeforeAndAfterAll {
+  override def beforeAll: Unit = {
+    super.beforeAll()
+    givenCleanMetricRegistry()
+    ()
+  }
+  override lazy val repository = new IRSAAGENTMappingRepository(mongoComponent)
+}
+
 class NewAgentCodeMappingRepositoryISpec
-    extends BaseRepositoryISpec[AgentReferenceMapping, NewAgentCodeMappingRepository]
-class HMCEVATAGNTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, HMCEVATAGNTMappingRepository]
+    extends BaseRepositoryISpec[AgentReferenceMapping, NewAgentCodeMappingRepository] with
+      DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+
+  override lazy val repository = new NewAgentCodeMappingRepository(mongoComponent)
+}
+
+class HMCEVATAGNTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, HMCEVATAGNTMappingRepository] with
+  DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+  override lazy val repository = new HMCEVATAGNTMappingRepository(mongoComponent)
+}
 
 class HMRCCHARAGENTMappingRepositoryISpec
-    extends BaseRepositoryISpec[AgentReferenceMapping, HMRCCHARAGENTMappingRepository]
-class HMRCGTSAGNTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, HMRCGTSAGNTMappingRepository]
-class HMRCMGDAGNTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, HMRCMGDAGNTMappingRepository]
+    extends BaseRepositoryISpec[AgentReferenceMapping, HMRCCHARAGENTMappingRepository] with
+      DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+  override lazy val repository = new HMRCCHARAGENTMappingRepository(mongoComponent)
+}
+class HMRCGTSAGNTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, HMRCGTSAGNTMappingRepository] with
+  DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+  override lazy val repository = new HMRCGTSAGNTMappingRepository(mongoComponent)
+}
+
+class HMRCMGDAGNTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, HMRCMGDAGNTMappingRepository] with
+  DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+  override lazy val repository = new HMRCMGDAGNTMappingRepository(mongoComponent)
+}
 class HMRCNOVRNAGNTMappingRepositoryISpec
-    extends BaseRepositoryISpec[AgentReferenceMapping, HMRCNOVRNAGNTMappingRepository]
-class IRCTAGENTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, IRCTAGENTMappingRepository]
-class IRPAYEAGENTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, IRPAYEAGENTMappingRepository]
-class IRSDLTAGENTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, IRSDLTAGENTMappingRepository]
+    extends BaseRepositoryISpec[AgentReferenceMapping, HMRCNOVRNAGNTMappingRepository] with
+      DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+  override lazy val repository = new HMRCNOVRNAGNTMappingRepository(mongoComponent)
+}
+class IRCTAGENTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, IRCTAGENTMappingRepository] with
+  DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+  override lazy val repository = new IRCTAGENTMappingRepository(mongoComponent)
+}
+class IRPAYEAGENTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, IRPAYEAGENTMappingRepository] with
+  DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+  override lazy val repository = new IRPAYEAGENTMappingRepository(mongoComponent)
+}
+class IRSDLTAGENTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, IRSDLTAGENTMappingRepository] with
+DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+  override lazy val repository = new IRSDLTAGENTMappingRepository(mongoComponent)
+}
 
 abstract class BaseRepositoryISpec[
-  T <: ArnToIdentifierMapping, R <: MappingRepository with RepositoryFunctions[T]: ClassTag]
-  extends AnyWordSpecLike with Matchers with OptionValues with ScalaFutures with MongoApp with IntegrationPatience {
+  T <: ArnToIdentifierMapping, R <: MappingRepository: ClassTag]
+  extends AnyWordSpecLike with Matchers with OptionValues with ScalaFutures with IntegrationPatience with GuiceOneAppPerSuite
+  with MetricTestSupport {
+
+  def repository: MappingRepository
 
   override implicit lazy val app: Application = appBuilder.build()
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
-      .configure(Map("migrate-repositories" -> "false","termination.stride.enrolment" -> "caat"))
-      .configure(mongoConfiguration)
+      .configure(Map(
+        "metrics.enabled" -> false,
+        "migrate-repositories" -> "false","termination.stride.enrolment" -> "caat",
+      )).disable[PlayModule]
+
 
   val arn1 = Arn("ARN00001")
   val arn2 = Arn("ARN00002")
@@ -50,15 +98,8 @@ abstract class BaseRepositoryISpec[
   val reference1 = "Ref0001"
   val reference2 = "Ref0002"
 
-  def repository: MappingRepository with RepositoryFunctions[T] = app.injector.instanceOf[R]
-
-  override def beforeEach() {
-    super.beforeEach()
-    repository.ensureIndexes.futureValue
-    ()
-  }
-
   private val repoName = repository.getClass.getSimpleName
+
 
   s"$repoName" should {
     behave like checkMapping(arn1, Seq(reference1, reference2))
@@ -71,7 +112,7 @@ abstract class BaseRepositoryISpec[
       s"create a mapping for {${businessId.getClass.getSimpleName}}" in {
         repository.store(businessId, reference1).futureValue
 
-        val result = repository.find().futureValue
+        val result = repository.findAll().futureValue
 
         result.size shouldBe 1
         result.head.businessId.value shouldBe businessId.value
@@ -83,7 +124,7 @@ abstract class BaseRepositoryISpec[
 
         val e = repository.store(businessId, reference1).failed.futureValue
 
-        e shouldBe a[DatabaseException]
+        e shouldBe a[MongoWriteException]
         e.getMessage() should include("E11000")
       }
 
@@ -91,7 +132,7 @@ abstract class BaseRepositoryISpec[
         repository.store(businessId, reference1).futureValue
         repository.store(businessId, reference2).futureValue
 
-        val result = repository.find().futureValue
+        val result = repository.findAll().futureValue
 
         result.size shouldBe 2
         result.head.businessId.value shouldBe businessId.value
@@ -106,7 +147,7 @@ abstract class BaseRepositoryISpec[
         repository.store(arn1, reference2).futureValue
         repository.store(arn2, reference2).futureValue
 
-        val result: List[ArnToIdentifierMapping] = repository.findBy(arn1).futureValue
+        val result: Seq[ArnToIdentifierMapping] = repository.findBy(arn1).futureValue
 
         result.size shouldBe 2
       }
@@ -121,22 +162,22 @@ abstract class BaseRepositoryISpec[
       repository.store(arn1, reference1).futureValue
       repository.store(arn2, reference2).futureValue
 
-      val mappings: List[ArnToIdentifierMapping] = repository.findAll().futureValue
+      val mappings: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
       mappings.size shouldBe 2
 
-      val result: WriteResult = repository.delete(arn1).futureValue
-      result.code shouldBe None
+      val result: DeleteResult = repository.deleteByArn(arn1).futureValue
+      result.getDeletedCount shouldBe 1L
 
-      val mappingsAfterDelete: List[ArnToIdentifierMapping] = repository.findAll().futureValue
+      val mappingsAfterDelete: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
       mappingsAfterDelete.size shouldBe 1
     }
 
     "do not fail delete when no matching records exist for Arn" in {
-      val mappings: List[ArnToIdentifierMapping] = repository.findAll().futureValue
+      val mappings: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
       mappings.size shouldBe 0
 
-      val result: WriteResult = repository.delete(arn1).futureValue
-      result.code shouldBe None
+      val result: DeleteResult = repository.deleteByArn(arn1).futureValue
+      result.getDeletedCount shouldBe 0L
     }
 
     "find all mappings for Utr" in {
@@ -144,7 +185,7 @@ abstract class BaseRepositoryISpec[
       repository.store(utr1, reference2).futureValue
       repository.store(utr2, reference2).futureValue
 
-      val result: List[ArnToIdentifierMapping] = repository.findBy(utr1).futureValue
+      val result: Seq[ArnToIdentifierMapping] = repository.findBy(utr1).futureValue
 
       result.size shouldBe 2
     }
@@ -159,33 +200,33 @@ abstract class BaseRepositoryISpec[
       repository.store(utr1, reference1).futureValue
       repository.store(utr2, reference2).futureValue
 
-      val mappings: List[ArnToIdentifierMapping] = repository.findAll().futureValue
+      val mappings: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
       mappings.size shouldBe 2
 
-      val result: WriteResult = repository.delete(utr1).futureValue
-      result.code shouldBe None
+      val result: DeleteResult = repository.deleteByUtr(utr1).futureValue
+      result.getDeletedCount shouldBe 1L
 
-      val mappingsAfterDelete: List[ArnToIdentifierMapping] = repository.findAll().futureValue
+      val mappingsAfterDelete: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
       mappingsAfterDelete.size shouldBe 1
     }
 
     "do not fail delete when no matching records exist for Utr" in {
-      val mappings: List[ArnToIdentifierMapping] = repository.findAll().futureValue
+      val mappings: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
       mappings.size shouldBe 0
 
-      val result: WriteResult = repository.delete(utr1).futureValue
-      result.code shouldBe None
+      val result: DeleteResult = repository.deleteByUtr(utr1).futureValue
+      result.getDeletedCount shouldBe 0L
     }
 
     "update records with utr to arn" in {
       repository.store(utr1, reference1).futureValue
 
-      val mappings: List[ArnToIdentifierMapping] = repository.findAll().futureValue
+      val mappings: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
       mappings.size shouldBe 1
 
       repository.updateUtrToArn(utr1, arn1).futureValue
 
-      val updatedMappings: List[ArnToIdentifierMapping] = repository.findAll().futureValue
+      val updatedMappings: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
       updatedMappings.size shouldBe 1
 
       updatedMappings.head.businessId shouldBe arn1

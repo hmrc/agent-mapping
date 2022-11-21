@@ -19,7 +19,9 @@ import uk.gov.hmrc.http.HeaderCarrier
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class AuthActionsISpec(implicit val ec: ExecutionContext) extends BaseISpec with MockitoSugar with ScalaFutures {
+import scala.concurrent.ExecutionContext.Implicits.global
+
+class AuthActionsISpec extends BaseISpec with MockitoSugar with ScalaFutures {
 
   lazy val app: Application = appBuilder.build()
 
@@ -96,22 +98,22 @@ class AuthActionsISpec(implicit val ec: ExecutionContext) extends BaseISpec with
     def response = mockAuthActions.authorisedWithAgentCode(authorisedWithAgentCodeAction).apply(fakeRequestAny)
 
     "return 200 for users with an agent code and validenrolments" in {
-      authStub[~[~[Credentials, Option[String]], Enrolments]](Future.successful(
-        new ~(new ~(Credentials("providerId", "providerType"), Some("agentCode")), Enrolments(saEnrolment))))
+      authStub[~[~[Option[Credentials], Option[String]], Enrolments]](Future.successful(
+        new ~(new ~(Some(Credentials("providerId", "providerType")), Some("agentCode")), Enrolments(saEnrolment))))
 
       status(response) shouldBe 200
     }
 
     "return 403 for users with an agent code and invalid enrolments" in {
-      authStub[~[~[Credentials, Option[String]], Enrolments]](Future.successful(
-        new ~(new ~(Credentials("providerId", "providerType"), Some("agentCode")), Enrolments(agentEnrolment))))
+      authStub[~[~[Option[Credentials], Option[String]], Enrolments]](Future.successful(
+        new ~(new ~(Some(Credentials("providerId", "providerType")), Some("agentCode")), Enrolments(agentEnrolment))))
 
       status(response) shouldBe 403
     }
 
     "return 403 for users with empty agent code and invalid enrolments" in {
-      authStub[~[~[Credentials, Option[String]], Enrolments]](Future.successful(
-        new ~(new ~(Credentials("providerId", "providerType"), None), Enrolments(Set.empty))))
+      authStub[~[~[Option[Credentials], Option[String]], Enrolments]](Future.successful(
+        new ~( new ~(Some(Credentials("providerId", "providerType")), None), Enrolments(Set.empty))))
 
       status(response) shouldBe 403
     }

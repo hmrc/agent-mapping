@@ -15,10 +15,6 @@
  */
 
 package uk.gov.hmrc.agentmapping.auth
-import java.nio.charset.StandardCharsets.UTF_8
-import java.util.Base64
-
-import javax.inject.{Inject, Singleton}
 import play.api.Logging
 import play.api.mvc._
 import uk.gov.hmrc.agentmapping.model.{AgentCode, BasicAuthentication, Identifier, LegacyAgentEnrolmentType}
@@ -28,9 +24,12 @@ import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{agentCode, allEnrolments, authorisedEnrolments, credentials}
 import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
 import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
-import uk.gov.hmrc.play.http.HeaderCarrierConverter.fromRequest
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
+import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
+import java.nio.charset.StandardCharsets.UTF_8
+import java.util.Base64
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.matching.Regex
 
@@ -46,15 +45,20 @@ class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComp
   def authorisedWithEnrolments(body: Request[AnyContent] => HasEligibleEnrolments => Future[Result])(
     implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
-      implicit val hc: HeaderCarrier = fromRequest(request)
+      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
 
       authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
-        .retrieve(allEnrolments)(allEnrolments => body(request)(captureIdentifiersFrom(allEnrolments).nonEmpty))
+        .retrieve(allEnrolments) {
+          case allEnrolments => body(request)(captureIdentifiersFrom(allEnrolments).nonEmpty)
+        }
+        .recover {
+          case e: AuthorisationException => Unauthorized
+        }
     }
 
   def authorisedWithAgentCode(body: Request[AnyContent] => Set[Identifier] => ProviderId => Future[Result])(
     implicit ec: ExecutionContext): Action[AnyContent] = Action.async { implicit request =>
-    implicit val hc: HeaderCarrier = fromRequest(request)
+    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
 
     authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
       .retrieve(credentials and agentCode and allEnrolments) {
@@ -62,10 +66,16 @@ class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComp
           captureIdentifiersAndAgentCodeFrom(allEnrolments, agentCodeOpt) match {
             case Some(identifiers) => body(request)(identifiers)(providerId)
 
-            case None => Future.successful(Forbidden)
+            case _ => Future.successful(Forbidden)
           }
+        case _ =>
+          logger.warn(s"error - missing credentials")
+          Future.successful(Forbidden)
       }
-      .recover { handleException }
+      .recover {
+        case e: NoActiveSession        => Unauthorized
+        case _: AuthorisationException => Forbidden
+      }
   }
 
   def authorisedWithProviderId(body: Request[AnyContent] => String => Future[Result])(
@@ -76,13 +86,16 @@ class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComp
           case Some(Credentials(providerId, _)) => body(request)(providerId)
           case _                                => Future.successful(Forbidden)
         }
-        .recover { handleException }
+        .recover {
+          case _: NoActiveSession        => Unauthorized
+          case _: AuthorisationException => Forbidden
+        }
     }
 
   def authorisedAsSubscribedAgent(body: Request[AnyContent] => Arn => Future[Result])(
     implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
-      implicit val hc: HeaderCarrier = fromRequest(request)
+      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
 
       authorised(
         Enrolment("HMRC-AS-AGENT")
@@ -95,12 +108,15 @@ class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComp
             case None      => Future.successful(Forbidden)
           }
         }
-        .recover { handleException }
+        .recover {
+          case _: NoActiveSession        => Unauthorized
+          case _: AuthorisationException => Forbidden
+        }
     }
 
   def basicAuth(body: Request[AnyContent] => Future[Result])(implicit ec: ExecutionContext): Action[AnyContent] =
     Action.async { implicit request =>
-      implicit val hc: HeaderCarrier = fromRequest(request)
+      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
 
       authorised() {
         body(request)
@@ -155,11 +171,6 @@ class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComp
             Forbidden
         }
     }
-
-  private def handleException(): PartialFunction[Throwable, Result] = {
-    case _: NoActiveSession        => Unauthorized
-    case _: AuthorisationException => Forbidden
-  }
 
   private def getEnrolmentInfo(enrolment: Set[Enrolment], enrolmentKey: String, identifier: String): Option[String] =
     enrolment.find(_.key equals enrolmentKey).flatMap(_.identifiers.find(_.key equals identifier).map(_.value))

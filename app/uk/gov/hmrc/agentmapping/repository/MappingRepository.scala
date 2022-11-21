@@ -16,164 +16,94 @@
 
 package uk.gov.hmrc.agentmapping.repository
 
-import javax.inject.Inject
-import org.joda.time.{DateTime, DateTimeZone}
-import org.slf4j.LoggerFactory
-import play.api.libs.json.Json.{JsValueWrapper, toJsFieldJsValueWrapper}
-import play.api.libs.json.{Format, Json}
-import play.modules.reactivemongo.ReactiveMongoComponent
-import reactivemongo.api.ReadPreference
-import reactivemongo.api.commands.WriteResult
-import reactivemongo.api.commands.bson.DefaultBSONCommandError
-import reactivemongo.api.indexes.Index
-import reactivemongo.api.indexes.IndexType.Ascending
-import reactivemongo.bson.{BSONDocument, BSONObjectID}
-import reactivemongo.play.json.ImplicitBSONHandlers._
+import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Indexes.ascending
+import org.mongodb.scala.model.Updates.{combine, set, unset}
+import org.mongodb.scala.model.{IndexModel, IndexOptions, UpdateOptions}
+import org.mongodb.scala.result.{DeleteResult, InsertOneResult, UpdateResult}
+import play.api.libs.json.Format
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
-import uk.gov.hmrc.agentmapping.repository.RepositoryTools._
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.domain.TaxIdentifier
-import uk.gov.hmrc.mongo.ReactiveRepository
-import uk.gov.hmrc.mongo.json.ReactiveMongoFormats
+import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
+import java.time.{Instant, LocalDateTime, ZoneOffset}
+import java.util.concurrent.TimeUnit
 import scala.collection.Seq
 import scala.concurrent.{ExecutionContext, Future}
 
-trait MappingRepository {
-  def store(
-    identifier: TaxIdentifier,
-    identifierValue: String,
-    createdTime: Option[DateTime] = Some(DateTime.now(DateTimeZone.UTC)))(implicit ec: ExecutionContext): Future[Unit]
-
-  def updateUtrToArn(utr: Utr, arn: Arn)(implicit ec: ExecutionContext): Future[Unit]
-}
-
-trait RepositoryFunctions[T] {
-  def find(query: (String, JsValueWrapper)*)(implicit ec: ExecutionContext): Future[List[T]]
-  def findBy(arn: Arn)(implicit ec: ExecutionContext): Future[List[T]]
-  def findBy(utr: Utr)(implicit ec: ExecutionContext): Future[List[T]]
-  def findAll(readPreference: ReadPreference = ReadPreference.primaryPreferred)(
-    implicit ec: ExecutionContext): Future[List[T]]
-  def delete(arn: Arn)(implicit ec: ExecutionContext): Future[WriteResult]
-  def delete(utr: Utr)(implicit ec: ExecutionContext): Future[WriteResult]
-  def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]]
-}
-
-/**
-  * A set of useful functions for dealing with Mongo repositories, collections and indexes
-  */
-object RepositoryTools {
-
-  def dropIndexIfExists[A, ID](rr: ReactiveRepository[A, ID], indexName: String)(
-    implicit ec: ExecutionContext): Future[Unit] = {
-
-    val logger = LoggerFactory.getLogger(rr.getClass)
-
-    rr.collection.indexesManager
-      .drop(indexName)
-      .map { numIndexesDropped =>
-        if (numIndexesDropped >= 0) {
-          logger.info(s"Successfully dropped old index $indexName")
-        } else {
-          logger.warn(s"Did not drop old index $indexName")
-        }
-      }
-      .recover {
-        case t: DefaultBSONCommandError if t.code.contains(27) =>
-          logger.info(s"IndexNotFound: Did not drop old index '$indexName' as it was not found")
-        case t =>
-          logger.warn(s"Did not drop old index '$indexName'", t)
-      }
-  }
-
-}
-
-abstract class BaseMappingRepository[T: Format: Manifest](
-  collectionName: String,
-  identifierKey: String,
-  wrap: (TaxIdentifier, String, Option[DateTime]) => T)(implicit mongoComponent: ReactiveMongoComponent)
-    extends ReactiveRepository[T, BSONObjectID](
-      collectionName,
-      mongoComponent.mongoConnector.db,
-      implicitly[Format[T]],
-      ReactiveMongoFormats.objectIdFormats)
-    with MappingRepository
-    with StrictlyEnsureIndexes[T, BSONObjectID]
-    with RepositoryFunctions[T] {
-
-  @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
-  def findBy(arn: Arn)(implicit ec: ExecutionContext): Future[List[T]] =
-    find(Seq("arn" -> Some(arn)).map(option => option._1 -> toJsFieldJsValueWrapper(option._2.get)): _*)
-
-  @SuppressWarnings(Array("org.wartremover.warts.OptionPartial"))
-  def findBy(utr: Utr)(implicit ec: ExecutionContext): Future[List[T]] =
-    find(Seq("utr" -> Some(utr)).map(option => option._1 -> toJsFieldJsValueWrapper(option._2.get)): _*)
-
-  // TODO: Remove this overridden method once the service has been deployed and the indexes have been updated.
-  override def ensureIndexes(implicit ec: ExecutionContext): Future[Seq[Boolean]] =
-    for {
-      _      <- dropIndexIfExists(this, "utrAndIdentifier")
-      _      <- dropIndexIfExists(this, "arnAndIdentifier")
-      result <- super.ensureIndexes
-    } yield result
-
-  override def indexes: Seq[Index] =
-    Seq(
-      Index(
-        Seq("arn" -> Ascending, identifierKey -> Ascending),
-        Some("arnWithIdentifier"),
-        unique = true,
-        partialFilter = Some(BSONDocument("arn" -> BSONDocument("$exists" -> true)))
+abstract class MappingRepository(collectionName: String, identifierKey: String = "identifier", mongo: MongoComponent)(
+  implicit ec: ExecutionContext)
+    extends PlayMongoRepository[AgentReferenceMapping](
+      mongoComponent = mongo,
+      collectionName = collectionName,
+      domainFormat = AgentReferenceMapping.formats,
+      indexes = Seq(
+        IndexModel(
+          ascending("arn", "identifier"),
+          IndexOptions()
+            .name("arnWithIdentifier")
+            .unique(true)
+            .partialFilterExpression(BsonDocument("arn" -> BsonDocument("$exists" -> true)))
+        ),
+        IndexModel(
+          ascending("utr", identifierKey),
+          IndexOptions()
+            .name("utrWithIdentifier")
+            .unique(true)
+            .partialFilterExpression(BsonDocument("utr" -> BsonDocument("$exists" -> true)))
+        ),
+        IndexModel(
+          ascending("arn"),
+          IndexOptions()
+            .name("AgentReferenceNumber")),
+        IndexModel(
+          ascending("utr"),
+          IndexOptions()
+            .name("Utr")),
+        IndexModel(
+          ascending("preCreatedDate"),
+          IndexOptions()
+            .name("preCreatedDate")
+            .expireAfter(86400L, TimeUnit.SECONDS)),
       ),
-      Index(
-        Seq("utr" -> Ascending, identifierKey -> Ascending),
-        Some("utrWithIdentifier"),
-        unique = true,
-        partialFilter = Some(BSONDocument("utr" -> BSONDocument("$exists" -> true)))
-      ),
-      Index(
-        Seq("arn" -> Ascending),
-        Some("AgentReferenceNumber")
-      ),
-      Index(
-        Seq("utr" -> Ascending),
-        Some("Utr")
-      ),
-      Index(
-        Seq("preCreatedDate" -> Ascending),
-        Some("preCreatedDate"),
-        options = BSONDocument("expireAfterSeconds" -> 86400)
-      )
-    )
+      replaceIndexes = true,
+      extraCodecs = Seq(
+        Codecs.playFormatCodec(Format(Arn.arnReads, Arn.arnWrites)),
+        Codecs.playFormatCodec(Format(Utr.utrReads, Utr.utrWrites)))
+    ) {
+
+  def findBy(arn: Arn): Future[Seq[AgentReferenceMapping]] =
+    collection.find(equal("arn", arn.value)).toFuture()
+
+  def findBy(utr: Utr): Future[Seq[AgentReferenceMapping]] =
+    collection.find(equal("utr", utr.value)).toFuture()
+
+  def findAll(): Future[Seq[AgentReferenceMapping]] =
+    collection.find().toFuture()
 
   def store(
     identifier: TaxIdentifier,
     identifierValue: String,
-    createdTime: Option[DateTime] = Some(DateTime.now(DateTimeZone.UTC)))(implicit ec: ExecutionContext): Future[Unit] =
-    insert(wrap(identifier, identifierValue, createdTime)).map(_ => ())
-
-  def updateUtrToArn(utr: Utr, arn: Arn)(implicit ec: ExecutionContext): Future[Unit] = {
-    val selector = Json.obj("utr" -> utr.value)
-    val update = Json.obj(
-      "$set"   -> Json.obj("arn"            -> arn.value),
-      "$unset" -> Json.obj("preCreatedDate" -> "", "utr" -> "")
-    )
-
+    createdTime: Option[LocalDateTime] = Some(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime))
+    : Future[InsertOneResult] =
     collection
-      .update(ordered = false)
-      .one(selector, update, upsert = false)
-      .map(_ => ())
-  }
+      .insertOne(AgentReferenceMapping(identifier, identifierValue, createdTime))
+      .toFuture()
 
-  def delete(arn: Arn)(implicit ec: ExecutionContext): Future[WriteResult] =
-    remove("arn" -> arn.value)
+  def updateUtrToArn(utr: Utr, arn: Arn): Future[UpdateResult] =
+    collection
+      .updateOne(
+        equal("utr", utr.value),
+        combine(set("arn", arn.value), unset("preCreatedDate"), unset("utr")),
+        UpdateOptions().upsert(false))
+      .toFuture()
 
-  def delete(utr: Utr)(implicit ec: ExecutionContext): Future[WriteResult] =
-    remove("utr" -> utr.value)
+  def deleteByArn(arn: Arn): Future[DeleteResult] =
+    collection.deleteOne(equal("arn", arn.value)).toFuture()
+
+  def deleteByUtr(utr: Utr): Future[DeleteResult] =
+    collection.deleteOne(equal("utr", utr.value)).toFuture()
 }
-
-abstract class NewMappingRepository @Inject()(serviceName: String)(implicit mongoComponent: ReactiveMongoComponent)
-    extends BaseMappingRepository(
-      s"agent-mapping-${serviceName.toLowerCase}",
-      "identifier",
-      AgentReferenceMapping.apply)

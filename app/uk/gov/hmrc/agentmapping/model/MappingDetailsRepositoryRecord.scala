@@ -16,11 +16,12 @@
 
 package uk.gov.hmrc.agentmapping.model
 
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import java.time.LocalDateTime
-import play.api.libs.json.{JsPath, OFormat}
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json.format
+import play.api.libs.json.{JsPath, OFormat}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+
+import java.time.LocalDateTime
 
 case class MappingDetailsRepositoryRecord(arn: Arn, mappingDetails: Seq[MappingDetails])
 

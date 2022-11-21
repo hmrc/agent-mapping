@@ -40,8 +40,7 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
  //private def batchResponse(recordsToReturn: Int, allActive: Boolean)
 
   "runEs2ForServices" should {
-    s"return $maxRecordsToDisplay if the total records from $HMCE_VATDEC_ORG is higher than $maxRecordsToDisplay" in {
-
+    s"return $maxRecordsToDisplay if the total records from $HMCE_VATDEC_ORG is higher than $maxRecordsToDisplay" in  {
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(clientCountBatchSize), 200)
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8,  batchResponse(clientCountBatchSize), 200)
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 15,  batchResponse(clientCountBatchSize), 200)
@@ -51,8 +50,7 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
       connector.getClientCount("agent1").futureValue shouldBe 40
     }
 
-    s"return $maxRecordsToDisplay if the total records from $HMCE_VATDEC_ORG alone is lower than $maxRecordsToDisplay but not when combined with $IR_SA" in {
-
+    s"return $maxRecordsToDisplay if the total records from $HMCE_VATDEC_ORG alone is lower than $maxRecordsToDisplay but not when combined with $IR_SA" in  {
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(clientCountBatchSize), 200)
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8,  batchResponse(clientCountBatchSize - 2), 200)
       givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(clientCountBatchSize), 200)
@@ -66,7 +64,6 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
     }
 
     s"return $maxRecordsToDisplay if the total records return from each $HMCE_VATDEC_ORG and $IR_SA is exactly half of the $maxRecordsToDisplay" in {
-
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(clientCountBatchSize), 200)
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8,  batchResponse(clientCountBatchSize), 200)
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 15,  batchResponse(clientCountBatchSize - 1), 200)
@@ -78,8 +75,7 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
 
     }
 
-    s"return the actual number of records when the total from $HMCE_VATDEC_ORG is less than $maxRecordsToDisplay and there are no records from $IR_SA" in {
-
+    s"return the actual number of records when the total from $HMCE_VATDEC_ORG is less than $maxRecordsToDisplay and there are no records from $IR_SA" in  {
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(clientCountBatchSize), 200)
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8,  batchResponse(clientCountBatchSize), 200)
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 15,  batchResponse(clientCountBatchSize - 1), 200)
@@ -88,8 +84,7 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
       connector.getClientCount("agent1").futureValue shouldBe 20
     }
 
-    s"return the actual number of records when the total from $HMCE_VATDEC_ORG and $IR_SA is less than $maxRecordsToDisplay" in {
-
+    s"return the actual number of records when the total from $HMCE_VATDEC_ORG and $IR_SA is less than $maxRecordsToDisplay" in  {
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(clientCountBatchSize), 200)
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8,  batchResponse(clientCountBatchSize), 200)
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 15,  batchResponse(clientCountBatchSize - 1), 200)
@@ -99,7 +94,6 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
     }
 
     s"return the actual number of records when there are only records from $IR_SA and is less than $maxRecordsToDisplay" in {
-
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(0), 200)
       givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(clientCountBatchSize - 2), 200)
 
@@ -107,7 +101,6 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
     }
 
     s"return the count of only Activated records" in {
-
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1, batchResponse(clientCountBatchSize, false), 200)
       givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8, batchResponse(clientCountBatchSize - 2), 200)
       givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(clientCountBatchSize, false), 200)

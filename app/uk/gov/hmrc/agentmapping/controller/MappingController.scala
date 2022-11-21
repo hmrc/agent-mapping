@@ -16,12 +16,11 @@
 
 package uk.gov.hmrc.agentmapping.controller
 
-import javax.inject.{Inject, Singleton}
+import com.mongodb.MongoWriteException
 import play.api.Logging
 import play.api.libs.json.Json.toJson
 import play.api.libs.json._
 import play.api.mvc._
-import reactivemongo.core.errors.DatabaseException
 import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.auth.AuthActions
 import uk.gov.hmrc.agentmapping.config.AppConfig
@@ -33,6 +32,7 @@ import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -103,7 +103,7 @@ class MappingController @Inject()(
         false
       }
       .recover {
-        case e: DatabaseException if e.getMessage().contains("E11000") =>
+        case e: MongoWriteException if e.getMessage().contains("E11000") =>
           businessId match {
             case arn: Arn => sendCreateMappingAuditEvent(arn, identifier, ggCredId, duplicate = true)
             case _        => ()
@@ -149,7 +149,7 @@ class MappingController @Inject()(
   }
 
   private def deleteAgentRecords(arn: Arn) =
-    Future.sequence(repositories.map(_.delete(arn).map(_.n)))
+    repositories.deleteDataForArn(arn)
 
   def delete(arn: Arn): Action[AnyContent] = Action.async {
     deleteAgentRecords(arn).map { _ =>
@@ -164,8 +164,8 @@ class MappingController @Inject()(
         detailRecords  <- detailsRepository.removeMappingDetailsForAgent(arn)
       } yield {
         Ok(
-          Json.toJson[TerminationResponse](
-            TerminationResponse(Seq(DeletionCount(appConfig.appName, "all-regimes", mappingRecords + detailRecords)))))
+          Json.toJson[TerminationResponse](TerminationResponse(
+            Seq(DeletionCount(appConfig.appName, "all-regimes", mappingRecords.toInt + detailRecords)))))
       }).recover {
         case e =>
           logger.warn(s"Something has gone for $arn due to: ${e.getMessage}")
@@ -180,8 +180,8 @@ class MappingController @Inject()(
     }
 
   def deletePreSubscriptionMapping(utr: Utr): Action[AnyContent] = basicAuth { request =>
-    Future
-      .sequence(repositories.map(_.delete(utr)))
+    repositories
+      .deleteDataForUtr(utr)
       .map { _ =>
         NoContent
       }
