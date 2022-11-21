@@ -22,6 +22,12 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class MappingDetailsControllerISpec extends ServerBaseISpec with AuthStubs with SubscriptionStub
   with DefaultPlayMongoRepositorySupport[MappingDetailsRepositoryRecord] {
 
+  override def beforeEach(): Unit = {
+    super.beforeEach()
+    commonStubs()
+    ()
+  }
+
   override val patience: PatienceConfig = patienceConfig
 
   val arn: Arn = Arn("TARN0000001")

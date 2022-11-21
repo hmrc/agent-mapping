@@ -1,8 +1,9 @@
 package uk.gov.hmrc.agentmapping.repository
 
+import com.kenshoo.play.metrics.PlayModule
 import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.result.DeleteResult
-import org.scalatest.OptionValues
+import org.scalatest.{BeforeAndAfterAll, OptionValues}
 import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
@@ -10,6 +11,7 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentmapping.model._
+import uk.gov.hmrc.agentmapping.support.MetricTestSupport
 import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
@@ -18,13 +20,19 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.ClassTag
 
 class IRSAAGENTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, IRSAAGENTMappingRepository] with
-  DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+  DefaultPlayMongoRepositorySupport[AgentReferenceMapping] with BeforeAndAfterAll {
+  override def beforeAll: Unit = {
+    super.beforeAll()
+    givenCleanMetricRegistry()
+    ()
+  }
   override lazy val repository = new IRSAAGENTMappingRepository(mongoComponent)
 }
 
 class NewAgentCodeMappingRepositoryISpec
     extends BaseRepositoryISpec[AgentReferenceMapping, NewAgentCodeMappingRepository] with
       DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+
   override lazy val repository = new NewAgentCodeMappingRepository(mongoComponent)
 }
 
@@ -66,13 +74,19 @@ DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
 }
 
 abstract class BaseRepositoryISpec[
-  T <: ArnToIdentifierMapping, R <: MappingRepository with RepositoryFunctions[T]: ClassTag]
-  extends AnyWordSpecLike with Matchers with OptionValues with ScalaFutures with IntegrationPatience with GuiceOneAppPerSuite {
+  T <: ArnToIdentifierMapping, R <: MappingRepository: ClassTag]
+  extends AnyWordSpecLike with Matchers with OptionValues with ScalaFutures with IntegrationPatience with GuiceOneAppPerSuite
+  with MetricTestSupport {
+
+  def repository: MappingRepository
 
   override implicit lazy val app: Application = appBuilder.build()
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
-      .configure(Map("migrate-repositories" -> "false","termination.stride.enrolment" -> "caat"))
+      .configure(Map(
+        "metrics.enabled" -> false,
+        "migrate-repositories" -> "false","termination.stride.enrolment" -> "caat",
+      )).disable[PlayModule]
 
 
   val arn1 = Arn("ARN00001")
@@ -84,9 +98,8 @@ abstract class BaseRepositoryISpec[
   val reference1 = "Ref0001"
   val reference2 = "Ref0002"
 
-  def repository: MappingRepository with RepositoryFunctions[T]
-
   private val repoName = repository.getClass.getSimpleName
+
 
   s"$repoName" should {
     behave like checkMapping(arn1, Seq(reference1, reference2))
@@ -152,7 +165,7 @@ abstract class BaseRepositoryISpec[
       val mappings: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
       mappings.size shouldBe 2
 
-      val result: DeleteResult = repository.delete(arn1).futureValue
+      val result: DeleteResult = repository.deleteByArn(arn1).futureValue
       result.getDeletedCount shouldBe 1L
 
       val mappingsAfterDelete: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
@@ -163,7 +176,7 @@ abstract class BaseRepositoryISpec[
       val mappings: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
       mappings.size shouldBe 0
 
-      val result: DeleteResult = repository.delete(arn1).futureValue
+      val result: DeleteResult = repository.deleteByArn(arn1).futureValue
       result.getDeletedCount shouldBe 0L
     }
 
@@ -190,7 +203,7 @@ abstract class BaseRepositoryISpec[
       val mappings: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
       mappings.size shouldBe 2
 
-      val result: DeleteResult = repository.delete(utr1).futureValue
+      val result: DeleteResult = repository.deleteByUtr(utr1).futureValue
       result.getDeletedCount shouldBe 1L
 
       val mappingsAfterDelete: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
@@ -201,7 +214,7 @@ abstract class BaseRepositoryISpec[
       val mappings: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
       mappings.size shouldBe 0
 
-      val result: DeleteResult = repository.delete(utr1).futureValue
+      val result: DeleteResult = repository.deleteByUtr(utr1).futureValue
       result.getDeletedCount shouldBe 0L
     }
 

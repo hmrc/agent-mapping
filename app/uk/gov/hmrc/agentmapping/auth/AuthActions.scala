@@ -69,7 +69,7 @@ class AuthActions @Inject()(val authConnector: AuthConnector, cc: ControllerComp
             case _ => Future.successful(Forbidden)
           }
         case _ =>
-          logger.warn(s"error - credentials")
+          logger.warn(s"error - missing credentials")
           Future.successful(Forbidden)
       }
       .recover {

@@ -2,6 +2,7 @@ package uk.gov.hmrc.agentmapping.support
 
 
 import com.google.inject.AbstractModule
+import com.kenshoo.play.metrics.PlayModule
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.{MatchResult, Matcher}
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
@@ -15,6 +16,7 @@ abstract class ServerBaseISpec extends BaseISpec with GuiceOneServerPerSuite wit
 
   override protected def appBuilder: GuiceApplicationBuilder = {
     new GuiceApplicationBuilder()
+      .disable[PlayModule]
       .configure(
         Map(
           "microservice.services.auth.port" -> wireMockPort,

@@ -149,7 +149,7 @@ class MappingController @Inject()(
   }
 
   private def deleteAgentRecords(arn: Arn) =
-    Future.sequence(repositories.map(_.delete(arn).map(_.getDeletedCount)))
+    repositories.deleteDataForArn(arn)
 
   def delete(arn: Arn): Action[AnyContent] = Action.async {
     deleteAgentRecords(arn).map { _ =>
@@ -180,8 +180,8 @@ class MappingController @Inject()(
     }
 
   def deletePreSubscriptionMapping(utr: Utr): Action[AnyContent] = basicAuth { request =>
-    Future
-      .sequence(repositories.map(_.delete(utr)))
+    repositories
+      .deleteDataForUtr(utr)
       .map { _ =>
         NoContent
       }
@@ -197,8 +197,6 @@ class MappingController @Inject()(
     ec: ExecutionContext,
     request: Request[AnyContent],
     providerId: String): Future[Result] = {
-
-    println(s"REQUEST >>>>>>>>>>>$businessId")
 
     val mappingResults: Set[Future[Boolean]] = identifiers
       .map(identifier => createMappingInRepository(businessId, identifier, providerId))
