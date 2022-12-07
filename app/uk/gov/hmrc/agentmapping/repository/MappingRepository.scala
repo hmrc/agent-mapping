@@ -38,7 +38,7 @@ abstract class MappingRepository(collectionName: String, identifierKey: String =
   implicit ec: ExecutionContext)
     extends PlayMongoRepository[AgentReferenceMapping](
       mongoComponent = mongo,
-      collectionName = collectionName,
+      collectionName = s"agent-mapping-${collectionName.toLowerCase}",
       domainFormat = AgentReferenceMapping.formats,
       indexes = Seq(
         IndexModel(
