@@ -6,7 +6,7 @@ import uk.gov.hmrc.agentmapping.model.{AuthProviderId, GGTag, MappingDetails, Ma
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
-
+import java.time.temporal.ChronoUnit.MILLIS
 import java.time.{Instant, LocalDateTime, ZoneOffset}
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -18,7 +18,7 @@ class MappingDetailsRepositoryISpec extends AnyWordSpecLike with Matchers
   private val arn = Arn("TARN0000001")
   private val authProviderId = AuthProviderId("cred-123")
   private val ggTag = GGTag("1234")
-  private val localDateTime: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime
+  private val localDateTime: LocalDateTime = Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime.truncatedTo(MILLIS)
 
   private val mappingDisplayDetails = MappingDetails(authProviderId, ggTag, 10, localDateTime)
   private val record = MappingDetailsRepositoryRecord(arn, Seq(mappingDisplayDetails))

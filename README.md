@@ -1,7 +1,6 @@
 # agent-mapping
 
-[![Build Status](https://travis-ci.org/hmrc/agent-mapping.svg)](https://travis-ci.org/hmrc/agent-mapping) [ ![Download](https://api.bintray.com/packages/hmrc/releases/agent-mapping/images/download.svg) ](https://bintray.com/hmrc/releases/agent-mapping/_latestVersion)
-
+![](https://img.shields.io/github/v/release/hmrc/agent-mapping)
 
 ## What is agent-mapping and why is it needed?
 
