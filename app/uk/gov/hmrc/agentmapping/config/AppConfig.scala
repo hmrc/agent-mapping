@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 HM Revenue & Customs
+ * Copyright 2023 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,16 +25,16 @@ class AppConfig @Inject()(servicesConfig: ServicesConfig) {
 
   val appName = "agent-mapping"
 
-  def getConf(key: String) = servicesConfig.getString(key)
+  def getConf(key: String): String = servicesConfig.getString(key)
 
-  val clientCountMaxResults = servicesConfig.getInt("clientCount.maxRecords")
-  val clientCountBatchSize = servicesConfig.getInt("clientCount.batchSize")
+  val clientCountMaxResults: Int = servicesConfig.getInt("clientCount.maxRecords")
+  val clientCountBatchSize: Int = servicesConfig.getInt("clientCount.batchSize")
 
-  val authBaseUrl = servicesConfig.baseUrl("auth")
+  val authBaseUrl: String = servicesConfig.baseUrl("auth")
 
-  val enrolmentStoreProxyBaseUrl = servicesConfig.baseUrl("enrolment-store-proxy")
+  val enrolmentStoreProxyBaseUrl: String = servicesConfig.baseUrl("enrolment-store-proxy")
 
-  val agentSubscriptionBaseUrl = servicesConfig.baseUrl("agent-subscription")
+  val agentSubscriptionBaseUrl: String = servicesConfig.baseUrl("agent-subscription")
 
   val terminationStrideRole: String = servicesConfig.getString("termination.stride.enrolment")
 
