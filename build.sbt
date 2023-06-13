@@ -1,4 +1,3 @@
-import uk.gov.hmrc.sbtdistributables.SbtDistributablesPlugin._
 
 lazy val scoverageSettings = {
   import scoverage.ScoverageKeys
@@ -13,13 +12,11 @@ lazy val scoverageSettings = {
   )
 }
 
-
-val silencerVersion = "1.7.8"
-
 lazy val root = (project in file("."))
   .settings(
     name := "agent-mapping",
     organization := "uk.gov.hmrc",
+    majorVersion := 1,
     scalaVersion := "2.12.15",
     scalacOptions ++= Seq(
       "-Xfatal-warnings",
@@ -30,20 +27,18 @@ lazy val root = (project in file("."))
       "-deprecation",
       "-feature",
       "-unchecked",
-      "-language:implicitConversions",
-      "-P:silencer:pathFilters=views;routes"),
+      "-Wconf:src=target/.*:s", // silence warnings from compiled files
+      "-Wconf:src=routes/.*:s", // silence warnings from routes files
+      "-Wconf:src=*html:w", // silence html warnings as they are wrong
+      "-language:implicitConversions"
+    ),
     PlayKeys.playDefaultPort := 9439,
     resolvers := Seq(
-      Resolver.typesafeRepo("releases")
+      Resolver.typesafeRepo("releases"),
+      "HMRC-open-artefacts-maven" at "https://open.artefacts.tax.service.gov.uk/maven2",
+      Resolver.url("HMRC-open-artefacts-ivy", url("https://open.artefacts.tax.service.gov.uk/ivy2"))(Resolver.ivyStylePatterns)
     ),
-    resolvers += "HMRC-open-artefacts-maven" at "https://open.artefacts.tax.service.gov.uk/maven2",
-    resolvers += Resolver.url("HMRC-open-artefacts-ivy", url("https://open.artefacts.tax.service.gov.uk/ivy2"))(Resolver.ivyStylePatterns),
-    resolvers += "HMRC-local-artefacts-maven" at "https://artefacts.tax.service.gov.uk/artifactory/hmrc-releases-local",
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test,
-    libraryDependencies ++= Seq(
-      compilerPlugin("com.github.ghik" % "silencer-plugin" % silencerVersion cross CrossVersion.full),
-      "com.github.ghik" % "silencer-lib" % silencerVersion % Provided cross CrossVersion.full
-    ),
     scoverageSettings,
     Compile / unmanagedResourceDirectories += baseDirectory.value / "resources",
     routesImport ++= Seq("uk.gov.hmrc.agentmapping.controller.UrlBinders._"),
@@ -52,7 +47,6 @@ lazy val root = (project in file("."))
   )
   .configs(IntegrationTest)
   .settings(
-    majorVersion := 0,
     IntegrationTest / Keys.fork := false,
     Defaults.itSettings,
     IntegrationTest / unmanagedSourceDirectories += baseDirectory(_ / "it").value,
