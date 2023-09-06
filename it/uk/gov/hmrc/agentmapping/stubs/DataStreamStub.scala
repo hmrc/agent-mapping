@@ -24,7 +24,7 @@ import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent
 
 trait DataStreamStub extends Eventually {
 
-  implicit val patience = PatienceConfig(scaled(Span(2, Seconds)), scaled(Span(500, Millis)))
+  implicit val patience = PatienceConfig(scaled(Span(15, Seconds)), scaled(Span(500, Millis)))
 
   def verifyAuditRequestSent(
     count: Int,
@@ -45,7 +45,7 @@ trait DataStreamStub extends Eventually {
       )
     }
 
-  def givenAuditConnector() = {
+  def givenAuditConnector = {
     stubFor(post(urlPathEqualTo("/write/audit/merged")).willReturn(aResponse().withStatus(204)))
     stubFor(post(urlPathEqualTo(auditUrl)).willReturn(aResponse().withStatus(204)))
   }

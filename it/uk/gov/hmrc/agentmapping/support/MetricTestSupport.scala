@@ -6,7 +6,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.Suite
 import play.api.Application
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 trait MetricTestSupport {
   self: Suite with Matchers =>

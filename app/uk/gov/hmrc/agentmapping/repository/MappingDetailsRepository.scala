@@ -28,7 +28,6 @@ import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
 import javax.inject.{Inject, Singleton}
-import scala.collection.Seq
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
@@ -37,22 +36,24 @@ class MappingDetailsRepository @Inject()(mongo: MongoComponent)(implicit ec: Exe
       mongoComponent = mongo,
       collectionName = "mapping-details",
       domainFormat = MappingDetailsRepositoryRecord.mappingDisplayRepositoryFormat,
-      indexes = Seq(
+      indexes = List(
         IndexModel(ascending("arn"), IndexOptions().name("arn").unique(true)),
         IndexModel(
           ascending("mappingDetails.authProviderId"),
           IndexOptions()
             .name("authProviderIdSparse")
             .sparse(true)
-            .unique(true))
+        )
       ),
       replaceIndexes = true,
-      extraCodecs = Seq(
+      extraCodecs = List(
         Codecs.playFormatCodec(MappingDetails.mongoDisplayDetailsFormat),
         Codecs.playFormatCodec(Format(Arn.arnReads, Arn.arnWrites)),
       )
     )
     with Logging {
+
+  override lazy val requiresTtlIndex = false //keep data to show the user when they next visit.
 
   def create(mappingDisplayRepositoryRecord: MappingDetailsRepositoryRecord): Future[Unit] =
     collection

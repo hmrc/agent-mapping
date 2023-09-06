@@ -65,14 +65,14 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
   def callGet(path: String): WSResponse = {
     wsClient.url(s"$url$path")
       .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
-      .get
+      .get()
       .futureValue
   }
 
   def callDelete(path: String): WSResponse = {
     wsClient.url(s"$url$path")
       .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
-      .delete
+      .delete()
       .futureValue
   }
 
@@ -589,7 +589,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
 
       val response = wsClient.url(s"$url${terminateAgentsMapping(registeredArn)}")
         .addHttpHeaders(HeaderNames.authorisation -> s"Basic ${basicAuth("username:password")}")
-        .delete
+        .delete()
         .futureValue
 
       response.status shouldBe 200
@@ -703,25 +703,25 @@ sealed trait MappingControllerISpecSetup
     }
   }
 
-      def cleanCollections() = {
-        Await.result(mongoDatabase.drop.toFuture(), 20.seconds)
-        Await.result(Future.sequence(repositories.map(coll => coll.ensureIndexes)), 20.seconds)
+      def cleanCollections = {
+        Await.result(mongoDatabase.drop().toFuture(), 20.seconds)
+        Await.result(Future.sequence(repositories.map(coll => coll.ensureIndexes())), 20.seconds)
       }
 
       override def commonStubs(): Unit = {
-        givenAuditConnector()
+        givenAuditConnector
         ()
       }
 
   override def beforeEach() = {
     super.beforeEach()
     commonStubs()
-    cleanCollections()
+    cleanCollections
     ()
   }
 
       override def afterAll() = {
-        cleanCollections()
+        cleanCollections
         super.afterAll()
         ()
       }

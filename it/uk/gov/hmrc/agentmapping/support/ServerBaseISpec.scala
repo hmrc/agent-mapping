@@ -38,13 +38,12 @@ abstract class ServerBaseISpec extends BaseISpec with GuiceOneServerPerSuite wit
   def matchRecordIgnoringDateTime(
                                    mappingDisplayRecord: MappingDetailsRepositoryRecord): Matcher[MappingDetailsRepositoryRecord] =
     new Matcher[MappingDetailsRepositoryRecord] {
-      override def apply(left: MappingDetailsRepositoryRecord): MatchResult = left match {
-        case record
-          if mappingDisplayRecord.arn == record.arn &&
-            mappingDisplayRecord.mappingDetails.map(m => (m.ggTag, m.count)) == record.mappingDetails
-              .map(m => (m.ggTag, m.count)) =>
-          MatchResult(matches = true, "", "")
-      }
+      override def apply(left: MappingDetailsRepositoryRecord): MatchResult =
+          if(mappingDisplayRecord.arn == left.arn &&
+            mappingDisplayRecord.mappingDetails.map(m => (m.ggTag, m.count)) == left.mappingDetails
+              .map(m => (m.ggTag, m.count)))
+          MatchResult(matches = true, "", "") else throw new RuntimeException("matchRecord error")
+
     }
 
 }

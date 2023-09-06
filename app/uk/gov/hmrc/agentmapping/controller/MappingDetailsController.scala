@@ -78,10 +78,8 @@ class MappingDetailsController @Inject()(
           val record = MappingDetailsRepositoryRecord(arn, userMappings2MappingDetails(userMappings))
           repository.create(record).map(_ => Created)
 
-        case Some(userMappings) if userMappings.isEmpty =>
-          Future successful Ok("No user mappings found")
-
-        case None => Future successful NotFound(s"no user mappings found for this auth provider id: $providerId")
+        case Some(_) => Future successful Ok("No user mappings found")
+        case None    => Future successful NotFound(s"no user mappings found for this auth provider id: $providerId")
       }
     }
 

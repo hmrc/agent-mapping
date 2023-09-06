@@ -13,7 +13,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class MappingDetailsRepositoryISpec extends AnyWordSpecLike with Matchers
    with DefaultPlayMongoRepositorySupport[MappingDetailsRepositoryRecord] {
 
-  val mappingDetailsRepository: MappingDetailsRepository = repository.asInstanceOf[MappingDetailsRepository]
+  lazy val mappingDetailsRepository: MappingDetailsRepository = repository.asInstanceOf[MappingDetailsRepository]
 
   private val arn = Arn("TARN0000001")
   private val authProviderId = AuthProviderId("cred-123")
@@ -23,7 +23,7 @@ class MappingDetailsRepositoryISpec extends AnyWordSpecLike with Matchers
   private val mappingDisplayDetails = MappingDetails(authProviderId, ggTag, 10, localDateTime)
   private val record = MappingDetailsRepositoryRecord(arn, Seq(mappingDisplayDetails))
 
-  override def repository: PlayMongoRepository[MappingDetailsRepositoryRecord] = new MappingDetailsRepository(mongoComponent)
+  override val repository: PlayMongoRepository[MappingDetailsRepositoryRecord] = new MappingDetailsRepository(mongoComponent)
 
     "create and findByArn" should {
       "create a record into the database and find it" in {

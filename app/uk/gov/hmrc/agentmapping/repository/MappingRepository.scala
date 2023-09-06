@@ -31,7 +31,6 @@ import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
 import java.time.{Instant, LocalDateTime, ZoneOffset}
 import java.util.concurrent.TimeUnit
-import scala.collection.Seq
 import scala.concurrent.{ExecutionContext, Future}
 
 abstract class MappingRepository(collectionName: String, identifierKey: String = "identifier", mongo: MongoComponent)(
@@ -40,7 +39,7 @@ abstract class MappingRepository(collectionName: String, identifierKey: String =
       mongoComponent = mongo,
       collectionName = s"agent-mapping-${collectionName.toLowerCase}",
       domainFormat = AgentReferenceMapping.formats,
-      indexes = Seq(
+      indexes = List(
         IndexModel(
           ascending("arn", "identifier"),
           IndexOptions()
@@ -70,10 +69,12 @@ abstract class MappingRepository(collectionName: String, identifierKey: String =
             .expireAfter(86400L, TimeUnit.SECONDS)),
       ),
       replaceIndexes = true,
-      extraCodecs = Seq(
+      extraCodecs = List(
         Codecs.playFormatCodec(Format(Arn.arnReads, Arn.arnWrites)),
         Codecs.playFormatCodec(Format(Utr.utrReads, Utr.utrWrites)))
     ) {
+
+  override lazy val requiresTtlIndex = false // keep data
 
   def findBy(arn: Arn): Future[Seq[AgentReferenceMapping]] =
     collection.find(equal("arn", arn.value)).toFuture()

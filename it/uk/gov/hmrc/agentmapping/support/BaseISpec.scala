@@ -36,7 +36,7 @@ abstract class BaseISpec extends AnyWordSpecLike with  Matchers with OptionValue
 
   override def commonStubs(): Unit = {
     givenCleanMetricRegistry()
-    givenAuditConnector()
+    givenAuditConnector
     ()
   }
 

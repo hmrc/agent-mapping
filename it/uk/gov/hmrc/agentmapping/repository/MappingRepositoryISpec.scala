@@ -21,7 +21,7 @@ import scala.reflect.ClassTag
 
 class IRSAAGENTMappingRepositoryISpec extends BaseRepositoryISpec[AgentReferenceMapping, IRSAAGENTMappingRepository] with
   DefaultPlayMongoRepositorySupport[AgentReferenceMapping] with BeforeAndAfterAll {
-  override def beforeAll: Unit = {
+  override def beforeAll(): Unit = {
     super.beforeAll()
     givenCleanMetricRegistry()
     ()

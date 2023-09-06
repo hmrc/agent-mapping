@@ -57,7 +57,7 @@
 
     <logger name="akka" level="ERROR"/>
 
-    <logger name="reactivemongo" level="ERROR"/>
+    <logger name="uk.gov.hmrc.mongo" level="WARN"/>
 
     <logger name="org.asynchttpclient" level="ERROR"/>
 
