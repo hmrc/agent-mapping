@@ -5,7 +5,6 @@ lazy val scoverageSettings = {
     // Semicolon-separated list of regexs matching classes to exclude
     ScoverageKeys.coverageExcludedPackages := """uk\.gov\.hmrc\.BuildInfo;.*\.Routes;.*\.RoutesPrefix;.*Filters?;MicroserviceAuditConnector;Module;GraphiteStartUp;.*\.Reverse[^.]*""",
     ScoverageKeys.coverageMinimumStmtTotal := 80.00,
-    //ScoverageKeys.coverageMinimumStmtPerFile := 80.00,
     ScoverageKeys.coverageFailOnMinimum := true,
     ScoverageKeys.coverageHighlighting := true,
     Test / parallelExecution := false
@@ -17,11 +16,10 @@ lazy val root = (project in file("."))
     name := "agent-mapping",
     organization := "uk.gov.hmrc",
     majorVersion := 1,
-    scalaVersion := "2.12.15",
+    scalaVersion := "2.13.10",
     scalacOptions ++= Seq(
       "-Xfatal-warnings",
       "-Xlint:-missing-interpolator,_",
-      "-Yno-adapted-args",
       "-Ywarn-value-discard",
       "-Ywarn-dead-code",
       "-deprecation",
@@ -43,7 +41,9 @@ lazy val root = (project in file("."))
     Compile / unmanagedResourceDirectories += baseDirectory.value / "resources",
     routesImport ++= Seq("uk.gov.hmrc.agentmapping.controller.UrlBinders._"),
     Compile / scalafmtOnCompile := true,
-    Test / scalafmtOnCompile := true
+    Test / scalafmtOnCompile := true,
+    //fix for scoverage compile errors for scala 2.13.10
+    libraryDependencySchemes ++= Seq("org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always),
   )
   .configs(IntegrationTest)
   .settings(
@@ -54,5 +54,3 @@ lazy val root = (project in file("."))
     IntegrationTest / scalafmtOnCompile := true
   )
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
-
-inConfig(IntegrationTest)(scalafmtCoreSettings)

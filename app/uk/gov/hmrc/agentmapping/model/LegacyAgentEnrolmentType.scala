@@ -18,10 +18,8 @@ package uk.gov.hmrc.agentmapping.model
 
 import play.api.libs.json.{Format, JsError, JsResult, JsString, JsSuccess, JsValue}
 
-/**
-  * A comprehensive list of all the old (pre-MTD) agent enrolment types
-  * IR-SA-AGENT is the only legacy code we actually use in authentication
-  * others are captured for future use.  One Mongo DB per instance of this type
+/** A comprehensive list of all the old (pre-MTD) agent enrolment types IR-SA-AGENT is the only legacy code we actually
+  * use in authentication others are captured for future use. One Mongo DB per instance of this type
   */
 sealed abstract class LegacyAgentEnrolmentType {
   def key: String = this match {

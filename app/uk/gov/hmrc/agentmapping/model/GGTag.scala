@@ -19,8 +19,8 @@ package uk.gov.hmrc.agentmapping.model
 import play.api.libs.json.Format
 import play.api.libs.functional.syntax._
 
-/**
-  * @param value Last 4 digits of a Government Gateway ID.
+/** @param value
+  *   Last 4 digits of a Government Gateway ID.
   */
 final case class GGTag(value: String)
 

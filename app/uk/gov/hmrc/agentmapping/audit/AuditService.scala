@@ -33,12 +33,14 @@ sealed abstract class AgentMappingEvent
 case object CreateMapping extends AgentMappingEvent
 
 @Singleton
-class AuditService @Inject()(val auditConnector: AuditConnector) {
+class AuditService @Inject() (val auditConnector: AuditConnector) {
 
-  def sendCreateMappingAuditEvent(arn: Arn, identifier: Identifier, authProviderId: String, duplicate: Boolean = false)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext,
-    request: Request[Any]): Unit = {
+  def sendCreateMappingAuditEvent(
+    arn: Arn,
+    identifier: Identifier,
+    authProviderId: String,
+    duplicate: Boolean = false
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext, request: Request[Any]): Unit = {
     auditEvent(
       CreateMapping,
       "create-mapping",
@@ -56,15 +58,14 @@ class AuditService @Inject()(val auditConnector: AuditConnector) {
   private[audit] def auditEvent(
     event: AgentMappingEvent,
     transactionName: String,
-    details: Seq[(String, String)] = Seq.empty)(
-    implicit hc: HeaderCarrier,
-    ec: ExecutionContext,
-    request: Request[Any]): Future[Unit] =
+    details: Seq[(String, String)] = Seq.empty
+  )(implicit hc: HeaderCarrier, ec: ExecutionContext, request: Request[Any]): Future[Unit] =
     send(createEvent(event, transactionName, details: _*))
 
-  private def createEvent(event: AgentMappingEvent, transactionName: String, details: (String, String)*)(
-    implicit hc: HeaderCarrier,
-    request: Request[Any]): DataEvent =
+  private def createEvent(event: AgentMappingEvent, transactionName: String, details: (String, String)*)(implicit
+    hc: HeaderCarrier,
+    request: Request[Any]
+  ): DataEvent =
     DataEvent(
       auditSource = "agent-mapping",
       auditType = event.toString,

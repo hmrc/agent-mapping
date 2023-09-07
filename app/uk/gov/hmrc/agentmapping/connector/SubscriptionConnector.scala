@@ -29,9 +29,9 @@ import uk.gov.hmrc.http.HttpReads.Implicits._
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class SubscriptionConnector @Inject()(appConfig: AppConfig, http: HttpClient, metrics: Metrics)(
-  implicit ec: ExecutionContext)
-    extends HttpAPIMonitor {
+class SubscriptionConnector @Inject() (appConfig: AppConfig, http: HttpClient, metrics: Metrics)(implicit
+  ec: ExecutionContext
+) extends HttpAPIMonitor {
 
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
@@ -42,8 +42,7 @@ class SubscriptionConnector @Inject()(appConfig: AppConfig, http: HttpClient, me
     monitor("ConsumedAPI-Agent-Subscription-getJourneyByPrimaryId-GET") {
       http
         .GET[HttpResponse](url.toString)
-        .map(response => {
-
+        .map { response =>
           response.status match {
             case 200 =>
               val userMappings: JsLookupResult = Json.parse(response.body) \ "userMappings"
@@ -51,7 +50,7 @@ class SubscriptionConnector @Inject()(appConfig: AppConfig, http: HttpClient, me
 
             case 204 => None
           }
-        })
+        }
     }
   }
 }

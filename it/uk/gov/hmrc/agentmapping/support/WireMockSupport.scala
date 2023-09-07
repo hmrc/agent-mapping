@@ -66,24 +66,21 @@ object Port {
     range(rnd.nextInt(range.length)) match {
       case 8080 => randomAvailable
       case 8090 => randomAvailable
-      case p: Int => {
+      case p: Int =>
         available(p) match {
-          case false => {
+          case false =>
             Logger.of("WireMockSupport").debug(s"Port $p is in use, trying another")
             randomAvailable
-          }
-          case true => {
+          case true =>
             Logger.of("WireMockSupport").debug("Taking port : " + p)
             usedPorts :+ p
             p
-          }
         }
-      }
     }
 
   private def available(p: Int): Boolean = {
     var socket: ServerSocket = null
-    try {
+    try
       if (!usedPorts.contains(p)) {
         socket = new ServerSocket(p)
         socket.setReuseAddress(true)
@@ -91,10 +88,9 @@ object Port {
       } else {
         false
       }
-    } catch {
+    catch {
       case t: Throwable => false
-    } finally {
+    } finally
       if (socket != null) socket.close()
-    }
   }
 }

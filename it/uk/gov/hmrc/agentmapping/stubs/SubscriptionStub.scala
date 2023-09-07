@@ -12,23 +12,33 @@ trait SubscriptionStub {
   def givenUserMappingsNotFoundForAuthProviderId(authProviderId: AuthProviderId): StubMapping =
     stubFor(
       get(urlPathEqualTo(s"/agent-subscription/subscription/journey/id/${encodePathSegment(authProviderId.id)}"))
-        .willReturn(aResponse()
-          .withStatus(Status.NO_CONTENT)))
+        .willReturn(
+          aResponse()
+            .withStatus(Status.NO_CONTENT)
+        )
+    )
 
-  def givenUserMappingsExistsForAuthProviderId(authProviderId: AuthProviderId, userMappings: Seq[UserMapping]): StubMapping =
+  def givenUserMappingsExistsForAuthProviderId(
+    authProviderId: AuthProviderId,
+    userMappings: Seq[UserMapping]
+  ): StubMapping =
     stubFor(
       get(urlPathEqualTo(s"/agent-subscription/subscription/journey/id/${encodePathSegment(authProviderId.id)}"))
-        .willReturn(aResponse()
-          .withStatus(Status.OK)
-          .withBody(s"""{"userMappings": ${Json.toJson(userMappings).toString()}}"""))
+        .willReturn(
+          aResponse()
+            .withStatus(Status.OK)
+            .withBody(s"""{"userMappings": ${Json.toJson(userMappings).toString()}}""")
+        )
     )
 
   def givenNoMappingsExistForAuthProviderId(authProviderId: AuthProviderId): StubMapping =
     stubFor(
       get(urlPathEqualTo(s"/agent-subscription/subscription/journey/id/${encodePathSegment(authProviderId.id)}"))
-        .willReturn(aResponse()
-          .withStatus(Status.OK)
-          .withBody(s"""{"userMappings": []}"""))
+        .willReturn(
+          aResponse()
+            .withStatus(Status.OK)
+            .withBody(s"""{"userMappings": []}""")
+        )
     )
 
 }

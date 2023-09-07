@@ -31,11 +31,12 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class MappingDetailsController @Inject()(
+class MappingDetailsController @Inject() (
   repository: MappingDetailsRepository,
   val authActions: AuthActions,
   cc: ControllerComponents,
-  subscriptionConnector: SubscriptionConnector)(implicit val ec: ExecutionContext)
+  subscriptionConnector: SubscriptionConnector
+)(implicit val ec: ExecutionContext)
     extends BackendController(cc)
     with Logging {
 
@@ -48,7 +49,8 @@ class MappingDetailsController @Inject()(
           mappingDetailsRequest.authProviderId,
           mappingDetailsRequest.ggTag,
           mappingDetailsRequest.count,
-          LocalDateTime.now())
+          LocalDateTime.now()
+        )
 
         repository.findByArn(arn).flatMap {
           case Some(record) =>
@@ -78,10 +80,8 @@ class MappingDetailsController @Inject()(
           val record = MappingDetailsRepositoryRecord(arn, userMappings2MappingDetails(userMappings))
           repository.create(record).map(_ => Created)
 
-        case Some(userMappings) if userMappings.isEmpty =>
-          Future successful Ok("No user mappings found")
-
-        case None => Future successful NotFound(s"no user mappings found for this auth provider id: $providerId")
+        case Some(_) => Future successful Ok("No user mappings found")
+        case None    => Future successful NotFound(s"no user mappings found for this auth provider id: $providerId")
       }
     }
 

@@ -31,16 +31,15 @@ import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 
 import java.time.{Instant, LocalDateTime, ZoneOffset}
 import java.util.concurrent.TimeUnit
-import scala.collection.Seq
 import scala.concurrent.{ExecutionContext, Future}
 
 abstract class MappingRepository(collectionName: String, identifierKey: String = "identifier", mongo: MongoComponent)(
-  implicit ec: ExecutionContext)
-    extends PlayMongoRepository[AgentReferenceMapping](
+  implicit ec: ExecutionContext
+) extends PlayMongoRepository[AgentReferenceMapping](
       mongoComponent = mongo,
       collectionName = s"agent-mapping-${collectionName.toLowerCase}",
       domainFormat = AgentReferenceMapping.formats,
-      indexes = Seq(
+      indexes = List(
         IndexModel(
           ascending("arn", "identifier"),
           IndexOptions()
@@ -58,22 +57,28 @@ abstract class MappingRepository(collectionName: String, identifierKey: String =
         IndexModel(
           ascending("arn"),
           IndexOptions()
-            .name("AgentReferenceNumber")),
+            .name("AgentReferenceNumber")
+        ),
         IndexModel(
           ascending("utr"),
           IndexOptions()
-            .name("Utr")),
+            .name("Utr")
+        ),
         IndexModel(
           ascending("preCreatedDate"),
           IndexOptions()
             .name("preCreatedDate")
-            .expireAfter(86400L, TimeUnit.SECONDS)),
+            .expireAfter(86400L, TimeUnit.SECONDS)
+        )
       ),
       replaceIndexes = true,
-      extraCodecs = Seq(
+      extraCodecs = List(
         Codecs.playFormatCodec(Format(Arn.arnReads, Arn.arnWrites)),
-        Codecs.playFormatCodec(Format(Utr.utrReads, Utr.utrWrites)))
+        Codecs.playFormatCodec(Format(Utr.utrReads, Utr.utrWrites))
+      )
     ) {
+
+  override lazy val requiresTtlIndex = false // keep data
 
   def findBy(arn: Arn): Future[Seq[AgentReferenceMapping]] =
     collection.find(equal("arn", arn.value)).toFuture()
@@ -87,8 +92,8 @@ abstract class MappingRepository(collectionName: String, identifierKey: String =
   def store(
     identifier: TaxIdentifier,
     identifierValue: String,
-    createdTime: Option[LocalDateTime] = Some(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime))
-    : Future[InsertOneResult] =
+    createdTime: Option[LocalDateTime] = Some(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime)
+  ): Future[InsertOneResult] =
     collection
       .insertOne(AgentReferenceMapping(identifier, identifierValue, createdTime))
       .toFuture()
@@ -98,7 +103,8 @@ abstract class MappingRepository(collectionName: String, identifierKey: String =
       .updateOne(
         equal("utr", utr.value),
         combine(set("arn", arn.value), unset("preCreatedDate"), unset("utr")),
-        UpdateOptions().upsert(false))
+        UpdateOptions().upsert(false)
+      )
       .toFuture()
 
   def deleteByArn(arn: Arn): Future[DeleteResult] =
