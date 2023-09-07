@@ -31,7 +31,7 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class MappingDetailsRepository @Inject()(mongo: MongoComponent)(implicit ec: ExecutionContext)
+class MappingDetailsRepository @Inject() (mongo: MongoComponent)(implicit ec: ExecutionContext)
     extends PlayMongoRepository[MappingDetailsRepositoryRecord](
       mongoComponent = mongo,
       collectionName = "mapping-details",
@@ -48,21 +48,20 @@ class MappingDetailsRepository @Inject()(mongo: MongoComponent)(implicit ec: Exe
       replaceIndexes = true,
       extraCodecs = List(
         Codecs.playFormatCodec(MappingDetails.mongoDisplayDetailsFormat),
-        Codecs.playFormatCodec(Format(Arn.arnReads, Arn.arnWrites)),
+        Codecs.playFormatCodec(Format(Arn.arnReads, Arn.arnWrites))
       )
     )
     with Logging {
 
-  override lazy val requiresTtlIndex = false //keep data to show the user when they next visit.
+  override lazy val requiresTtlIndex = false // keep data to show the user when they next visit.
 
   def create(mappingDisplayRepositoryRecord: MappingDetailsRepositoryRecord): Future[Unit] =
     collection
       .insertOne(mappingDisplayRepositoryRecord)
       .toFuture()
       .map(_ => ())
-      .recover {
-        case e: MongoWriteException =>
-          logger.warn(s"Error trying to insert a mapping details record ${e.getError}")
+      .recover { case e: MongoWriteException =>
+        logger.warn(s"Error trying to insert a mapping details record ${e.getError}")
       }
 
   def findByArn(arn: Arn): Future[Option[MappingDetailsRepositoryRecord]] =
@@ -76,7 +75,7 @@ class MappingDetailsRepository @Inject()(mongo: MongoComponent)(implicit ec: Exe
       .toFuture()
       .map {
         case result if result.getMatchedCount == 1L => ()
-        case e                                      => logger.error(s"Unknown error occurred when updating mapping details ${e.wasAcknowledged()}.")
+        case e => logger.error(s"Unknown error occurred when updating mapping details ${e.wasAcknowledged()}.")
       }
 
   def removeMappingDetailsForAgent(arn: Arn)(implicit ec: ExecutionContext): Future[Int] =

@@ -39,9 +39,9 @@ object Enrolment {
 case class EnrolmentResponse(enrolments: Seq[Enrolment])
 
 @Singleton
-class EnrolmentStoreProxyConnector @Inject()(appConfig: AppConfig, http: HttpClient, metrics: Metrics)(
-  implicit ec: ExecutionContext)
-    extends HttpAPIMonitor {
+class EnrolmentStoreProxyConnector @Inject() (appConfig: AppConfig, http: HttpClient, metrics: Metrics)(implicit
+  ec: ExecutionContext
+) extends HttpAPIMonitor {
 
   override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
@@ -59,19 +59,19 @@ class EnrolmentStoreProxyConnector @Inject()(appConfig: AppConfig, http: HttpCli
       irSaF <- getClientCount(userId, IR_SA, vatF)
     } yield irSaF
 
-  private def getClientCount(userId: String, service: String, cumulativeCount: Int = 0)(
-    implicit hc: HeaderCarrier): Future[Int] = {
+  private def getClientCount(userId: String, service: String, cumulativeCount: Int = 0)(implicit
+    hc: HeaderCarrier
+  ): Future[Int] = {
 
     @SuppressWarnings(Array("org.wartremover.warts.Recursion"))
     def doGet(cumCount: Int = cumulativeCount, startRecord: Int = 1): Future[Int] = cumCount match {
       case c if c >= maxClientRelationships => maxClientRelationships
       case _ =>
-        getDelegatedEnrolmentsCountFor(userId, startRecord, service).flatMap {
-          case (prefilteredCount, filteredCount) =>
-            if (prefilteredCount < batchSize) {
-              filteredCount + cumCount
-            } else
-              doGet(filteredCount + cumCount, startRecord + batchSize)
+        getDelegatedEnrolmentsCountFor(userId, startRecord, service).flatMap { case (prefilteredCount, filteredCount) =>
+          if (prefilteredCount < batchSize) {
+            filteredCount + cumCount
+          } else
+            doGet(filteredCount + cumCount, startRecord + batchSize)
         }
 
     }
@@ -79,9 +79,10 @@ class EnrolmentStoreProxyConnector @Inject()(appConfig: AppConfig, http: HttpCli
     doGet()
   }
 
-  //ES2 - delegated
-  private def getDelegatedEnrolmentsCountFor(userId: String, startRecord: Int, service: String)(
-    implicit hc: HeaderCarrier): Future[(Int, Int)] = {
+  // ES2 - delegated
+  private def getDelegatedEnrolmentsCountFor(userId: String, startRecord: Int, service: String)(implicit
+    hc: HeaderCarrier
+  ): Future[(Int, Int)] = {
 
     def url(userId: String, startRecord: Int, service: String): String =
       s"$espBaseUrl/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated&service=$service&start-record=$startRecord&max-records=$batchSize"
@@ -104,8 +105,11 @@ object EnrolmentStoreProxyConnector {
       Try(response.status match {
         case 200 => EnrolmentResponse((response.json \ "enrolments").as[Seq[Enrolment]])
         case 204 => EnrolmentResponse(Seq.empty)
-      }).getOrElse(throw new RuntimeException(
-        s"Error retrieving client list from $url: status: ${response.status}, body: ${response.body}"))
+      }).getOrElse(
+        throw new RuntimeException(
+          s"Error retrieving client list from $url: status: ${response.status}, body: ${response.body}"
+        )
+      )
   }
 
   implicit val writes: Writes[EnrolmentResponse] = Json.writes[EnrolmentResponse]

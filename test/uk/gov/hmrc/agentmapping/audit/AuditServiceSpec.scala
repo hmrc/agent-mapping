@@ -46,7 +46,8 @@ class AuditServiceSpec
       val hc = HeaderCarrier(
         authorization = Some(Authorization("dummy bearer token")),
         sessionId = Some(SessionId("dummy session id")),
-        requestId = Some(RequestId("dummy request id")))
+        requestId = Some(RequestId("dummy request id"))
+      )
 
       implicit val ec = ExecutionContext.Implicits.global
 
@@ -57,7 +58,8 @@ class AuditServiceSpec
           Seq(
             "extra1"               -> "first extra detail",
             "extra2"               -> "second extra detail",
-            "agentReferenceNumber" -> "GARN0000247")
+            "agentReferenceNumber" -> "GARN0000247"
+          )
         )(hc, ec, FakeRequest("GET", "/path"))
         .futureValue
 

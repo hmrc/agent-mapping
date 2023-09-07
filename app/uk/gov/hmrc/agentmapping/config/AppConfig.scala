@@ -21,7 +21,7 @@ import uk.gov.hmrc.agentmapping.model.BasicAuthentication
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 @Singleton
-class AppConfig @Inject()(servicesConfig: ServicesConfig) {
+class AppConfig @Inject() (servicesConfig: ServicesConfig) {
 
   val appName = "agent-mapping"
 

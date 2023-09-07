@@ -11,7 +11,11 @@ import uk.gov.hmrc.http.HttpClient
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport with GuiceOneAppPerSuite with EnrolmentStoreStubs{
+class EnrolmentStoreProxyConnectorISpec
+    extends BaseISpec
+    with WireMockSupport
+    with GuiceOneAppPerSuite
+    with EnrolmentStoreStubs {
 
   implicit val hc = HeaderCarrier()
 
@@ -20,7 +24,7 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
 
   override implicit lazy val app: Application = appBuilder.build()
 
-   val appConfig = app.injector.instanceOf[AppConfig]
+  val appConfig = app.injector.instanceOf[AppConfig]
 
   private lazy val connector: EnrolmentStoreProxyConnector =
     new EnrolmentStoreProxyConnector(appConfig, http, metrics)
@@ -31,28 +35,28 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
   private val HMCE_VATDEC_ORG = "HMCE-VATDEC-ORG"
   private val IR_SA = "IR-SA"
 
-  private def batchResponse(recordsToReturn: Int, allActive: Boolean = true) = {
-    if(allActive) EnrolmentResponse(List.fill(recordsToReturn)(Enrolment("Activated"))) else {
-      EnrolmentResponse(Enrolment("Not Activated") :: List.fill(recordsToReturn-1)(Enrolment("Activated")))
+  private def batchResponse(recordsToReturn: Int, allActive: Boolean = true) =
+    if (allActive) EnrolmentResponse(List.fill(recordsToReturn)(Enrolment("Activated")))
+    else {
+      EnrolmentResponse(Enrolment("Not Activated") :: List.fill(recordsToReturn - 1)(Enrolment("Activated")))
     }
-  }
 
- //private def batchResponse(recordsToReturn: Int, allActive: Boolean)
+  // private def batchResponse(recordsToReturn: Int, allActive: Boolean)
 
   "runEs2ForServices" should {
-    s"return $maxRecordsToDisplay if the total records from $HMCE_VATDEC_ORG is higher than $maxRecordsToDisplay" in  {
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(clientCountBatchSize), 200)
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8,  batchResponse(clientCountBatchSize), 200)
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 15,  batchResponse(clientCountBatchSize), 200)
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 22,  batchResponse(clientCountBatchSize), 200)
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 29,  batchResponse(clientCountBatchSize), 200)
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 36,  batchResponse(clientCountBatchSize), 200)
+    s"return $maxRecordsToDisplay if the total records from $HMCE_VATDEC_ORG is higher than $maxRecordsToDisplay" in {
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1, batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8, batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 15, batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 22, batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 29, batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 36, batchResponse(clientCountBatchSize), 200)
       connector.getClientCount("agent1").futureValue shouldBe 40
     }
 
-    s"return $maxRecordsToDisplay if the total records from $HMCE_VATDEC_ORG alone is lower than $maxRecordsToDisplay but not when combined with $IR_SA" in  {
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(clientCountBatchSize), 200)
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8,  batchResponse(clientCountBatchSize - 2), 200)
+    s"return $maxRecordsToDisplay if the total records from $HMCE_VATDEC_ORG alone is lower than $maxRecordsToDisplay but not when combined with $IR_SA" in {
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1, batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8, batchResponse(clientCountBatchSize - 2), 200)
       givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(clientCountBatchSize), 200)
       givenEs2ClientsFoundFor("agent1", IR_SA, 8, batchResponse(clientCountBatchSize), 200)
       givenEs2ClientsFoundFor("agent1", IR_SA, 15, batchResponse(clientCountBatchSize), 200)
@@ -64,37 +68,37 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
     }
 
     s"return $maxRecordsToDisplay if the total records return from each $HMCE_VATDEC_ORG and $IR_SA is exactly half of the $maxRecordsToDisplay" in {
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(clientCountBatchSize), 200)
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8,  batchResponse(clientCountBatchSize), 200)
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 15,  batchResponse(clientCountBatchSize - 1), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1, batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8, batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 15, batchResponse(clientCountBatchSize - 1), 200)
       givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(clientCountBatchSize), 200)
       givenEs2ClientsFoundFor("agent1", IR_SA, 8, batchResponse(clientCountBatchSize), 200)
-      givenEs2ClientsFoundFor("agent1", IR_SA, 15, batchResponse(clientCountBatchSize -1), 200)
+      givenEs2ClientsFoundFor("agent1", IR_SA, 15, batchResponse(clientCountBatchSize - 1), 200)
 
       connector.getClientCount("agent1").futureValue shouldBe 40
 
     }
 
-    s"return the actual number of records when the total from $HMCE_VATDEC_ORG is less than $maxRecordsToDisplay and there are no records from $IR_SA" in  {
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(clientCountBatchSize), 200)
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8,  batchResponse(clientCountBatchSize), 200)
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 15,  batchResponse(clientCountBatchSize - 1), 200)
+    s"return the actual number of records when the total from $HMCE_VATDEC_ORG is less than $maxRecordsToDisplay and there are no records from $IR_SA" in {
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1, batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8, batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 15, batchResponse(clientCountBatchSize - 1), 200)
       givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(0), 200)
 
       connector.getClientCount("agent1").futureValue shouldBe 20
     }
 
-    s"return the actual number of records when the total from $HMCE_VATDEC_ORG and $IR_SA is less than $maxRecordsToDisplay" in  {
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(clientCountBatchSize), 200)
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8,  batchResponse(clientCountBatchSize), 200)
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 15,  batchResponse(clientCountBatchSize - 1), 200)
+    s"return the actual number of records when the total from $HMCE_VATDEC_ORG and $IR_SA is less than $maxRecordsToDisplay" in {
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1, batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 8, batchResponse(clientCountBatchSize), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 15, batchResponse(clientCountBatchSize - 1), 200)
       givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(clientCountBatchSize - 2), 200)
 
       connector.getClientCount("agent1").futureValue shouldBe 25
     }
 
     s"return the actual number of records when there are only records from $IR_SA and is less than $maxRecordsToDisplay" in {
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(0), 200)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1, batchResponse(0), 200)
       givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(clientCountBatchSize - 2), 200)
 
       connector.getClientCount("agent1").futureValue shouldBe 5
@@ -110,14 +114,14 @@ class EnrolmentStoreProxyConnectorISpec  extends BaseISpec with WireMockSupport 
     }
 
     "return 0 if the call to ESP returns 204" in {
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(0), 204)
-      givenEs2ClientsFoundFor("agent1",IR_SA, 1, batchResponse(0), 204)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1, batchResponse(0), 204)
+      givenEs2ClientsFoundFor("agent1", IR_SA, 1, batchResponse(0), 204)
 
       connector.getClientCount("agent1").futureValue shouldBe 0
     }
 
     "throw an exception if the call to ESP does not work" in {
-      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1,  batchResponse(0), 502)
+      givenEs2ClientsFoundFor("agent1", HMCE_VATDEC_ORG, 1, batchResponse(0), 502)
 
       val exception = intercept[RuntimeException] {
         connector.getClientCount("agent1").futureValue

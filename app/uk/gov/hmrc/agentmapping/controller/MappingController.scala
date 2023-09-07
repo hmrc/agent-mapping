@@ -36,7 +36,7 @@ import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
 @Singleton
-class MappingController @Inject()(
+class MappingController @Inject() (
   appConfig: AppConfig,
   repositories: MappingRepositories,
   detailsRepository: MappingDetailsRepository,
@@ -44,7 +44,8 @@ class MappingController @Inject()(
   subscriptionConnector: SubscriptionConnector,
   espConnector: EnrolmentStoreProxyConnector,
   cc: ControllerComponents,
-  val authActions: AuthActions)(implicit val ec: ExecutionContext)
+  val authActions: AuthActions
+)(implicit val ec: ExecutionContext)
     extends BackendController(cc)
     with Logging {
 
@@ -66,14 +67,15 @@ class MappingController @Inject()(
       for {
         userMappings <- subscriptionConnector.getUserMappings(AuthProviderId(providerId))
         createMappingsResult <- userMappings match {
-                                 case Some(mappings) =>
-                                   val identifiers = createIdentifiersFromUserMappings(mappings)
-                                   createMapping(arn, identifiers)
-                                 case None =>
-                                   logger.error(
-                                     "no subscription journey record found when attempting to create mappings")
-                                   Future successful NoContent
-                               }
+                                  case Some(mappings) =>
+                                    val identifiers = createIdentifiersFromUserMappings(mappings)
+                                    createMapping(arn, identifiers)
+                                  case None =>
+                                    logger.error(
+                                      "no subscription journey record found when attempting to create mappings"
+                                    )
+                                    Future successful NoContent
+                                }
       } yield createMappingsResult
     }
 
@@ -84,14 +86,13 @@ class MappingController @Inject()(
         .map(clientCount => Ok(Json.obj("clientCount" -> clientCount)))
     }
 
-  /**
-    * Add mapping for the passed identifier against an ARN or UTR (businessId)
-    * The identifier key (enrolment type) determines which data store to use
-    * Returns true IF the mapping already exists, false otherwise
+  /** Add mapping for the passed identifier against an ARN or UTR (businessId) The identifier key (enrolment type)
+    * determines which data store to use Returns true IF the mapping already exists, false otherwise
     */
-  private def createMappingInRepository(businessId: TaxIdentifier, identifier: Identifier, ggCredId: String)(
-    implicit hc: HeaderCarrier,
-    request: Request[Any]): Future[Boolean] =
+  private def createMappingInRepository(businessId: TaxIdentifier, identifier: Identifier, ggCredId: String)(implicit
+    hc: HeaderCarrier,
+    request: Request[Any]
+  ): Future[Boolean] =
     repositories
       .get(identifier.enrolmentType)
       .store(businessId, identifier.value)
@@ -162,14 +163,15 @@ class MappingController @Inject()(
       (for {
         mappingRecords <- deleteAgentRecords(arn).map(_.sum)
         detailRecords  <- detailsRepository.removeMappingDetailsForAgent(arn)
-      } yield {
-        Ok(
-          Json.toJson[TerminationResponse](TerminationResponse(
-            Seq(DeletionCount(appConfig.appName, "all-regimes", mappingRecords.toInt + detailRecords)))))
-      }).recover {
-        case e =>
-          logger.warn(s"Something has gone for $arn due to: ${e.getMessage}")
-          InternalServerError
+      } yield Ok(
+        Json.toJson[TerminationResponse](
+          TerminationResponse(
+            Seq(DeletionCount(appConfig.appName, "all-regimes", mappingRecords.toInt + detailRecords))
+          )
+        )
+      )).recover { case e =>
+        logger.warn(s"Something has gone for $arn due to: ${e.getMessage}")
+        InternalServerError
       }
     }
   }
@@ -192,11 +194,12 @@ class MappingController @Inject()(
       repositories.updateUtrToArn(arn, utr).map(_ => Ok)
     }
 
-  private def createMapping(businessId: TaxIdentifier, identifiers: Set[Identifier])(
-    implicit hc: HeaderCarrier,
+  private def createMapping(businessId: TaxIdentifier, identifiers: Set[Identifier])(implicit
+    hc: HeaderCarrier,
     ec: ExecutionContext,
     request: Request[AnyContent],
-    providerId: String): Future[Result] = {
+    providerId: String
+  ): Future[Result] = {
 
     val mappingResults: Set[Future[Boolean]] = identifiers
       .map(identifier => createMappingInRepository(businessId, identifier, providerId))
@@ -224,5 +227,6 @@ class MappingController @Inject()(
 
   private def writeAgentReferenceMappingWith(identifierFieldName: String): Writes[AgentReferenceMapping] =
     Writes[AgentReferenceMapping](m =>
-      Json.obj("arn" -> JsString(m.businessId.value), identifierFieldName -> JsString(m.identifier)))
+      Json.obj("arn" -> JsString(m.businessId.value), identifierFieldName -> JsString(m.identifier))
+    )
 }

@@ -31,11 +31,12 @@ import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class MappingDetailsController @Inject()(
+class MappingDetailsController @Inject() (
   repository: MappingDetailsRepository,
   val authActions: AuthActions,
   cc: ControllerComponents,
-  subscriptionConnector: SubscriptionConnector)(implicit val ec: ExecutionContext)
+  subscriptionConnector: SubscriptionConnector
+)(implicit val ec: ExecutionContext)
     extends BackendController(cc)
     with Logging {
 
@@ -48,7 +49,8 @@ class MappingDetailsController @Inject()(
           mappingDetailsRequest.authProviderId,
           mappingDetailsRequest.ggTag,
           mappingDetailsRequest.count,
-          LocalDateTime.now())
+          LocalDateTime.now()
+        )
 
         repository.findByArn(arn).flatMap {
           case Some(record) =>

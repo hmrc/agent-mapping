@@ -24,13 +24,14 @@ import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent
 
 trait DataStreamStub extends Eventually {
 
-  implicit val patience = PatienceConfig(scaled(Span(15, Seconds)), scaled(Span(500, Millis)))
+  implicit val patience = PatienceConfig(scaled(Span(25, Seconds)), scaled(Span(500, Millis)))
 
   def verifyAuditRequestSent(
     count: Int,
     event: AgentMappingEvent,
     tags: Map[String, String] = Map.empty,
-    detail: Map[String, String] = Map.empty) =
+    detail: Map[String, String] = Map.empty
+  ) =
     eventually {
       verify(
         count,

@@ -24,7 +24,8 @@ final case class UserMapping(
   agentCode: Option[MappedAgentCode],
   legacyEnrolments: Seq[AgentEnrolment],
   count: Int = 0,
-  ggTag: String)
+  ggTag: String
+)
 
 object UserMapping {
   implicit val format: OFormat[UserMapping] = Json.format

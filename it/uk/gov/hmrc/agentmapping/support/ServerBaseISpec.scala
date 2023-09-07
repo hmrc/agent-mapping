@@ -1,6 +1,5 @@
 package uk.gov.hmrc.agentmapping.support
 
-
 import com.google.inject.AbstractModule
 import com.kenshoo.play.metrics.PlayModule
 import org.scalatest.concurrent.ScalaFutures
@@ -14,37 +13,40 @@ abstract class ServerBaseISpec extends BaseISpec with GuiceOneServerPerSuite wit
 
   override implicit lazy val app: Application = appBuilder.build()
 
-  override protected def appBuilder: GuiceApplicationBuilder = {
+  override protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .disable[PlayModule]
       .configure(
         Map(
-          "microservice.services.auth.port" -> wireMockPort,
+          "microservice.services.auth.port"               -> wireMockPort,
           "microservice.services.agent-subscription.port" -> wireMockPort,
           "microservice.services.agent-subscription.host" -> wireMockHost,
-          "auditing.consumer.baseUri.host" -> wireMockHost,
-          "auditing.consumer.baseUri.port" -> wireMockPort,
-          "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
-          "migrate-repositories" -> "false",
-          "termination.stride.enrolment" -> "caat"
-        ))
+          "auditing.consumer.baseUri.host"                -> wireMockHost,
+          "auditing.consumer.baseUri.port"                -> wireMockPort,
+          "application.router"                            -> "testOnlyDoNotUseInAppConf.Routes",
+          "migrate-repositories"                          -> "false",
+          "termination.stride.enrolment"                  -> "caat"
+        )
+      )
       .overrides(new TestGuiceModule)
-  }
 
   protected class TestGuiceModule extends AbstractModule {
     override def configure(): Unit = {}
   }
 
   def matchRecordIgnoringDateTime(
-                                   mappingDisplayRecord: MappingDetailsRepositoryRecord): Matcher[MappingDetailsRepositoryRecord] =
+    mappingDisplayRecord: MappingDetailsRepositoryRecord
+  ): Matcher[MappingDetailsRepositoryRecord] =
     new Matcher[MappingDetailsRepositoryRecord] {
       override def apply(left: MappingDetailsRepositoryRecord): MatchResult =
-          if(mappingDisplayRecord.arn == left.arn &&
-            mappingDisplayRecord.mappingDetails.map(m => (m.ggTag, m.count)) == left.mappingDetails
-              .map(m => (m.ggTag, m.count)))
-          MatchResult(matches = true, "", "") else throw new RuntimeException("matchRecord error")
+        if (
+          mappingDisplayRecord.arn == left.arn &&
+          mappingDisplayRecord.mappingDetails.map(m => (m.ggTag, m.count)) == left.mappingDetails
+            .map(m => (m.ggTag, m.count))
+        )
+          MatchResult(matches = true, "", "")
+        else throw new RuntimeException("matchRecord error")
 
     }
 
 }
-

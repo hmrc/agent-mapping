@@ -19,8 +19,8 @@ package uk.gov.hmrc.agentmapping.model
 import play.api.libs.json.Format
 import play.api.libs.functional.syntax._
 
-/**
-  * @param id An internal id associated with a Government Gateway account.
+/** @param id
+  *   An internal id associated with a Government Gateway account.
   */
 final case class AuthProviderId(id: String)
 
