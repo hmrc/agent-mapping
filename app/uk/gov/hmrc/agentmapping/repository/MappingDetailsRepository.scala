@@ -30,6 +30,7 @@ import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
+//DO NOT DELETE (even if this microservice gets decommissioned)
 @Singleton
 class MappingDetailsRepository @Inject() (mongo: MongoComponent)(implicit ec: ExecutionContext)
     extends PlayMongoRepository[MappingDetailsRepositoryRecord](

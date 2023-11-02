@@ -23,6 +23,7 @@ import uk.gov.hmrc.mongo.MongoComponent
 import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 
+//DO NOT DELETE (even if this microservice gets decommissioned)
 @Singleton
 class MappingRepositories @Inject() (
   agentCodeMappingRepository: NewAgentCodeMappingRepository,
@@ -50,7 +51,6 @@ class MappingRepositories @Inject() (
       IRAgentReferencePaye -> iRPAYEAGENTMappingRepository,
       SdltStorn            -> iRSDLTAGENTMappingRepository
     )
-
   def get(legacyAgentEnrolmentType: LegacyAgentEnrolmentType): MappingRepository =
     repositories(legacyAgentEnrolmentType)
 
