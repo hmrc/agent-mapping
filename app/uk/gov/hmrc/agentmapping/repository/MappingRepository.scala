@@ -33,6 +33,7 @@ import java.time.{Instant, LocalDateTime, ZoneOffset}
 import java.util.concurrent.TimeUnit
 import scala.concurrent.{ExecutionContext, Future}
 
+//DO NOT DELETE (even if this microservice gets decommissioned)
 abstract class MappingRepository(collectionName: String, identifierKey: String = "identifier", mongo: MongoComponent)(
   implicit ec: ExecutionContext
 ) extends PlayMongoRepository[AgentReferenceMapping](
