@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentmapping.repository
 
+import org.mongodb.scala.SingleObservable
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.ascending
@@ -113,4 +114,7 @@ abstract class MappingRepository(collectionName: String, identifierKey: String =
 
   def deleteByUtr(utr: Utr): Future[DeleteResult] =
     collection.deleteOne(equal("utr", utr.value)).toFuture()
+
+  // This is for testing purposes only
+  def deleteAll(): SingleObservable[DeleteResult] = collection.deleteMany(BsonDocument())
 }

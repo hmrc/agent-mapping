@@ -722,10 +722,8 @@ sealed trait MappingControllerISpecSetup
     }
   }
 
-  def cleanCollections = {
-    Await.result(mongoDatabase.drop().toFuture(), 20.seconds)
-    Await.result(Future.sequence(repositories.map(coll => coll.ensureIndexes())), 20.seconds)
-  }
+  def deleteTestDataInAllCollections =
+    Await.result(Future.sequence(repositories.map(coll => coll.deleteAll().toFuture())), 20.seconds)
 
   override def commonStubs(): Unit = {
     givenAuditConnector
@@ -735,12 +733,12 @@ sealed trait MappingControllerISpecSetup
   override def beforeEach() = {
     super.beforeEach()
     commonStubs()
-    cleanCollections
+    deleteTestDataInAllCollections
     ()
   }
 
   override def afterAll() = {
-    cleanCollections
+    deleteTestDataInAllCollections
     super.afterAll()
     ()
   }
