@@ -63,7 +63,6 @@ class EnrolmentStoreProxyConnector @Inject() (appConfig: AppConfig, http: HttpCl
     hc: HeaderCarrier
   ): Future[Int] = {
 
-    @SuppressWarnings(Array("org.wartremover.warts.Recursion"))
     def doGet(cumCount: Int = cumulativeCount, startRecord: Int = 1): Future[Int] = cumCount match {
       case c if c >= maxClientRelationships => maxClientRelationships
       case _ =>
