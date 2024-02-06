@@ -50,50 +50,38 @@ class EnrolmentStoreProxyConnector @Inject() (appConfig: AppConfig, http: HttpCl
 
   private val espBaseUrl = appConfig.enrolmentStoreProxyBaseUrl
 
-  private val HMCE_VATDEC_ORG = "HMCE-VATDEC-ORG"
   private val IR_SA = "IR-SA"
 
-  def getClientCount(userId: String)(implicit hc: HeaderCarrier): Future[Int] =
-    for {
-      vatF  <- getClientCount(userId, HMCE_VATDEC_ORG)
-      irSaF <- getClientCount(userId, IR_SA, vatF)
-    } yield irSaF
-
-  private def getClientCount(userId: String, service: String, cumulativeCount: Int = 0)(implicit
+  def getClientCount(userId: String, cumulativeCount: Int = 0, startRecord: Int = 1)(implicit
     hc: HeaderCarrier
-  ): Future[Int] = {
-
-    @SuppressWarnings(Array("org.wartremover.warts.Recursion"))
-    def doGet(cumCount: Int = cumulativeCount, startRecord: Int = 1): Future[Int] = cumCount match {
-      case c if c >= maxClientRelationships => maxClientRelationships
+  ): Future[Int] =
+    cumulativeCount match {
+      case cCount if cCount >= maxClientRelationships => maxClientRelationships
       case _ =>
-        getDelegatedEnrolmentsCountFor(userId, startRecord, service).flatMap { case (prefilteredCount, filteredCount) =>
+        getDelegatedEnrolmentsCountFor(userId, startRecord, IR_SA).flatMap { case (prefilteredCount, filteredCount) =>
           if (prefilteredCount < batchSize) {
-            filteredCount + cumCount
-          } else
-            doGet(filteredCount + cumCount, startRecord + batchSize)
+            filteredCount + cumulativeCount
+          } else {
+            getClientCount(userId, filteredCount + cumulativeCount, startRecord + batchSize)
+          }
         }
-
     }
-
-    doGet()
-  }
 
   // ES2 - delegated
   private def getDelegatedEnrolmentsCountFor(userId: String, startRecord: Int, service: String)(implicit
     hc: HeaderCarrier
   ): Future[(Int, Int)] = {
-
     def url(userId: String, startRecord: Int, service: String): String =
-      s"$espBaseUrl/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated&service=$service&start-record=$startRecord&max-records=$batchSize"
-    monitor(s"ConsumedAPI-ESPes2-$service-GET") {
-      http.GET[EnrolmentResponse](url(userId, startRecord, service).toString)(responseHandler, hc, ec).map {
-        enrolmentResponse =>
-          val filteredCount =
-            enrolmentResponse.enrolments
-              .count(e => e.state.toLowerCase == "activated" || e.state.toLowerCase == "unknown")
+      s"$espBaseUrl/enrolment-store-proxy/enrolment-store/users/$userId/enrolments" +
+        s"?type=delegated&service=$service&start-record=$startRecord&max-records=$batchSize"
 
-          (enrolmentResponse.enrolments.length, filteredCount)
+    monitor(s"ConsumedAPI-ESPes2-$service-GET") {
+      http.GET[EnrolmentResponse](url(userId, startRecord, service))(responseHandler, hc, ec).map { enrolmentResponse =>
+        val filteredCount =
+          enrolmentResponse.enrolments
+            .count(e => e.state.toLowerCase == "activated" || e.state.toLowerCase == "unknown")
+
+        (enrolmentResponse.enrolments.length, filteredCount)
       }
     }
   }
