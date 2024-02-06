@@ -435,19 +435,6 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
       response.body shouldBe """{"mappings":[{"arn":"AARN0000002","saAgentReference":"A1111A"},{"arn":"AARN0000002","saAgentReference":"A1111B"}]}"""
     }
 
-    "return 200 status with a json body representing the mappings that match the supplied arn for vat" in {
-      vatRepo.store(registeredArn, "101747696").futureValue
-      vatRepo.store(registeredArn, "101747641").futureValue
-
-      val response = callGet(findVATMappingsRequest)
-
-      response.status shouldBe 200
-      val body = response.body
-
-      body should include("""{"arn":"AARN0000002","vrn":"101747696"}""")
-      body should include("""{"arn":"AARN0000002","vrn":"101747641"}""")
-    }
-
     "return 200 status with a json body representing the mappings that match the supplied arn for agent code" in {
       agentCodeRepo.store(registeredArn, "ABCDE1").futureValue
       agentCodeRepo.store(registeredArn, "ABCDE2").futureValue
@@ -723,7 +710,7 @@ sealed trait MappingControllerISpecSetup
   }
 
   def deleteTestDataInAllCollections =
-    Await.result(Future.sequence(repositories.map(coll => coll.deleteAll().toFuture())), 20.seconds)
+    Await.result(Future.sequence(repositories.map(coll => coll.deleteAll())), 20.seconds)
 
   override def commonStubs(): Unit = {
     givenAuditConnector

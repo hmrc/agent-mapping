@@ -121,14 +121,6 @@ class MappingController @Inject() (
     }
   }
 
-  def findVatMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] = Action.async {
-    repositories.get(AgentRefNo).findBy(arn) map { matches =>
-      implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("vrn")
-      if (matches.nonEmpty) Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
-      else NotFound
-    }
-  }
-
   def findAgentCodeMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] = Action.async {
     repositories.get(AgentCode).findBy(arn) map { matches =>
       implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("agentCode")

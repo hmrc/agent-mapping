@@ -15,7 +15,6 @@ GET           /client-count                               @uk.gov.hmrc.agentmapp
 GET           /mappings/:arn                              @uk.gov.hmrc.agentmapping.controller.MappingController.findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
 GET           /mappings/sa/:arn                           @uk.gov.hmrc.agentmapping.controller.MappingController.findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
-GET           /mappings/vat/:arn                          @uk.gov.hmrc.agentmapping.controller.MappingController.findVatMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 GET           /mappings/agentcode/:arn                    @uk.gov.hmrc.agentmapping.controller.MappingController.findAgentCodeMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
 
 # supported keys: char,gts,mgd,novrn,ct,paye,sdlt
