@@ -16,17 +16,15 @@
 
 package uk.gov.hmrc.agentmapping.connector
 
-import com.codahale.metrics.MetricRegistry
-import com.kenshoo.play.metrics.Metrics
-import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json.format
 import play.api.libs.json.{Json, OFormat, Writes}
-import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmapping.config.AppConfig
 import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector.responseHandler
 import uk.gov.hmrc.agentmapping.util._
 import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpReads, HttpResponse}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
+import javax.inject.{Inject, Singleton}
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.Try
 
@@ -39,11 +37,9 @@ object Enrolment {
 case class EnrolmentResponse(enrolments: Seq[Enrolment])
 
 @Singleton
-class EnrolmentStoreProxyConnector @Inject() (appConfig: AppConfig, http: HttpClient, metrics: Metrics)(implicit
-  ec: ExecutionContext
+class EnrolmentStoreProxyConnector @Inject() (appConfig: AppConfig, http: HttpClient, val metrics: Metrics)(implicit
+  val ec: ExecutionContext
 ) extends HttpAPIMonitor {
-
-  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   private val batchSize = appConfig.clientCountBatchSize
   private val maxClientRelationships = appConfig.clientCountMaxResults

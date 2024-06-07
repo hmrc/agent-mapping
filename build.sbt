@@ -1,3 +1,9 @@
+import uk.gov.hmrc.{DefaultBuildSettings, SbtAutoBuildPlugin}
+
+val appName = "agent-mapping"
+
+ThisBuild / majorVersion := 2
+ThisBuild / scalaVersion := "2.13.12"
 
 lazy val scoverageSettings = {
   import scoverage.ScoverageKeys
@@ -11,46 +17,48 @@ lazy val scoverageSettings = {
   )
 }
 
+val scalaCOptions = Seq(
+  "-Xfatal-warnings",
+  "-Xlint:-missing-interpolator,_",
+  "-Ywarn-value-discard",
+  "-Ywarn-dead-code",
+  "-deprecation",
+  "-feature",
+  "-unchecked",
+  "-Wconf:src=target/.*:s", // silence warnings from compiled files
+  "-Wconf:src=routes/.*:s", // silence warnings from routes files
+  "-Wconf:src=*html:w", // silence html warnings as they are wrong
+  "-language:implicitConversions"
+)
+
 lazy val root = (project in file("."))
   .settings(
-    name := "agent-mapping",
+    name := appName,
     organization := "uk.gov.hmrc",
-    majorVersion := 1,
-    scalaVersion := "2.13.10",
-    scalacOptions ++= Seq(
-      "-Xfatal-warnings",
-      "-Xlint:-missing-interpolator,_",
-      "-Ywarn-value-discard",
-      "-Ywarn-dead-code",
-      "-deprecation",
-      "-feature",
-      "-unchecked",
-      "-Wconf:src=target/.*:s", // silence warnings from compiled files
-      "-Wconf:src=routes/.*:s", // silence warnings from routes files
-      "-Wconf:src=*html:w", // silence html warnings as they are wrong
-      "-language:implicitConversions"
-    ),
     PlayKeys.playDefaultPort := 9439,
-    resolvers ++= Seq(
-      Resolver.typesafeRepo("releases"),
-      "HMRC-open-artefacts-maven" at "https://open.artefacts.tax.service.gov.uk/maven2",
-      Resolver.url("HMRC-open-artefacts-ivy", url("https://open.artefacts.tax.service.gov.uk/ivy2"))(Resolver.ivyStylePatterns)
-    ),
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test,
-    scoverageSettings,
-    Compile / unmanagedResourceDirectories += baseDirectory.value / "resources",
+    resolvers ++= Seq(Resolver.typesafeRepo("releases")),
     routesImport ++= Seq("uk.gov.hmrc.agentmapping.controller.UrlBinders._"),
+    scalacOptions ++= scalaCOptions,
     Compile / scalafmtOnCompile := true,
     Test / scalafmtOnCompile := true,
-    //fix for scoverage compile errors for scala 2.13.10
-    libraryDependencySchemes ++= Seq("org.scala-lang.modules" %% "scala-xml" % VersionScheme.Always),
+    Compile / unmanagedResourceDirectories += baseDirectory.value / "resources"
   )
-  .configs(IntegrationTest)
   .settings(
-    IntegrationTest / Keys.fork := false,
-    Defaults.itSettings,
-    IntegrationTest / unmanagedSourceDirectories += baseDirectory(_ / "it").value,
-    IntegrationTest / parallelExecution := false,
-    IntegrationTest / scalafmtOnCompile := true
+    Test / parallelExecution := false,
+    scoverageSettings
   )
-  .enablePlugins(PlayScala, SbtDistributablesPlugin)
+  .enablePlugins(PlayScala, SbtAutoBuildPlugin, SbtDistributablesPlugin)
+  .disablePlugins(JUnitXmlReportPlugin)
+
+
+lazy val it = project
+  .enablePlugins(PlayScala)
+  .dependsOn(root % "test->test") // the "test->test" allows reusing test code and test dependencies
+  .settings(DefaultBuildSettings.itSettings())
+  .settings(libraryDependencies ++= AppDependencies.test)
+  .settings(
+    Compile / scalafmtOnCompile := true,
+    Test / scalafmtOnCompile := true
+  )
+
