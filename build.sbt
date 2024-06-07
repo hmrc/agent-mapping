@@ -48,7 +48,7 @@ lazy val root = (project in file("."))
     Test / parallelExecution := false,
     scoverageSettings
   )
-  .enablePlugins(PlayScala, SbtAutoBuildPlugin, SbtDistributablesPlugin)
+  .enablePlugins(PlayScala, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin)
 
 
