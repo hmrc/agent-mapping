@@ -30,7 +30,6 @@ abstract class ServerBaseISpec extends BaseISpec with GuiceOneServerPerSuite wit
 
   override protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
-//      .disable[PlayModule]
       .configure(
         Map(
           "microservice.services.auth.port"               -> wireMockPort,
