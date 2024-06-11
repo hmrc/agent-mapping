@@ -2,7 +2,7 @@ import uk.gov.hmrc.{DefaultBuildSettings, SbtAutoBuildPlugin}
 
 val appName = "agent-mapping"
 
-ThisBuild / majorVersion := 2
+ThisBuild / majorVersion := 1
 ThisBuild / scalaVersion := "2.13.12"
 
 lazy val scoverageSettings = {
