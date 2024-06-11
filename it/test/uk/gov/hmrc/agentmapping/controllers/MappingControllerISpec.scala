@@ -314,6 +314,7 @@ class MappingControllerISpec extends MappingControllerISpecSetup with ScalaFutur
       s"return created upon success" in {
         givenUserIsAuthorisedForMultiple(fixtures)
         callPut(createMappingRequest, None).status shouldBe 201
+        fixtures.foreach(f => verifyCreateMappingAuditEventSent(f))
       }
     }
 
