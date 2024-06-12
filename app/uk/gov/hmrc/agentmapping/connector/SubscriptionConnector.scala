@@ -16,29 +16,29 @@
 
 package uk.gov.hmrc.agentmapping.connector
 
-import com.codahale.metrics.MetricRegistry
-import com.kenshoo.play.metrics.Metrics
-import javax.inject.Inject
 import play.api.libs.json.{JsLookupResult, Json}
-import uk.gov.hmrc.agent.kenshoo.monitoring.HttpAPIMonitor
 import uk.gov.hmrc.agentmapping.config.AppConfig
 import uk.gov.hmrc.agentmapping.model.{AuthProviderId, UserMapping}
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
-import uk.gov.hmrc.play.encoding.UriPathEncoding.encodePathSegment
+import uk.gov.hmrc.agentmapping.util.HttpAPIMonitor
 import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.play.bootstrap.metrics.Metrics
+import uk.gov.hmrc.play.encoding.UriPathEncoding.encodePathSegment
 
+import javax.inject.Inject
 import scala.concurrent.{ExecutionContext, Future}
 
-class SubscriptionConnector @Inject() (appConfig: AppConfig, http: HttpClient, metrics: Metrics)(implicit
-  ec: ExecutionContext
+class SubscriptionConnector @Inject() (appConfig: AppConfig, http: HttpClient, val metrics: Metrics)(implicit
+  val ec: ExecutionContext
 ) extends HttpAPIMonitor {
-
-  override val kenshooRegistry: MetricRegistry = metrics.defaultRegistry
 
   def getUserMappings(internalId: AuthProviderId)(implicit hc: HeaderCarrier): Future[Option[List[UserMapping]]] = {
 
     val url =
       s"${appConfig.agentSubscriptionBaseUrl}/agent-subscription/subscription/journey/id/${encodePathSegment(internalId.id)}"
+
+    val timer = metrics.defaultRegistry.timer("ConsumedAPI-Agent-Subscription-getJourneyByPrimaryId-GET")
+    timer.time()
     monitor("ConsumedAPI-Agent-Subscription-getJourneyByPrimaryId-GET") {
       http
         .GET[HttpResponse](url.toString)
