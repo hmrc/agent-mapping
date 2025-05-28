@@ -19,70 +19,73 @@ package uk.gov.hmrc.agentmapping.repository
 import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.ascending
-import org.mongodb.scala.model.{IndexModel, IndexOptions, Updates}
+import org.mongodb.scala.model.IndexModel
+import org.mongodb.scala.model.IndexOptions
+import org.mongodb.scala.model.Updates
 import play.api.Logging
 import play.api.libs.json.Format
-import uk.gov.hmrc.agentmapping.model.{MappingDetails, MappingDetailsRepositoryRecord}
+import uk.gov.hmrc.agentmapping.model.MappingDetails
+import uk.gov.hmrc.agentmapping.model.MappingDetailsRepositoryRecord
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.play.json.{Codecs, PlayMongoRepository}
+import uk.gov.hmrc.mongo.play.json.Codecs
+import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 //DO NOT DELETE (even if this microservice gets decommissioned)
 @Singleton
 class MappingDetailsRepository @Inject() (mongo: MongoComponent)(implicit ec: ExecutionContext)
-    extends PlayMongoRepository[MappingDetailsRepositoryRecord](
-      mongoComponent = mongo,
-      collectionName = "mapping-details",
-      domainFormat = MappingDetailsRepositoryRecord.mappingDisplayRepositoryFormat,
-      indexes = List(
-        IndexModel(ascending("arn"), IndexOptions().name("arn").unique(true)),
-        IndexModel(
-          ascending("mappingDetails.authProviderId"),
-          IndexOptions()
-            .name("authProviderIdSparse")
-            .sparse(true)
-        )
-      ),
-      replaceIndexes = true,
-      extraCodecs = List(
-        Codecs.playFormatCodec(MappingDetails.mongoDisplayDetailsFormat),
-        Codecs.playFormatCodec(Format(Arn.arnReads, Arn.arnWrites))
-      )
+extends PlayMongoRepository[MappingDetailsRepositoryRecord](
+  mongoComponent = mongo,
+  collectionName = "mapping-details",
+  domainFormat = MappingDetailsRepositoryRecord.mappingDisplayRepositoryFormat,
+  indexes = List(
+    IndexModel(ascending("arn"), IndexOptions().name("arn").unique(true)),
+    IndexModel(
+      ascending("mappingDetails.authProviderId"),
+      IndexOptions()
+        .name("authProviderIdSparse")
+        .sparse(true)
     )
-    with Logging {
+  ),
+  replaceIndexes = true,
+  extraCodecs = List(
+    Codecs.playFormatCodec(MappingDetails.mongoDisplayDetailsFormat),
+    Codecs.playFormatCodec(Format(Arn.arnReads, Arn.arnWrites))
+  )
+)
+with Logging {
 
   override lazy val requiresTtlIndex = false // keep data to show the user when they next visit.
 
-  def create(mappingDisplayRepositoryRecord: MappingDetailsRepositoryRecord): Future[Unit] =
-    collection
-      .insertOne(mappingDisplayRepositoryRecord)
-      .toFuture()
-      .map(_ => ())
-      .recover { case e: MongoWriteException =>
-        logger.warn(s"Error trying to insert a mapping details record ${e.getError}")
-      }
+  def create(mappingDisplayRepositoryRecord: MappingDetailsRepositoryRecord): Future[Unit] = collection
+    .insertOne(mappingDisplayRepositoryRecord)
+    .toFuture()
+    .map(_ => ())
+    .recover { case e: MongoWriteException => logger.warn(s"Error trying to insert a mapping details record ${e.getError}") }
 
-  def findByArn(arn: Arn): Future[Option[MappingDetailsRepositoryRecord]] =
-    collection
-      .find(equal("arn", arn.value))
-      .headOption()
+  def findByArn(arn: Arn): Future[Option[MappingDetailsRepositoryRecord]] = collection
+    .find(equal("arn", arn.value))
+    .headOption()
 
-  def updateMappingDisplayDetails(arn: Arn, newMapping: MappingDetails): Future[Unit] =
-    collection
-      .updateOne(equal("arn", arn.value), Updates.addToSet("mappingDetails", newMapping))
-      .toFuture()
-      .map {
-        case result if result.getMatchedCount == 1L => ()
-        case e => logger.error(s"Unknown error occurred when updating mapping details ${e.wasAcknowledged()}.")
-      }
+  def updateMappingDisplayDetails(
+    arn: Arn,
+    newMapping: MappingDetails
+  ): Future[Unit] = collection
+    .updateOne(equal("arn", arn.value), Updates.addToSet("mappingDetails", newMapping))
+    .toFuture()
+    .map {
+      case result if result.getMatchedCount == 1L => ()
+      case e => logger.error(s"Unknown error occurred when updating mapping details ${e.wasAcknowledged()}.")
+    }
 
-  def removeMappingDetailsForAgent(arn: Arn)(implicit ec: ExecutionContext): Future[Int] =
-    collection
-      .deleteOne(equal("arn", arn))
-      .toFuture()
-      .map(deleteResult => deleteResult.getDeletedCount.toInt)
+  def removeMappingDetailsForAgent(arn: Arn)(implicit ec: ExecutionContext): Future[Int] = collection
+    .deleteOne(equal("arn", arn))
+    .toFuture()
+    .map(deleteResult => deleteResult.getDeletedCount.toInt)
 
 }

@@ -18,32 +18,47 @@ package uk.gov.hmrc.agentmapping.model
 
 import play.api.libs.functional.syntax._
 import play.api.libs.json.Json.format
-import play.api.libs.json.{JsPath, OFormat}
+import play.api.libs.json.JsPath
+import play.api.libs.json.OFormat
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
 import java.time.LocalDateTime
 
-case class MappingDetailsRepositoryRecord(arn: Arn, mappingDetails: Seq[MappingDetails])
+case class MappingDetailsRepositoryRecord(
+  arn: Arn,
+  mappingDetails: Seq[MappingDetails]
+)
 
 object MappingDetailsRepositoryRecord {
   implicit val mappingDisplayRepositoryFormat: OFormat[MappingDetailsRepositoryRecord] = format
 }
 
-final case class MappingDetails(authProviderId: AuthProviderId, ggTag: GGTag, count: Int, createdOn: LocalDateTime)
+final case class MappingDetails(
+  authProviderId: AuthProviderId,
+  ggTag: GGTag,
+  count: Int,
+  createdOn: LocalDateTime
+)
 
 object MappingDetails {
 
   import MongoLocalDateTimeFormat._
 
-  implicit val mongoDisplayDetailsFormat: OFormat[MappingDetails] = (
-    (JsPath \ "authProviderId").format[AuthProviderId] and
-      (JsPath \ "ggTag").format[GGTag] and
-      (JsPath \ "count").format[Int] and
-      (JsPath \ "createdOn").format[LocalDateTime]
-  )(MappingDetails.apply, unlift(MappingDetails.unapply))
+  implicit val mongoDisplayDetailsFormat: OFormat[MappingDetails] =
+    (
+      (JsPath \ "authProviderId").format[AuthProviderId] and
+        (JsPath \ "ggTag").format[GGTag] and
+        (JsPath \ "count").format[Int] and
+        (JsPath \ "createdOn").format[LocalDateTime]
+    )(MappingDetails.apply, unlift(MappingDetails.unapply))
+
 }
 
-final case class MappingDetailsRequest(authProviderId: AuthProviderId, ggTag: GGTag, count: Int)
+final case class MappingDetailsRequest(
+  authProviderId: AuthProviderId,
+  ggTag: GGTag,
+  count: Int
+)
 
 object MappingDetailsRequest {
   implicit val mappingDisplayRequestFormat: OFormat[MappingDetailsRequest] = format

@@ -15,8 +15,10 @@
  */
 
 package test.uk.gov.hmrc.agentmapping.auth
+
 import org.mockito.ArgumentMatchers.any
-import org.mockito.Mockito.{reset, when}
+import org.mockito.Mockito.reset
+import org.mockito.Mockito.when
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.Application
@@ -24,7 +26,9 @@ import play.api.mvc.ControllerComponents
 import play.api.mvc.Results._
 import play.api.mvc._
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{contentAsString, defaultAwaitTimeout, status}
+import play.api.test.Helpers.contentAsString
+import play.api.test.Helpers.defaultAwaitTimeout
+import play.api.test.Helpers.status
 import uk.gov.hmrc.agentmapping.model.Identifier
 import test.uk.gov.hmrc.agentmapping.support.BaseISpec
 import uk.gov.hmrc.agentmapping.auth.AuthActions
@@ -34,10 +38,14 @@ import uk.gov.hmrc.auth.core.authorise.Predicate
 import uk.gov.hmrc.auth.core.retrieve._
 import uk.gov.hmrc.http.HeaderCarrier
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
 
-class AuthActionsISpec extends BaseISpec with MockitoSugar with ScalaFutures {
+class AuthActionsISpec
+extends BaseISpec
+with MockitoSugar
+with ScalaFutures {
 
   lazy val app: Application = appBuilder.build()
 
@@ -181,9 +189,11 @@ class AuthActionsISpec extends BaseISpec with MockitoSugar with ScalaFutures {
 
   val strideAction: Request[AnyContent] => Future[Result] = { request => Future successful Ok }
 
-  private def authStub[A](returnValue: Future[A]) =
-    when(mockAuthConnector.authorise(any[Predicate](), any[Retrieval[A]])(any[HeaderCarrier], any[ExecutionContext]))
-      .thenReturn(returnValue)
+  private def authStub[A](returnValue: Future[A]) = when(mockAuthConnector.authorise(
+    any[Predicate](),
+    any[Retrieval[A]]
+  )(any[HeaderCarrier], any[ExecutionContext]))
+    .thenReturn(returnValue)
 
   private val fakeRequestAny: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
 
@@ -197,13 +207,16 @@ class AuthActionsISpec extends BaseISpec with MockitoSugar with ScalaFutures {
   )
 
   private val saEnrolment = Set(
-    Enrolment("IR-SA-AGENT", Seq(EnrolmentIdentifier("sa", "00001")), state = "", delegatedAuthRule = None)
+    Enrolment(
+      "IR-SA-AGENT",
+      Seq(EnrolmentIdentifier("sa", "00001")),
+      state = "",
+      delegatedAuthRule = None
+    )
   )
 
-  val onlyStride: Set[Enrolment] => Future[Enrolments] =
-    strideEnrolments => Future successful Enrolments(strideEnrolments)
+  val onlyStride: Set[Enrolment] => Future[Enrolments] = strideEnrolments => Future successful Enrolments(strideEnrolments)
 
-  val onlyStrideFail: Future[Enrolments] =
-    Future failed new UnsupportedAuthProvider
+  val onlyStrideFail: Future[Enrolments] = Future failed new UnsupportedAuthProvider
 
 }

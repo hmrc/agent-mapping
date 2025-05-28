@@ -17,39 +17,43 @@
 package uk.gov.hmrc.agentmapping.audit
 
 import com.google.inject.Singleton
-import javax.inject.Inject
 import play.api.mvc.Request
 import uk.gov.hmrc.agentmapping.model.Identifier
+import uk.gov.hmrc.agentmapping.util.RequestSupport
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
 
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.Try
 
 sealed abstract class AgentMappingEvent
-case object CreateMapping extends AgentMappingEvent
+case object CreateMapping
+extends AgentMappingEvent
 
 @Singleton
-class AuditService @Inject() (val auditConnector: AuditConnector) {
+class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: ExecutionContext) {
 
   def sendCreateMappingAuditEvent(
     arn: Arn,
     identifier: Identifier,
     authProviderId: String,
     duplicate: Boolean = false
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext, request: Request[Any]): Unit = {
+  )(implicit
+    request: Request[Any]
+  ): Unit = {
     auditEvent(
       CreateMapping,
       "create-mapping",
       Seq(
-        "authProviderId"       -> authProviderId,
-        "identifierType"       -> identifier.enrolmentType.key,
-        "identifier"           -> identifier.value,
+        "authProviderId" -> authProviderId,
+        "identifierType" -> identifier.enrolmentType.key,
+        "identifier" -> identifier.value,
         "agentReferenceNumber" -> arn.value,
-        "duplicate"            -> duplicate.toString
+        "duplicate" -> duplicate.toString
       )
     )
     ()
@@ -59,25 +63,34 @@ class AuditService @Inject() (val auditConnector: AuditConnector) {
     event: AgentMappingEvent,
     transactionName: String,
     details: Seq[(String, String)] = Seq.empty
-  )(implicit hc: HeaderCarrier, ec: ExecutionContext, request: Request[Any]): Future[Unit] =
-    send(createEvent(event, transactionName, details: _*))
-
-  private def createEvent(event: AgentMappingEvent, transactionName: String, details: (String, String)*)(implicit
-    hc: HeaderCarrier,
+  )(implicit
     request: Request[Any]
-  ): DataEvent =
+  ): Future[Unit] = send(createEvent(
+    event,
+    transactionName,
+    details: _*
+  ))
+
+  private def createEvent(
+    event: AgentMappingEvent,
+    transactionName: String,
+    details: (String, String)*
+  )(implicit
+    request: Request[Any]
+  ): DataEvent = {
+    val hc = RequestSupport.hc
     DataEvent(
       auditSource = "agent-mapping",
       auditType = event.toString,
       tags = hc.toAuditTags(transactionName, request.path),
       detail = hc.toAuditDetails(details.map(pair => pair._1 -> pair._2): _*)
     )
+  }
 
-  private def send(events: DataEvent*)(implicit hc: HeaderCarrier, ec: ExecutionContext): Future[Unit] =
-    Future {
-      events.foreach { event =>
-        Try(auditConnector.sendEvent(event))
-      }
+  private def send(events: DataEvent*): Future[Unit] = Future {
+    events.foreach { event =>
+      Try(auditConnector.sendEvent(event))
     }
+  }
 
 }

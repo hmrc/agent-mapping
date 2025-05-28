@@ -16,32 +16,44 @@
 
 package uk.gov.hmrc.agentmapping.connector
 
-import play.api.libs.json.{JsLookupResult, Json}
+import play.api.libs.json.JsLookupResult
+import play.api.libs.json.Json
+import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentmapping.config.AppConfig
-import uk.gov.hmrc.agentmapping.model.{AuthProviderId, UserMapping}
+import uk.gov.hmrc.agentmapping.model.AuthProviderId
+import uk.gov.hmrc.agentmapping.model.UserMapping
 import uk.gov.hmrc.agentmapping.util.HttpAPIMonitor
+import uk.gov.hmrc.agentmapping.util.RequestSupport.hc
 import uk.gov.hmrc.http.HttpReads.Implicits._
-import uk.gov.hmrc.http.{HeaderCarrier, HttpClient, HttpResponse}
+import uk.gov.hmrc.http.HttpResponse
+import uk.gov.hmrc.http.StringContextOps
+import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import uk.gov.hmrc.play.encoding.UriPathEncoding.encodePathSegment
 
+import java.net.URL
 import javax.inject.Inject
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
-class SubscriptionConnector @Inject() (appConfig: AppConfig, http: HttpClient, val metrics: Metrics)(implicit
+class SubscriptionConnector @Inject() (
+  appConfig: AppConfig,
+  http: HttpClientV2,
+  val metrics: Metrics
+)(implicit
   val ec: ExecutionContext
-) extends HttpAPIMonitor {
+)
+extends HttpAPIMonitor {
 
-  def getUserMappings(internalId: AuthProviderId)(implicit hc: HeaderCarrier): Future[Option[List[UserMapping]]] = {
+  def getUserMappings(internalId: AuthProviderId)(implicit rh: RequestHeader): Future[Option[List[UserMapping]]] = {
 
-    val url =
-      s"${appConfig.agentSubscriptionBaseUrl}/agent-subscription/subscription/journey/id/${encodePathSegment(internalId.id)}"
+    val subscriptionJourneyUrl: URL = url"${appConfig.agentSubscriptionBaseUrl}/agent-subscription/subscription/journey/id/${encodePathSegment(internalId.id)}"
 
     val timer = metrics.defaultRegistry.timer("ConsumedAPI-Agent-Subscription-getJourneyByPrimaryId-GET")
     timer.time()
     monitor("ConsumedAPI-Agent-Subscription-getJourneyByPrimaryId-GET") {
       http
-        .GET[HttpResponse](url.toString)
+        .get(subscriptionJourneyUrl).execute[HttpResponse]
         .map { response =>
           response.status match {
             case 200 =>

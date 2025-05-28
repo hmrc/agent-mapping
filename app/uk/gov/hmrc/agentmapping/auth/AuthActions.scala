@@ -15,53 +15,57 @@
  */
 
 package uk.gov.hmrc.agentmapping.auth
+
 import play.api.Logging
 import play.api.mvc._
-import uk.gov.hmrc.agentmapping.model.{AgentCode, BasicAuthentication, Identifier, LegacyAgentEnrolmentType}
+import uk.gov.hmrc.agentmapping.model.AgentCode
+import uk.gov.hmrc.agentmapping.model.BasicAuthentication
+import uk.gov.hmrc.agentmapping.model.Identifier
+import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.auth.core.AuthProvider.{GovernmentGateway, PrivilegedApplication}
+import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
+import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
 import uk.gov.hmrc.auth.core._
-import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.{agentCode, allEnrolments, authorisedEnrolments, credentials}
-import uk.gov.hmrc.auth.core.retrieve.{Credentials, ~}
-import uk.gov.hmrc.http.{HeaderCarrier, HeaderNames}
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.agentCode
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.allEnrolments
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.authorisedEnrolments
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.credentials
+import uk.gov.hmrc.auth.core.retrieve.Credentials
+import uk.gov.hmrc.auth.core.retrieve.~
+import uk.gov.hmrc.http.HeaderNames
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 import java.nio.charset.StandardCharsets.UTF_8
 import java.util.Base64
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 import scala.util.matching.Regex
 
 @Singleton
-class AuthActions @Inject() (val authConnector: AuthConnector, cc: ControllerComponents)
-    extends BackendController(cc)
-    with AuthorisedFunctions
-    with Logging {
+class AuthActions @Inject() (
+  val authConnector: AuthConnector,
+  cc: ControllerComponents
+)
+extends BackendController(cc)
+with AuthorisedFunctions
+with Logging {
 
   private type HasEligibleEnrolments = Boolean
   private type ProviderId = String
 
   def authorisedWithEnrolments(
     body: Request[AnyContent] => HasEligibleEnrolments => Future[Result]
-  )(implicit ec: ExecutionContext): Action[AnyContent] =
-    Action.async { implicit request =>
-      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
-
-      authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
-        .retrieve(allEnrolments) { case allEnrolments =>
-          body(request)(captureIdentifiersFrom(allEnrolments).nonEmpty)
-        }
-        .recover { case e: AuthorisationException =>
-          Unauthorized
-        }
-    }
+  )(implicit ec: ExecutionContext): Action[AnyContent] = Action.async { implicit request =>
+    authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
+      .retrieve(allEnrolments) { case allEnrolments => body(request)(captureIdentifiersFrom(allEnrolments).nonEmpty) }
+      .recover { case e: AuthorisationException => Unauthorized }
+  }
 
   def authorisedWithAgentCode(
     body: Request[AnyContent] => Set[Identifier] => ProviderId => Future[Result]
   )(implicit ec: ExecutionContext): Action[AnyContent] = Action.async { implicit request =>
-    implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
-
     authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
       .retrieve(credentials and agentCode and allEnrolments) {
         case Some(Credentials(providerId, _)) ~ agentCodeOpt ~ allEnrolments =>
@@ -75,67 +79,61 @@ class AuthActions @Inject() (val authConnector: AuthConnector, cc: ControllerCom
           Future.successful(Forbidden)
       }
       .recover {
-        case e: NoActiveSession        => Unauthorized
+        case e: NoActiveSession => Unauthorized
         case _: AuthorisationException => Forbidden
       }
   }
 
   def authorisedWithProviderId(
     body: Request[AnyContent] => String => Future[Result]
-  )(implicit ec: ExecutionContext): Action[AnyContent] =
-    Action.async { implicit request =>
-      authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
-        .retrieve(credentials) {
-          case Some(Credentials(providerId, _)) => body(request)(providerId)
-          case _                                => Future.successful(Forbidden)
-        }
-        .recover {
-          case _: NoActiveSession        => Unauthorized
-          case _: AuthorisationException => Forbidden
-        }
-    }
+  )(implicit ec: ExecutionContext): Action[AnyContent] = Action.async { implicit request =>
+    authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
+      .retrieve(credentials) {
+        case Some(Credentials(providerId, _)) => body(request)(providerId)
+        case _ => Future.successful(Forbidden)
+      }
+      .recover {
+        case _: NoActiveSession => Unauthorized
+        case _: AuthorisationException => Forbidden
+      }
+  }
 
   def authorisedAsSubscribedAgent(
     body: Request[AnyContent] => Arn => Future[Result]
-  )(implicit ec: ExecutionContext): Action[AnyContent] =
-    Action.async { implicit request =>
-      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
+  )(implicit ec: ExecutionContext): Action[AnyContent] = Action.async { implicit request =>
+    authorised(
+      Enrolment("HMRC-AS-AGENT")
+        and AuthProviders(GovernmentGateway)
+    )
+      .retrieve(authorisedEnrolments) { enrolments =>
+        val arnOpt = getEnrolmentInfo(
+          enrolments.enrolments,
+          "HMRC-AS-AGENT",
+          "AgentReferenceNumber"
+        )
 
-      authorised(
-        Enrolment("HMRC-AS-AGENT")
-          and AuthProviders(GovernmentGateway)
-      )
-        .retrieve(authorisedEnrolments) { enrolments =>
-          val arnOpt = getEnrolmentInfo(enrolments.enrolments, "HMRC-AS-AGENT", "AgentReferenceNumber")
-
-          arnOpt match {
-            case Some(arn) => body(request)(Arn(arn))
-            case None      => Future.successful(Forbidden)
-          }
+        arnOpt match {
+          case Some(arn) => body(request)(Arn(arn))
+          case None => Future.successful(Forbidden)
         }
-        .recover {
-          case _: NoActiveSession        => Unauthorized
-          case _: AuthorisationException => Forbidden
-        }
-    }
-
-  def basicAuth(body: Request[AnyContent] => Future[Result])(implicit ec: ExecutionContext): Action[AnyContent] =
-    Action.async { implicit request =>
-      implicit val hc: HeaderCarrier = HeaderCarrierConverter.fromRequest(request)
-
-      authorised() {
-        body(request)
-      } recover { case _: NoActiveSession =>
-        Unauthorized
       }
-    }
+      .recover {
+        case _: NoActiveSession => Unauthorized
+        case _: AuthorisationException => Forbidden
+      }
+  }
+
+  def basicAuth(body: Request[AnyContent] => Future[Result])(implicit ec: ExecutionContext): Action[AnyContent] = Action.async { implicit request =>
+    authorised() {
+      body(request)
+    } recover { case _: NoActiveSession => Unauthorized }
+  }
 
   val basicAuthHeader: Regex = "Basic (.+)".r
   val decodedAuth: Regex = "(.+):(.+)".r
 
   private def decodeFromBase64(encodedString: String): String =
-    try
-      new String(Base64.getDecoder.decode(encodedString), UTF_8)
+    try new String(Base64.getDecoder.decode(encodedString), UTF_8)
     catch { case _: Throwable => "" }
 
   def withBasicAuth(
@@ -145,7 +143,8 @@ class AuthActions @Inject() (val authConnector: AuthConnector, cc: ControllerCom
       case Some(basicAuthHeader(encodedAuthHeader)) =>
         decodeFromBase64(encodedAuthHeader) match {
           case decodedAuth(username, password) =>
-            if (BasicAuthentication(username, password) == expectedAuth) body
+            if (BasicAuthentication(username, password) == expectedAuth)
+              body
             else {
               logger.warn("Authorization header found in the request but invalid username or password")
               Future successful Unauthorized
@@ -161,43 +160,48 @@ class AuthActions @Inject() (val authConnector: AuthConnector, cc: ControllerCom
 
   def onlyStride(
     strideRole: String
-  )(body: Request[AnyContent] => Future[Result])(implicit ec: ExecutionContext): Action[AnyContent] =
-    Action.async { implicit request =>
-      authorised(AuthProviders(PrivilegedApplication))
-        .retrieve(allEnrolments) {
-          case allEnrols if allEnrols.enrolments.map(_.key).contains(strideRole) =>
-            body(request)
-          case e =>
-            logger.warn(
-              s"Unauthorized Discovered during Stride Authentication: ${e.enrolments.map(enrol => enrol.key).mkString(",")}"
-            )
-            Future successful Unauthorized
-        }
-        .recover { case e =>
-          logger.warn(s"Error Discovered during Stride Authentication: ${e.getMessage}")
-          Forbidden
-        }
-    }
+  )(body: Request[AnyContent] => Future[Result])(implicit ec: ExecutionContext): Action[AnyContent] = Action.async { implicit request =>
+    authorised(AuthProviders(PrivilegedApplication))
+      .retrieve(allEnrolments) {
+        case allEnrols if allEnrols.enrolments.map(_.key).contains(strideRole) => body(request)
+        case e =>
+          logger.warn(
+            s"Unauthorized Discovered during Stride Authentication: ${e.enrolments.map(enrol => enrol.key).mkString(",")}"
+          )
+          Future successful Unauthorized
+      }
+      .recover { case e =>
+        logger.warn(s"Error Discovered during Stride Authentication: ${e.getMessage}")
+        Forbidden
+      }
+  }
 
-  private def getEnrolmentInfo(enrolment: Set[Enrolment], enrolmentKey: String, identifier: String): Option[String] =
-    enrolment.find(_.key equals enrolmentKey).flatMap(_.identifiers.find(_.key equals identifier).map(_.value))
+  private def getEnrolmentInfo(
+    enrolment: Set[Enrolment],
+    enrolmentKey: String,
+    identifier: String
+  ): Option[String] = enrolment.find(_.key equals enrolmentKey).flatMap(_.identifiers.find(_.key equals identifier).map(_.value))
 
   private def captureIdentifiersAndAgentCodeFrom(
     enrolments: Enrolments,
     agentCodeOpt: Option[String]
   ): Option[Set[Identifier]] = {
     val identifiers = captureIdentifiersFrom(enrolments)
-    if (identifiers.isEmpty) None
+    if (identifiers.isEmpty)
+      None
     else
       Some(agentCodeOpt match {
-        case None            => identifiers
-        case Some(agentCode) => identifiers + Identifier(AgentCode, agentCode)
+        case None => identifiers
+        case Some(ac) => identifiers + Identifier(AgentCode, ac)
       })
   }
 
   private def captureIdentifiersFrom(enrolments: Enrolments): Set[Identifier] = {
 
-    case class AgentEnrolment(legacyAgentEnrolmentType: LegacyAgentEnrolmentType, values: Seq[String])
+    case class AgentEnrolment(
+      legacyAgentEnrolmentType: LegacyAgentEnrolmentType,
+      values: Seq[String]
+    )
 
     enrolments.enrolments
       .map(enrolment =>
@@ -207,8 +211,7 @@ class AuthActions @Inject() (val authConnector: AuthConnector, cc: ControllerCom
       )
       .collect {
         // We only use the FIRST value; since all the enrolments we care about are single valued
-        case Some(AgentEnrolment(enrolmentType, Seq(enrolmentIdentifierValue))) =>
-          Identifier(enrolmentType, enrolmentIdentifierValue)
+        case Some(AgentEnrolment(enrolmentType, Seq(enrolmentIdentifierValue))) => Identifier(enrolmentType, enrolmentIdentifierValue)
       }
   }
 

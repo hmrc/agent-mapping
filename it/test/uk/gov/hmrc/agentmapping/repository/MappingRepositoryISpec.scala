@@ -18,17 +18,30 @@ package test.uk.gov.hmrc.agentmapping.repository
 
 import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.result.DeleteResult
-import org.scalatest.concurrent.{IntegrationPatience, ScalaFutures}
+import org.scalatest.concurrent.IntegrationPatience
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import org.scalatest.{BeforeAndAfterAll, OptionValues}
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.OptionValues
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import test.uk.gov.hmrc.agentmapping.support.MetricTestSupport
 import uk.gov.hmrc.agentmapping.model._
-import uk.gov.hmrc.agentmapping.repository.{HMCEVATAGNTMappingRepository, HMRCCHARAGENTMappingRepository, HMRCGTSAGNTMappingRepository, HMRCMGDAGNTMappingRepository, HMRCNOVRNAGNTMappingRepository, IRCTAGENTMappingRepository, IRPAYEAGENTMappingRepository, IRSAAGENTMappingRepository, IRSDLTAGENTMappingRepository, MappingRepository, NewAgentCodeMappingRepository}
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
+import uk.gov.hmrc.agentmapping.repository.HMCEVATAGNTMappingRepository
+import uk.gov.hmrc.agentmapping.repository.HMRCCHARAGENTMappingRepository
+import uk.gov.hmrc.agentmapping.repository.HMRCGTSAGNTMappingRepository
+import uk.gov.hmrc.agentmapping.repository.HMRCMGDAGNTMappingRepository
+import uk.gov.hmrc.agentmapping.repository.HMRCNOVRNAGNTMappingRepository
+import uk.gov.hmrc.agentmapping.repository.IRCTAGENTMappingRepository
+import uk.gov.hmrc.agentmapping.repository.IRPAYEAGENTMappingRepository
+import uk.gov.hmrc.agentmapping.repository.IRSAAGENTMappingRepository
+import uk.gov.hmrc.agentmapping.repository.IRSDLTAGENTMappingRepository
+import uk.gov.hmrc.agentmapping.repository.MappingRepository
+import uk.gov.hmrc.agentmapping.repository.NewAgentCodeMappingRepository
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.Utr
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -36,88 +49,92 @@ import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.ClassTag
 
 class IRSAAGENTMappingRepositoryISpec
-    extends BaseRepositoryISpec[AgentReferenceMapping, IRSAAGENTMappingRepository]
-    with DefaultPlayMongoRepositorySupport[AgentReferenceMapping]
-    with BeforeAndAfterAll {
+extends BaseRepositoryISpec[AgentReferenceMapping, IRSAAGENTMappingRepository]
+with DefaultPlayMongoRepositorySupport[AgentReferenceMapping]
+with BeforeAndAfterAll {
+
   override def beforeAll(): Unit = {
     super.beforeAll()
     givenCleanMetricRegistry()
     ()
   }
   override lazy val repository = new IRSAAGENTMappingRepository(mongoComponent)
+
 }
 
 class NewAgentCodeMappingRepositoryISpec
-    extends BaseRepositoryISpec[AgentReferenceMapping, NewAgentCodeMappingRepository]
-    with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+extends BaseRepositoryISpec[AgentReferenceMapping, NewAgentCodeMappingRepository]
+with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
 
   override lazy val repository = new NewAgentCodeMappingRepository(mongoComponent)
 }
 
 class HMCEVATAGNTMappingRepositoryISpec
-    extends BaseRepositoryISpec[AgentReferenceMapping, HMCEVATAGNTMappingRepository]
-    with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+extends BaseRepositoryISpec[AgentReferenceMapping, HMCEVATAGNTMappingRepository]
+with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
   override lazy val repository = new HMCEVATAGNTMappingRepository(mongoComponent)
 }
 
 class HMRCCHARAGENTMappingRepositoryISpec
-    extends BaseRepositoryISpec[AgentReferenceMapping, HMRCCHARAGENTMappingRepository]
-    with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+extends BaseRepositoryISpec[AgentReferenceMapping, HMRCCHARAGENTMappingRepository]
+with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
   override lazy val repository = new HMRCCHARAGENTMappingRepository(mongoComponent)
 }
 class HMRCGTSAGNTMappingRepositoryISpec
-    extends BaseRepositoryISpec[AgentReferenceMapping, HMRCGTSAGNTMappingRepository]
-    with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+extends BaseRepositoryISpec[AgentReferenceMapping, HMRCGTSAGNTMappingRepository]
+with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
   override lazy val repository = new HMRCGTSAGNTMappingRepository(mongoComponent)
 }
 
 class HMRCMGDAGNTMappingRepositoryISpec
-    extends BaseRepositoryISpec[AgentReferenceMapping, HMRCMGDAGNTMappingRepository]
-    with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+extends BaseRepositoryISpec[AgentReferenceMapping, HMRCMGDAGNTMappingRepository]
+with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
   override lazy val repository = new HMRCMGDAGNTMappingRepository(mongoComponent)
 }
 class HMRCNOVRNAGNTMappingRepositoryISpec
-    extends BaseRepositoryISpec[AgentReferenceMapping, HMRCNOVRNAGNTMappingRepository]
-    with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+extends BaseRepositoryISpec[AgentReferenceMapping, HMRCNOVRNAGNTMappingRepository]
+with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
   override lazy val repository = new HMRCNOVRNAGNTMappingRepository(mongoComponent)
 }
 class IRCTAGENTMappingRepositoryISpec
-    extends BaseRepositoryISpec[AgentReferenceMapping, IRCTAGENTMappingRepository]
-    with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+extends BaseRepositoryISpec[AgentReferenceMapping, IRCTAGENTMappingRepository]
+with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
   override lazy val repository = new IRCTAGENTMappingRepository(mongoComponent)
 }
 class IRPAYEAGENTMappingRepositoryISpec
-    extends BaseRepositoryISpec[AgentReferenceMapping, IRPAYEAGENTMappingRepository]
-    with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+extends BaseRepositoryISpec[AgentReferenceMapping, IRPAYEAGENTMappingRepository]
+with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
   override lazy val repository = new IRPAYEAGENTMappingRepository(mongoComponent)
 }
 class IRSDLTAGENTMappingRepositoryISpec
-    extends BaseRepositoryISpec[AgentReferenceMapping, IRSDLTAGENTMappingRepository]
-    with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+extends BaseRepositoryISpec[AgentReferenceMapping, IRSDLTAGENTMappingRepository]
+with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
   override lazy val repository = new IRSDLTAGENTMappingRepository(mongoComponent)
 }
 
-abstract class BaseRepositoryISpec[T <: ArnToIdentifierMapping, R <: MappingRepository: ClassTag]
-    extends AnyWordSpecLike
-    with Matchers
-    with OptionValues
-    with ScalaFutures
-    with IntegrationPatience
-    with GuiceOneAppPerSuite
-    with MetricTestSupport {
+abstract class BaseRepositoryISpec[
+  T <: ArnToIdentifierMapping,
+  R <: MappingRepository: ClassTag
+]
+extends AnyWordSpecLike
+with Matchers
+with OptionValues
+with ScalaFutures
+with IntegrationPatience
+with GuiceOneAppPerSuite
+with MetricTestSupport {
 
   def repository: MappingRepository
 
   override implicit lazy val app: Application = appBuilder.build()
-  protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
-      .configure(
-        Map(
-          "metrics.enabled"              -> false,
-          "migrate-repositories"         -> "false",
-          "termination.stride.enrolment" -> "caat"
-        )
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
+    .configure(
+      Map(
+        "metrics.enabled" -> false,
+        "migrate-repositories" -> "false",
+        "termination.stride.enrolment" -> "caat"
       )
+    )
 //      .disable[PlayModule]
 
   val arn1 = Arn("ARN00001")
@@ -135,7 +152,10 @@ abstract class BaseRepositoryISpec[T <: ArnToIdentifierMapping, R <: MappingRepo
     behave like checkMapping(arn1, Seq(reference1, reference2))
     behave like checkMapping(utr1, Seq(reference1, reference2))
 
-    def checkMapping(businessId: TaxIdentifier, references: Seq[String]): Unit = {
+    def checkMapping(
+      businessId: TaxIdentifier,
+      references: Seq[String]
+    ): Unit = {
       val reference1 = references.head
       val reference2 = references.last
 
@@ -266,4 +286,5 @@ abstract class BaseRepositoryISpec[T <: ArnToIdentifierMapping, R <: MappingRepo
       repository.findBy(utr1).futureValue shouldBe List.empty
     }
   }
+
 }

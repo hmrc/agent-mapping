@@ -1,21 +1,10 @@
-import uk.gov.hmrc.{DefaultBuildSettings, SbtAutoBuildPlugin}
+import uk.gov.hmrc.DefaultBuildSettings
+import CodeCoverageSettings.scoverageSettings
 
 val appName = "agent-mapping"
 
 ThisBuild / majorVersion := 1
-ThisBuild / scalaVersion := "2.13.12"
-
-lazy val scoverageSettings = {
-  import scoverage.ScoverageKeys
-  Seq(
-    // Semicolon-separated list of regexs matching classes to exclude
-    ScoverageKeys.coverageExcludedPackages := """uk\.gov\.hmrc\.BuildInfo;.*\.Routes;.*\.RoutesPrefix;.*Filters?;MicroserviceAuditConnector;Module;GraphiteStartUp;.*\.Reverse[^.]*""",
-    ScoverageKeys.coverageMinimumStmtTotal := 80.00,
-    ScoverageKeys.coverageFailOnMinimum := true,
-    ScoverageKeys.coverageHighlighting := true,
-    Test / parallelExecution := false
-  )
-}
+ThisBuild / scalaVersion := "2.13.16"
 
 val scalaCOptions = Seq(
   "-Xfatal-warnings",
@@ -32,6 +21,7 @@ val scalaCOptions = Seq(
 )
 
 lazy val root = (project in file("."))
+  .disablePlugins(JUnitXmlReportPlugin)
   .settings(
     name := appName,
     organization := "uk.gov.hmrc",
@@ -42,9 +32,7 @@ lazy val root = (project in file("."))
     scalacOptions ++= scalaCOptions,
     Compile / scalafmtOnCompile := true,
     Test / scalafmtOnCompile := true,
-    Compile / unmanagedResourceDirectories += baseDirectory.value / "resources"
-  )
-  .settings(
+    Compile / unmanagedResourceDirectories += baseDirectory.value / "resources",
     Test / parallelExecution := false,
     scoverageSettings
   )

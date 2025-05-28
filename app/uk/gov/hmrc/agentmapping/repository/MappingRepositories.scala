@@ -17,11 +17,14 @@
 package uk.gov.hmrc.agentmapping.repository
 
 import uk.gov.hmrc.agentmapping.model._
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.Utr
 import uk.gov.hmrc.mongo.MongoComponent
 
-import javax.inject.{Inject, Singleton}
-import scala.concurrent.{ExecutionContext, Future}
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 //DO NOT DELETE (even if this microservice gets decommissioned)
 @Singleton
@@ -38,82 +41,76 @@ class MappingRepositories @Inject() (
   iRSDLTAGENTMappingRepository: IRSDLTAGENTMappingRepository
 ) {
 
-  private val repositories: Map[LegacyAgentEnrolmentType, MappingRepository] =
-    Map(
-      AgentCode            -> agentCodeMappingRepository,
-      IRAgentReference     -> iRSAAGENTMappingRepository,
-      AgentRefNo           -> hMCEVATAGNTMappingRepository,
-      AgentCharId          -> hMRCCHARAGENTMappingRepository,
-      HmrcGtsAgentRef      -> hMRCGTSAGNTMappingRepository,
-      HmrcMgdAgentRef      -> hMRCMGDAGNTMappingRepository,
-      VATAgentRefNo        -> hMRCNOVRNAGNTMappingRepository,
-      IRAgentReferenceCt   -> iRCTAGENTMappingRepository,
-      IRAgentReferencePaye -> iRPAYEAGENTMappingRepository,
-      SdltStorn            -> iRSDLTAGENTMappingRepository
-    )
-  def get(legacyAgentEnrolmentType: LegacyAgentEnrolmentType): MappingRepository =
-    repositories(legacyAgentEnrolmentType)
+  private val repositories: Map[LegacyAgentEnrolmentType, MappingRepository] = Map(
+    AgentCode -> agentCodeMappingRepository,
+    IRAgentReference -> iRSAAGENTMappingRepository,
+    AgentRefNo -> hMCEVATAGNTMappingRepository,
+    AgentCharId -> hMRCCHARAGENTMappingRepository,
+    HmrcGtsAgentRef -> hMRCGTSAGNTMappingRepository,
+    HmrcMgdAgentRef -> hMRCMGDAGNTMappingRepository,
+    VATAgentRefNo -> hMRCNOVRNAGNTMappingRepository,
+    IRAgentReferenceCt -> iRCTAGENTMappingRepository,
+    IRAgentReferencePaye -> iRPAYEAGENTMappingRepository,
+    SdltStorn -> iRSDLTAGENTMappingRepository
+  )
+  def get(legacyAgentEnrolmentType: LegacyAgentEnrolmentType): MappingRepository = repositories(legacyAgentEnrolmentType)
 
   def map[T](f: MappingRepository => T): Seq[T] = repositories.values.map(f).toSeq
 
-  def deleteDataForArn(arn: Arn)(implicit ec: ExecutionContext): Future[Seq[Int]] =
-    Future
-      .sequence(repositories.map { case (_, repository) =>
-        repository.deleteByArn(arn).map(dr => dr.getDeletedCount.toInt)
-      }.toSeq)
+  def deleteDataForArn(arn: Arn)(implicit ec: ExecutionContext): Future[Seq[Int]] = Future
+    .sequence(repositories.map { case (_, repository) => repository.deleteByArn(arn).map(dr => dr.getDeletedCount.toInt) }.toSeq)
 
-  def deleteDataForUtr(utr: Utr)(implicit ec: ExecutionContext): Future[Seq[Int]] =
-    Future
-      .sequence(repositories.map { case (_, repository) =>
-        repository.deleteByUtr(utr).map(dr => dr.getDeletedCount.toInt)
-      }.toSeq)
+  def deleteDataForUtr(utr: Utr)(implicit ec: ExecutionContext): Future[Seq[Int]] = Future
+    .sequence(repositories.map { case (_, repository) => repository.deleteByUtr(utr).map(dr => dr.getDeletedCount.toInt) }.toSeq)
 
-  def updateUtrToArn(arn: Arn, utr: Utr)(implicit ec: ExecutionContext): Future[Unit] =
-    Future
-      .sequence(repositories.map { case (_, repository) =>
-        repository
-          .updateUtrToArn(utr, arn)
-      })
-      .map(_ => ())
+  def updateUtrToArn(
+    arn: Arn,
+    utr: Utr
+  )(implicit ec: ExecutionContext): Future[Unit] = Future
+    .sequence(repositories.map { case (_, repository) =>
+      repository
+        .updateUtrToArn(utr, arn)
+    })
+    .map(_ => ())
 
 }
 
 @Singleton
 class IRSAAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-    extends MappingRepository(collectionName = "IR-SA-AGENT", mongo = mongoComponent)
+extends MappingRepository(collectionName = "IR-SA-AGENT", mongo = mongoComponent)
 
 @Singleton
 class NewAgentCodeMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-    extends MappingRepository(collectionName = "AgentCode", mongo = mongoComponent)
+extends MappingRepository(collectionName = "AgentCode", mongo = mongoComponent)
 
 @Singleton
 class HMCEVATAGNTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-    extends MappingRepository("HMCE-VAT-AGNT", mongo = mongoComponent)
+extends MappingRepository("HMCE-VAT-AGNT", mongo = mongoComponent)
 
 @Singleton
 class HMRCCHARAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-    extends MappingRepository("HMRC-CHAR-AGENT", mongo = mongoComponent)
+extends MappingRepository("HMRC-CHAR-AGENT", mongo = mongoComponent)
 
 @Singleton
 class HMRCGTSAGNTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-    extends MappingRepository("HMRC-GTS-AGNT", mongo = mongoComponent)
+extends MappingRepository("HMRC-GTS-AGNT", mongo = mongoComponent)
 
 @Singleton
 class HMRCMGDAGNTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-    extends MappingRepository("HMRC-MGD-AGNT", mongo = mongoComponent)
+extends MappingRepository("HMRC-MGD-AGNT", mongo = mongoComponent)
 
 @Singleton
 class HMRCNOVRNAGNTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-    extends MappingRepository("HMRC-NOVRN-AGNT", mongo = mongoComponent)
+extends MappingRepository("HMRC-NOVRN-AGNT", mongo = mongoComponent)
 
 @Singleton
 class IRCTAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-    extends MappingRepository("IR-CT-AGENT", mongo = mongoComponent)
+extends MappingRepository("IR-CT-AGENT", mongo = mongoComponent)
 
 @Singleton
 class IRPAYEAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-    extends MappingRepository("IR-PAYE-AGENT", mongo = mongoComponent)
+extends MappingRepository("IR-PAYE-AGENT", mongo = mongoComponent)
 
 @Singleton
 class IRSDLTAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit ec: ExecutionContext)
-    extends MappingRepository("IR-SDLT-AGENT", mongo = mongoComponent)
+extends MappingRepository("IR-SDLT-AGENT", mongo = mongoComponent)
