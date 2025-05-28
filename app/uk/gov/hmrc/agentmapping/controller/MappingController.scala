@@ -162,18 +162,10 @@ with Logging {
     }
   }
 
-  private def deleteAgentRecords(arn: Arn) = repositories.deleteDataForArn(arn)
-
-  def delete(arn: Arn): Action[AnyContent] = Action.async {
-    deleteAgentRecords(arn).map { _ =>
-      NoContent
-    }
-  }
-
   def removeMappingsForAgent(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     withBasicAuth(appConfig.expectedAuth) {
       (for {
-        mappingRecords <- deleteAgentRecords(arn).map(_.sum)
+        mappingRecords <- repositories.deleteDataForArn(arn).map(_.sum)
         detailRecords <- detailsRepository.removeMappingDetailsForAgent(arn)
       } yield Ok(
         Json.toJson[TerminationResponse](
