@@ -16,7 +16,8 @@
 
 package uk.gov.hmrc.agentmapping.config
 
-import javax.inject.{Inject, Singleton}
+import javax.inject.Inject
+import javax.inject.Singleton
 import uk.gov.hmrc.agentmapping.model.BasicAuthentication
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 

@@ -20,8 +20,12 @@ import java.time.LocalDateTime
 
 import javax.inject.Inject
 import play.api.Logging
-import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{Action, AnyContent, ControllerComponents, Request}
+import play.api.libs.json.JsValue
+import play.api.libs.json.Json
+import play.api.mvc.Action
+import play.api.mvc.AnyContent
+import play.api.mvc.ControllerComponents
+import play.api.mvc.Request
 import uk.gov.hmrc.agentmapping.auth.AuthActions
 import uk.gov.hmrc.agentmapping.connector.SubscriptionConnector
 import uk.gov.hmrc.agentmapping.model._
@@ -29,7 +33,8 @@ import uk.gov.hmrc.agentmapping.repository.MappingDetailsRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
 
 class MappingDetailsController @Inject() (
   repository: MappingDetailsRepository,
@@ -37,8 +42,8 @@ class MappingDetailsController @Inject() (
   cc: ControllerComponents,
   subscriptionConnector: SubscriptionConnector
 )(implicit val ec: ExecutionContext)
-    extends BackendController(cc)
-    with Logging {
+extends BackendController(cc)
+with Logging {
 
   import authActions._
 
@@ -57,7 +62,9 @@ class MappingDetailsController @Inject() (
             if (record.mappingDetails.exists(m => m.authProviderId == mappingDetailsRequest.authProviderId)) {
               logger.error("already mapped")
               Future successful Conflict
-            } else repository.updateMappingDisplayDetails(arn, details).map(_ => Ok)
+            }
+            else
+              repository.updateMappingDisplayDetails(arn, details).map(_ => Ok)
 
           case None =>
             val record = MappingDetailsRepositoryRecord(arn, Seq(details))
@@ -69,23 +76,28 @@ class MappingDetailsController @Inject() (
   def findRecordByArn(arn: Arn): Action[AnyContent] = Action.async { request =>
     repository.findByArn(arn).map {
       case Some(record) => Ok(Json.toJson(record))
-      case None         => NotFound(s"no record found for this arn: $arn")
+      case None => NotFound(s"no record found for this arn: $arn")
     }
   }
 
-  def transferSubscriptionRecordToMappingDetails(arn: Arn): Action[AnyContent] =
-    authorisedWithProviderId { implicit request => implicit providerId =>
-      subscriptionConnector.getUserMappings(AuthProviderId(providerId)).flatMap {
-        case Some(userMappings) if userMappings.nonEmpty =>
-          val record = MappingDetailsRepositoryRecord(arn, userMappings2MappingDetails(userMappings))
-          repository.create(record).map(_ => Created)
+  def transferSubscriptionRecordToMappingDetails(arn: Arn): Action[AnyContent] = authorisedWithProviderId { implicit request => implicit providerId =>
+    subscriptionConnector.getUserMappings(AuthProviderId(providerId)).flatMap {
+      case Some(userMappings) if userMappings.nonEmpty =>
+        val record = MappingDetailsRepositoryRecord(arn, userMappings2MappingDetails(userMappings))
+        repository.create(record).map(_ => Created)
 
-        case Some(_) => Future successful Ok("No user mappings found")
-        case None    => Future successful NotFound(s"no user mappings found for this auth provider id: $providerId")
-      }
+      case Some(_) => Future successful Ok("No user mappings found")
+      case None => Future successful NotFound(s"no user mappings found for this auth provider id: $providerId")
     }
+  }
 
-  def userMappings2MappingDetails(userMappings: List[UserMapping]): Seq[MappingDetails] =
-    userMappings.map(u => MappingDetails(u.authProviderId, GGTag(u.ggTag), u.count, LocalDateTime.now()))
+  def userMappings2MappingDetails(userMappings: List[UserMapping]): Seq[MappingDetails] = userMappings.map(u =>
+    MappingDetails(
+      u.authProviderId,
+      GGTag(u.ggTag),
+      u.count,
+      LocalDateTime.now()
+    )
+  )
 
 }

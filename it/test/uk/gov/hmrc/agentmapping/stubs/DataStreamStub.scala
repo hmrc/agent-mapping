@@ -18,11 +18,14 @@ package test.uk.gov.hmrc.agentmapping.stubs
 
 import com.github.tomakehurst.wiremock.client.WireMock._
 import org.scalatest.concurrent.Eventually
-import org.scalatest.time.{Millis, Seconds, Span}
+import org.scalatest.time.Millis
+import org.scalatest.time.Seconds
+import org.scalatest.time.Span
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent
 
-trait DataStreamStub extends Eventually {
+trait DataStreamStub
+extends Eventually {
 
   implicit val patience = PatienceConfig(scaled(Span(25, Seconds)), scaled(Span(500, Millis)))
 
@@ -31,20 +34,19 @@ trait DataStreamStub extends Eventually {
     event: AgentMappingEvent,
     tags: Map[String, String] = Map.empty,
     detail: Map[String, String] = Map.empty
-  ) =
-    eventually {
-      verify(
-        count,
-        postRequestedFor(urlPathEqualTo(auditUrl))
-          .withRequestBody(similarToJson(s"""{
+  ) = eventually {
+    verify(
+      count,
+      postRequestedFor(urlPathEqualTo(auditUrl))
+        .withRequestBody(similarToJson(s"""{
           |  "auditSource": "agent-mapping",
           |  "auditType": "$event",
           |  "tags": ${Json.toJson(tags)},
           |  "detail": ${Json.toJson(detail)}
 
           |}"""))
-      )
-    }
+    )
+  }
 
   def givenAuditConnector = {
     stubFor(post(urlPathEqualTo("/write/audit/merged")).willReturn(aResponse().withStatus(204)))
@@ -53,6 +55,10 @@ trait DataStreamStub extends Eventually {
 
   private def auditUrl = "/write/audit"
 
-  private def similarToJson(value: String) = equalToJson(value.stripMargin, true, true)
+  private def similarToJson(value: String) = equalToJson(
+    value.stripMargin,
+    true,
+    true
+  )
 
 }

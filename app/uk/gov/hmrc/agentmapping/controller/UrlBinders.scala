@@ -17,30 +17,47 @@
 package uk.gov.hmrc.agentmapping.controller
 
 import play.api.mvc.PathBindable
-import uk.gov.hmrc.agentmtdidentifiers.model.{Arn, Utr}
+import uk.gov.hmrc.agentmtdidentifiers.model.Arn
+import uk.gov.hmrc.agentmtdidentifiers.model.Utr
 
 object UrlBinders {
 
-  implicit val utrBinder: PathBindable[Utr] = new PathBindable[Utr] {
-    override def bind(key: String, utrValue: String): Either[String, Utr] =
-      if (Utr.isValid(utrValue)) {
-        Right(Utr(utrValue))
-      } else {
-        Left(raw""""$utrValue" is not a valid UTR""")
-      }
+  implicit val utrBinder: PathBindable[Utr] =
+    new PathBindable[Utr] {
+      override def bind(
+        key: String,
+        utrValue: String
+      ): Either[String, Utr] =
+        if (Utr.isValid(utrValue)) {
+          Right(Utr(utrValue))
+        }
+        else {
+          Left(raw""""$utrValue" is not a valid UTR""")
+        }
 
-    override def unbind(key: String, utr: Utr): String = utr.value
-  }
+      override def unbind(
+        key: String,
+        utr: Utr
+      ): String = utr.value
+    }
 
-  implicit val arnBinder: PathBindable[Arn] = new PathBindable[Arn] {
-    override def bind(key: String, arnValue: String): Either[String, Arn] =
-      if (Arn.isValid(arnValue)) {
-        Right(Arn(arnValue))
-      } else {
-        Left(raw""""$arnValue" is not a valid ARN""")
-      }
+  implicit val arnBinder: PathBindable[Arn] =
+    new PathBindable[Arn] {
+      override def bind(
+        key: String,
+        arnValue: String
+      ): Either[String, Arn] =
+        if (Arn.isValid(arnValue)) {
+          Right(Arn(arnValue))
+        }
+        else {
+          Left(raw""""$arnValue" is not a valid ARN""")
+        }
 
-    override def unbind(key: String, arn: Arn): String = arn.value
-  }
+      override def unbind(
+        key: String,
+        arn: Arn
+      ): String = arn.value
+    }
 
 }

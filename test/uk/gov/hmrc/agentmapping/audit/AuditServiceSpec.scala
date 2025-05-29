@@ -20,47 +20,48 @@ import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.verify
 import org.scalatest.OptionValues
-import org.scalatest.concurrent.{Eventually, ScalaFutures}
+import org.scalatest.concurrent.Eventually
+import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.test.FakeRequest
-import uk.gov.hmrc.http.{Authorization, HeaderCarrier, RequestId, SessionId}
+import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.http.HeaderNames
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
 
 import scala.concurrent.ExecutionContext
+import scala.concurrent.ExecutionContext.Implicits.global
 
 class AuditServiceSpec
-    extends AnyWordSpecLike
-    with Matchers
-    with OptionValues
-    with ScalaFutures
-    with MockitoSugar
-    with Eventually {
+extends AnyWordSpecLike
+with Matchers
+with OptionValues
+with ScalaFutures
+with MockitoSugar
+with Eventually {
   "auditEvent" should {
     "send an event with the correct fields" in {
       val mockConnector = mock[AuditConnector]
       val service = new AuditService(mockConnector)
-
-      val hc = HeaderCarrier(
-        authorization = Some(Authorization("dummy bearer token")),
-        sessionId = Some(SessionId("dummy session id")),
-        requestId = Some(RequestId("dummy request id"))
-      )
-
-      implicit val ec = ExecutionContext.Implicits.global
 
       service
         .auditEvent(
           CreateMapping,
           "transaction name",
           Seq(
-            "extra1"               -> "first extra detail",
-            "extra2"               -> "second extra detail",
+            "extra1" -> "first extra detail",
+            "extra2" -> "second extra detail",
             "agentReferenceNumber" -> "GARN0000247"
           )
-        )(hc, ec, FakeRequest("GET", "/path"))
+        )(
+          FakeRequest("GET", "/path").withHeaders(
+            HeaderNames.authorisation -> "dummy bearer token",
+            HeaderNames.xSessionId -> "dummy session id",
+            HeaderNames.xRequestId -> "dummy request id"
+          )
+        )
         .futureValue
 
       eventually {

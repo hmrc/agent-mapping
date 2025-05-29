@@ -16,17 +16,22 @@
 
 package test.uk.gov.hmrc.agentmapping.controllers
 
-import play.api.libs.json.{JsValue, Json}
-import play.api.mvc.{ControllerComponents, Request}
+import play.api.libs.json.JsValue
+import play.api.libs.json.Json
+import play.api.mvc.ControllerComponents
+import play.api.mvc.Request
 import play.api.test.FakeRequest
-import play.api.test.Helpers.{contentAsJson, defaultAwaitTimeout, status}
+import play.api.test.Helpers.contentAsJson
+import play.api.test.Helpers.defaultAwaitTimeout
+import play.api.test.Helpers.status
 import play.mvc.Http.Status
 import uk.gov.hmrc.agentmapping.auth.AuthActions
 import uk.gov.hmrc.agentmapping.connector.SubscriptionConnector
 import uk.gov.hmrc.agentmapping.controller.MappingDetailsController
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository.MappingDetailsRepository
-import test.uk.gov.hmrc.agentmapping.stubs.{AuthStubs, SubscriptionStub}
+import test.uk.gov.hmrc.agentmapping.stubs.AuthStubs
+import test.uk.gov.hmrc.agentmapping.stubs.SubscriptionStub
 import test.uk.gov.hmrc.agentmapping.support.ServerBaseISpec
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain
@@ -36,10 +41,10 @@ import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class MappingDetailsControllerISpec
-    extends ServerBaseISpec
-    with AuthStubs
-    with SubscriptionStub
-    with DefaultPlayMongoRepositorySupport[MappingDetailsRepositoryRecord] {
+extends ServerBaseISpec
+with AuthStubs
+with SubscriptionStub
+with DefaultPlayMongoRepositorySupport[MappingDetailsRepositoryRecord] {
 
   override def beforeEach(): Unit = {
     super.beforeEach()
@@ -51,15 +56,19 @@ class MappingDetailsControllerISpec
 
   val arn: Arn = Arn("TARN0000001")
 
-  override protected val repository: MappingDetailsRepository =
-    new MappingDetailsRepository(mongoComponent)
+  override protected val repository: MappingDetailsRepository = new MappingDetailsRepository(mongoComponent)
 
   val authActions = app.injector.instanceOf[AuthActions]
   val cc = app.injector.instanceOf[ControllerComponents]
   val subscriptionConnector = app.injector.instanceOf[SubscriptionConnector]
 
   lazy val controller: MappingDetailsController =
-    new MappingDetailsController(repository, authActions, cc, subscriptionConnector)
+    new MappingDetailsController(
+      repository,
+      authActions,
+      cc,
+      subscriptionConnector
+    )
 
   val authProviderId = AuthProviderId("cred-123")
   val ggTag = GGTag("1234")
@@ -79,7 +88,15 @@ class MappingDetailsControllerISpec
 
       repository.findByArn(arn).futureValue.get.arn shouldBe arn
       repository.findByArn(arn).futureValue.get should matchRecordIgnoringDateTime(
-        MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, c, LocalDateTime.now())))
+        MappingDetailsRepositoryRecord(
+          arn,
+          Seq(MappingDetails(
+            authProviderId,
+            ggTag,
+            c,
+            LocalDateTime.now()
+          ))
+        )
       )
     }
 
@@ -90,7 +107,15 @@ class MappingDetailsControllerISpec
       )
 
       repository
-        .create(MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, c, LocalDateTime.now()))))
+        .create(MappingDetailsRepositoryRecord(
+          arn,
+          Seq(MappingDetails(
+            authProviderId,
+            ggTag,
+            c,
+            LocalDateTime.now()
+          ))
+        ))
         .futureValue
 
       val result = controller.createOrUpdateRecord(arn)(request)
@@ -103,8 +128,18 @@ class MappingDetailsControllerISpec
         MappingDetailsRepositoryRecord(
           arn,
           Seq(
-            MappingDetails(authProviderId, ggTag, c, LocalDateTime.now()),
-            MappingDetails(AuthProviderId("cred-456"), GGTag("5678"), 20, LocalDateTime.now())
+            MappingDetails(
+              authProviderId,
+              ggTag,
+              c,
+              LocalDateTime.now()
+            ),
+            MappingDetails(
+              AuthProviderId("cred-456"),
+              GGTag("5678"),
+              20,
+              LocalDateTime.now()
+            )
           )
         )
       )
@@ -117,7 +152,15 @@ class MappingDetailsControllerISpec
         .withHeaders("Authorization" -> "Bearer XYZ")
 
       repository
-        .create(MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, c, LocalDateTime.now()))))
+        .create(MappingDetailsRepositoryRecord(
+          arn,
+          Seq(MappingDetails(
+            authProviderId,
+            ggTag,
+            c,
+            LocalDateTime.now()
+          ))
+        ))
         .futureValue
 
       val result = controller.createOrUpdateRecord(arn)(request)
@@ -130,7 +173,15 @@ class MappingDetailsControllerISpec
     "find and return record if it exists for the arn" in {
 
       repository
-        .create(MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, c, LocalDateTime.now()))))
+        .create(MappingDetailsRepositoryRecord(
+          arn,
+          Seq(MappingDetails(
+            authProviderId,
+            ggTag,
+            c,
+            LocalDateTime.now()
+          ))
+        ))
         .futureValue
 
       val result =
@@ -141,7 +192,15 @@ class MappingDetailsControllerISpec
 
       status(result) shouldBe Status.OK
       contentAsJson(result).as[MappingDetailsRepositoryRecord] should matchRecordIgnoringDateTime(
-        MappingDetailsRepositoryRecord(arn, Seq(MappingDetails(authProviderId, ggTag, c, LocalDateTime.now())))
+        MappingDetailsRepositoryRecord(
+          arn,
+          Seq(MappingDetails(
+            authProviderId,
+            ggTag,
+            c,
+            LocalDateTime.now()
+          ))
+        )
       )
     }
 
@@ -163,13 +222,20 @@ class MappingDetailsControllerISpec
 
     "don't create mapping-details row for user no mappings (clean credentials)" in {
 
-      givenUserIsAuthorisedForCreds(AgentCode.key, "AgentCode", agentCode, "cred-123", agentCodeOpt = None)
+      givenUserIsAuthorisedForCreds(
+        AgentCode.key,
+        "AgentCode",
+        agentCode,
+        "cred-123",
+        agentCodeOpt = None
+      )
       givenNoMappingsExistForAuthProviderId(AuthProviderId("cred-123"))
 
-      val result = controller.transferSubscriptionRecordToMappingDetails(arn)(
-        FakeRequest("PUT", "agent-mapping/mappings/task-list/details/arn/:arn")
-          .withHeaders("Authorization" -> "Bearer XYZ")
-      )
+      val result =
+        controller.transferSubscriptionRecordToMappingDetails(arn)(
+          FakeRequest("PUT", "agent-mapping/mappings/task-list/details/arn/:arn")
+            .withHeaders("Authorization" -> "Bearer XYZ")
+        )
 
       status(result) shouldBe Status.OK
 
@@ -179,7 +245,13 @@ class MappingDetailsControllerISpec
 
     "update the permanent mapping details store with the user mappings from the subscription journey record" in {
 
-      givenUserIsAuthorisedForCreds(AgentCode.key, "AgentCode", agentCode, "cred-123", agentCodeOpt = None)
+      givenUserIsAuthorisedForCreds(
+        AgentCode.key,
+        "AgentCode",
+        agentCode,
+        "cred-123",
+        agentCodeOpt = None
+      )
       givenUserMappingsExistsForAuthProviderId(
         AuthProviderId("cred-123"),
         Seq(
@@ -206,18 +278,29 @@ class MappingDetailsControllerISpec
         )
       )
 
-      val result = controller.transferSubscriptionRecordToMappingDetails(arn)(
-        FakeRequest("PUT", "agent-mapping/mappings/task-list/details/arn/:arn")
-          .withHeaders("Authorization" -> "Bearer XYZ")
-      )
+      val result =
+        controller.transferSubscriptionRecordToMappingDetails(arn)(
+          FakeRequest("PUT", "agent-mapping/mappings/task-list/details/arn/:arn")
+            .withHeaders("Authorization" -> "Bearer XYZ")
+        )
 
       status(result) shouldBe Status.CREATED
       repository.findByArn(arn).futureValue.get should matchRecordIgnoringDateTime(
         MappingDetailsRepositoryRecord(
           arn,
           Seq(
-            MappingDetails(AuthProviderId("cred-456"), GGTag("ggTag-1"), 5, LocalDateTime.now()),
-            MappingDetails(AuthProviderId("cred-789"), GGTag("ggTag-2"), 10, LocalDateTime.now())
+            MappingDetails(
+              AuthProviderId("cred-456"),
+              GGTag("ggTag-1"),
+              5,
+              LocalDateTime.now()
+            ),
+            MappingDetails(
+              AuthProviderId("cred-789"),
+              GGTag("ggTag-2"),
+              10,
+              LocalDateTime.now()
+            )
           )
         )
       )
@@ -225,15 +308,23 @@ class MappingDetailsControllerISpec
 
     "return not found when no user mappings are found in the subscription journey record" in {
 
-      givenUserIsAuthorisedForCreds(AgentCode.key, "AgentCode", agentCode, "cred-123", agentCodeOpt = None)
+      givenUserIsAuthorisedForCreds(
+        AgentCode.key,
+        "AgentCode",
+        agentCode,
+        "cred-123",
+        agentCodeOpt = None
+      )
       givenUserMappingsNotFoundForAuthProviderId(AuthProviderId("cred-123"))
 
-      val result = controller.transferSubscriptionRecordToMappingDetails(arn)(
-        FakeRequest("PUT", "agent-mapping/mappings/task-list/details/arn/:arn")
-          .withHeaders("Authorization" -> "Bearer XYZ")
-      )
+      val result =
+        controller.transferSubscriptionRecordToMappingDetails(arn)(
+          FakeRequest("PUT", "agent-mapping/mappings/task-list/details/arn/:arn")
+            .withHeaders("Authorization" -> "Bearer XYZ")
+        )
 
       status(result) shouldBe Status.NOT_FOUND
     }
   }
+
 }
