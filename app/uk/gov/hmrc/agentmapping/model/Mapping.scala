@@ -16,22 +16,17 @@
 
 package uk.gov.hmrc.agentmapping.model
 
-import play.api.libs.json._
 import play.api.libs.json.Json.format
+import play.api.libs.json._
+import uk.gov.hmrc.agentmapping.util.EncryptionUtils.decryptString
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentmtdidentifiers.model.Utr
+import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypter
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.domain.TaxIdentifier
 
 import java.time.LocalDateTime
-
-case class Mapping(
-  arn: String,
-  identifiers: Seq[Identifier]
-)
-
-object Mapping {
-  implicit val formats: Format[Mapping] = format[Mapping]
-}
 
 case class AgentReferenceMappings(mappings: Seq[AgentReferenceMapping])
 
@@ -49,7 +44,8 @@ trait ArnToIdentifierMapping {
 case class AgentReferenceMapping(
   businessId: TaxIdentifier,
   identifier: String,
-  createdDate: Option[LocalDateTime]
+  createdDate: Option[LocalDateTime],
+  encrypted: Option[Boolean]
 )
 extends ArnToIdentifierMapping
 
@@ -57,56 +53,125 @@ object AgentReferenceMapping {
 
   import MongoLocalDateTimeFormat._
 
-  implicit val writes: Writes[AgentReferenceMapping] =
-    new Writes[AgentReferenceMapping] {
-      override def writes(o: AgentReferenceMapping): JsValue =
-        o match {
-          case AgentReferenceMapping(
-                Arn(arn),
-                identifier,
-                _
-              ) =>
-            Json.obj("arn" -> arn, "identifier" -> identifier)
-          case AgentReferenceMapping(
-                Utr(utr),
-                identifier,
-                Some(createdDate)
-              ) =>
-            Json.obj(
-              "utr" -> utr,
-              "identifier" -> identifier,
-              "preCreatedDate" -> createdDate
-            )
-          case _ => throw new Exception(s"Unknown AgentReferenceMapping type: $o")
-        }
-    }
+  implicit val writes: Writes[AgentReferenceMapping] = {
+    case AgentReferenceMapping(
+          Arn(arn),
+          identifier,
+          _,
+          _
+        ) =>
+      Json.obj("arn" -> arn, "identifier" -> identifier)
+    case AgentReferenceMapping(
+          Utr(utr),
+          identifier,
+          Some(createdDate),
+          _
+        ) =>
+      Json.obj(
+        "utr" -> utr,
+        "identifier" -> identifier,
+        "preCreatedDate" -> createdDate
+      )
+    case o => throw new Exception(s"Unknown AgentReferenceMapping type: $o")
+  }
 
   implicit val reads: Reads[AgentReferenceMapping] =
-    new Reads[AgentReferenceMapping] {
-      override def reads(json: JsValue): JsResult[AgentReferenceMapping] =
+    (json: JsValue) =>
+      if ((json \ "arn").toOption.isDefined) {
+        val arn = (json \ "arn").as[Arn]
+        val identifier = (json \ "identifier").as[String]
+        JsSuccess(AgentReferenceMapping(
+          arn,
+          identifier,
+          None,
+          None
+        ))
+      }
+      else if ((json \ "utr").toOption.isDefined) {
+        val utr = (json \ "utr").as[Utr]
+        val identifier = (json \ "identifier").as[String]
+        val preCreatedDate = (json \ "preCreatedDate").asOpt[LocalDateTime]
+        JsSuccess(AgentReferenceMapping(
+          utr,
+          identifier,
+          preCreatedDate,
+          None
+        ))
+      }
+      else
+        JsError("invalid json")
+
+  implicit val formats: Format[AgentReferenceMapping] = Format(reads, writes)
+
+  def databaseFormat(implicit
+    crypto: Encrypter
+      with Decrypter
+  ): Format[AgentReferenceMapping] = {
+
+    val databaseWrites: Writes[AgentReferenceMapping] = {
+      case AgentReferenceMapping(
+            Arn(arn),
+            identifier,
+            _,
+            _
+          ) =>
+        Json.obj(
+          "arn" -> arn,
+          "identifier" -> stringEncrypter.writes(identifier),
+          "encrypted" -> Some(true)
+        )
+      case AgentReferenceMapping(
+            Utr(utr),
+            identifier,
+            Some(createdDate),
+            _
+          ) =>
+        Json.obj(
+          "utr" -> utr,
+          "identifier" -> stringEncrypter.writes(identifier),
+          "preCreatedDate" -> createdDate,
+          "encrypted" -> Some(true)
+        )
+      case o => throw new Exception(s"Unknown AgentReferenceMapping type: $o")
+    }
+
+    val databaseReads: Reads[AgentReferenceMapping] =
+      (json: JsValue) =>
         if ((json \ "arn").toOption.isDefined) {
+          val isEncrypted = (json \ "encrypted").asOpt[Boolean]
           val arn = (json \ "arn").as[Arn]
-          val identifier = (json \ "identifier").as[String]
+          val identifier = decryptString(
+            "identifier",
+            isEncrypted,
+            json
+          )
           JsSuccess(AgentReferenceMapping(
             arn,
             identifier,
-            None
+            None,
+            isEncrypted
           ))
         }
         else if ((json \ "utr").toOption.isDefined) {
+          val isEncrypted = (json \ "encrypted").asOpt[Boolean]
           val utr = (json \ "utr").as[Utr]
-          val identifier = (json \ "identifier").as[String]
+          val identifier = decryptString(
+            "identifier",
+            isEncrypted,
+            json
+          )
           val preCreatedDate = (json \ "preCreatedDate").asOpt[LocalDateTime]
           JsSuccess(AgentReferenceMapping(
             utr,
             identifier,
-            preCreatedDate
+            preCreatedDate,
+            isEncrypted
           ))
         }
         else
           JsError("invalid json")
-    }
 
-  implicit val formats: Format[AgentReferenceMapping] = Format(reads, writes)
+    Format(databaseReads, databaseWrites)
+  }
 
 }

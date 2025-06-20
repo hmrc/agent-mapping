@@ -14,38 +14,38 @@
  * limitations under the License.
  */
 
-package test.uk.gov.hmrc.agentmapping.repository
+package uk.gov.hmrc.agentmapping.repository
 
+import org.apache.pekko.stream.Materializer
 import org.mongodb.scala.MongoWriteException
+import org.mongodb.scala.model.Filters
+import org.mongodb.scala.model.Updates
 import org.mongodb.scala.result.DeleteResult
+import org.scalatest.BeforeAndAfterAll
+import org.scalatest.OptionValues
+import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
+import org.scalatest.time.Millis
+import org.scalatest.time.Seconds
+import org.scalatest.time.Span
 import org.scalatest.wordspec.AnyWordSpecLike
-import org.scalatest.BeforeAndAfterAll
-import org.scalatest.OptionValues
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import test.uk.gov.hmrc.agentmapping.support.MetricTestSupport
 import uk.gov.hmrc.agentmapping.model._
-import uk.gov.hmrc.agentmapping.repository.HMCEVATAGNTMappingRepository
-import uk.gov.hmrc.agentmapping.repository.HMRCCHARAGENTMappingRepository
-import uk.gov.hmrc.agentmapping.repository.HMRCGTSAGNTMappingRepository
-import uk.gov.hmrc.agentmapping.repository.HMRCMGDAGNTMappingRepository
-import uk.gov.hmrc.agentmapping.repository.HMRCNOVRNAGNTMappingRepository
-import uk.gov.hmrc.agentmapping.repository.IRCTAGENTMappingRepository
-import uk.gov.hmrc.agentmapping.repository.IRPAYEAGENTMappingRepository
-import uk.gov.hmrc.agentmapping.repository.IRSAAGENTMappingRepository
-import uk.gov.hmrc.agentmapping.repository.IRSDLTAGENTMappingRepository
-import uk.gov.hmrc.agentmapping.repository.MappingRepository
-import uk.gov.hmrc.agentmapping.repository.NewAgentCodeMappingRepository
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentmtdidentifiers.model.Utr
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.SymmetricCryptoFactory
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
-import scala.concurrent.ExecutionContext.Implicits.global
 
+import java.time.LocalDateTime
+import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.ClassTag
 
 class IRSAAGENTMappingRepositoryISpec
@@ -65,46 +65,53 @@ with BeforeAndAfterAll {
 class NewAgentCodeMappingRepositoryISpec
 extends BaseRepositoryISpec[AgentReferenceMapping, NewAgentCodeMappingRepository]
 with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
-
   override lazy val repository = new NewAgentCodeMappingRepository(mongoComponent)
+
 }
 
 class HMCEVATAGNTMappingRepositoryISpec
 extends BaseRepositoryISpec[AgentReferenceMapping, HMCEVATAGNTMappingRepository]
 with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
   override lazy val repository = new HMCEVATAGNTMappingRepository(mongoComponent)
+
 }
 
 class HMRCCHARAGENTMappingRepositoryISpec
 extends BaseRepositoryISpec[AgentReferenceMapping, HMRCCHARAGENTMappingRepository]
 with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
   override lazy val repository = new HMRCCHARAGENTMappingRepository(mongoComponent)
+
 }
 class HMRCGTSAGNTMappingRepositoryISpec
 extends BaseRepositoryISpec[AgentReferenceMapping, HMRCGTSAGNTMappingRepository]
 with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
   override lazy val repository = new HMRCGTSAGNTMappingRepository(mongoComponent)
+
 }
 
 class HMRCMGDAGNTMappingRepositoryISpec
 extends BaseRepositoryISpec[AgentReferenceMapping, HMRCMGDAGNTMappingRepository]
 with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
   override lazy val repository = new HMRCMGDAGNTMappingRepository(mongoComponent)
+
 }
 class HMRCNOVRNAGNTMappingRepositoryISpec
 extends BaseRepositoryISpec[AgentReferenceMapping, HMRCNOVRNAGNTMappingRepository]
 with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
   override lazy val repository = new HMRCNOVRNAGNTMappingRepository(mongoComponent)
+
 }
 class IRCTAGENTMappingRepositoryISpec
 extends BaseRepositoryISpec[AgentReferenceMapping, IRCTAGENTMappingRepository]
 with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
   override lazy val repository = new IRCTAGENTMappingRepository(mongoComponent)
+
 }
 class IRPAYEAGENTMappingRepositoryISpec
 extends BaseRepositoryISpec[AgentReferenceMapping, IRPAYEAGENTMappingRepository]
 with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
   override lazy val repository = new IRPAYEAGENTMappingRepository(mongoComponent)
+
 }
 class IRSDLTAGENTMappingRepositoryISpec
 extends BaseRepositoryISpec[AgentReferenceMapping, IRSDLTAGENTMappingRepository]
@@ -124,6 +131,9 @@ with IntegrationPatience
 with GuiceOneAppPerSuite
 with MetricTestSupport {
 
+  implicit val mat: Materializer = app.injector.instanceOf[Materializer]
+  implicit val crypto: Encrypter
+    with Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "GTfz3GZy0+gN0p/5wSqRBpWlbWVDMezXWtX+G9ENwCc=")
   def repository: MappingRepository
 
   override implicit lazy val app: Application = appBuilder.build()
@@ -135,13 +145,12 @@ with MetricTestSupport {
         "termination.stride.enrolment" -> "caat"
       )
     )
-//      .disable[PlayModule]
 
-  val arn1 = Arn("ARN00001")
-  val arn2 = Arn("ARN00002")
+  val arn1: Arn = Arn("ARN00001")
+  val arn2: Arn = Arn("ARN00002")
 
-  val utr1 = Utr("4000000009")
-  val utr2 = Utr("7000000002")
+  val utr1: Utr = Utr("4000000009")
+  val utr2: Utr = Utr("7000000002")
 
   val reference1 = "Ref0001"
   val reference2 = "Ref0002"
@@ -175,7 +184,7 @@ with MetricTestSupport {
         val e = repository.store(businessId, reference1).failed.futureValue
 
         e shouldBe a[MongoWriteException]
-        e.getMessage() should include("E11000")
+        e.getMessage should include("E11000")
       }
 
       s"allow more than one identifier to be mapped to the same {${businessId.getClass.getSimpleName}" in {
@@ -284,6 +293,94 @@ with MetricTestSupport {
 
       repository.findBy(arn1).futureValue shouldBe List(updatedMappings.head)
       repository.findBy(utr1).futureValue shouldBe List.empty
+    }
+  }
+
+  "countUnencrypted" should {
+
+    "return the number of items missing the 'encrypted' field and correctly ignore items with the field" in {
+      repository.collection.insertOne(
+        AgentReferenceMapping(
+          Arn("XARN1234567"),
+          "ABC123",
+          None,
+          Some(true)
+        )
+      ).toFuture().futureValue
+      repository.collection.insertOne(
+        AgentReferenceMapping(
+          Utr("1234567890"),
+          "ABC123",
+          Some(LocalDateTime.now()),
+          Some(true)
+        )
+      ).toFuture().futureValue
+      repository.collection.insertOne(
+        AgentReferenceMapping(
+          Arn("ZARN1234567"),
+          "ABC123",
+          None,
+          Some(true)
+        )
+      ).toFuture().futureValue
+      repository.collection.updateOne(
+        Filters.equal("arn", "XARN1234567"),
+        Updates.unset("encrypted")
+      ).toFuture().futureValue
+      repository.collection.updateOne(
+        Filters.equal("utr", "1234567890"),
+        Updates.unset("encrypted")
+      ).toFuture().futureValue
+
+      repository.countUnencrypted().futureValue shouldBe 2
+    }
+  }
+
+  "encryptOldRecords" should {
+
+    "iterate through all unencrypted items in the database and store them with encryption applied" in {
+      repository.collection.insertOne(
+        AgentReferenceMapping(
+          Arn("XARN1234567"),
+          "ABC123",
+          None,
+          Some(true)
+        )
+      ).toFuture().futureValue
+      repository.collection.insertOne(
+        AgentReferenceMapping(
+          Utr("1234567890"),
+          "ABC123",
+          Some(LocalDateTime.now()),
+          Some(true)
+        )
+      ).toFuture().futureValue
+      repository.collection.insertOne(
+        AgentReferenceMapping(
+          Arn("ZARN1234567"),
+          "ABC123",
+          None,
+          Some(true)
+        )
+      ).toFuture().futureValue
+      repository.collection.updateOne(
+        Filters.equal("arn", "XARN1234567"),
+        Updates.unset("encrypted")
+      ).toFuture().futureValue
+      repository.collection.updateOne(
+        Filters.equal("utr", "1234567890"),
+        Updates.unset("encrypted")
+      ).toFuture().futureValue
+      repository.collection.updateOne(
+        Filters.equal("arn", "ZARN1234567"),
+        Updates.unset("encrypted")
+      ).toFuture().futureValue
+
+      val throttleRate = 2
+      repository.encryptOldRecords(throttleRate)
+      eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
+        repository.countUnencrypted().futureValue shouldBe 0
+      }
     }
   }
 
