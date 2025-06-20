@@ -3,7 +3,7 @@ import sbt.*
 
 object AppDependencies {
 
-  private val bootstrapVer: String = "9.12.0"
+  private val bootstrapVer: String = "9.13.0"
   private val mongoVer: String = "2.6.0"
 
   val compile: Seq[ModuleID] = Seq(
