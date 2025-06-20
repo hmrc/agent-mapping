@@ -16,8 +16,13 @@
 
 package uk.gov.hmrc.agentmapping.repository
 
+import org.apache.pekko.Done
+import org.apache.pekko.stream.Materializer
+import org.apache.pekko.stream.scaladsl.Source
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Filters.exists
+import org.mongodb.scala.model.Filters.or
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Updates.combine
 import org.mongodb.scala.model.Updates.set
@@ -28,10 +33,13 @@ import org.mongodb.scala.model.UpdateOptions
 import org.mongodb.scala.result.DeleteResult
 import org.mongodb.scala.result.InsertOneResult
 import org.mongodb.scala.result.UpdateResult
+import play.api.Logging
 import play.api.libs.json.Format
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentmtdidentifiers.model.Utr
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.Codecs
@@ -41,8 +49,10 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.concurrent.TimeUnit
+import javax.inject.Named
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
 
 //DO NOT DELETE (even if this microservice gets decommissioned)
 abstract class MappingRepository(
@@ -50,12 +60,16 @@ abstract class MappingRepository(
   identifierKey: String = "identifier",
   mongo: MongoComponent
 )(
-  implicit ec: ExecutionContext
+  implicit
+  ec: ExecutionContext,
+  @Named("aes") crypto: Encrypter
+    with Decrypter,
+  mat: Materializer
 )
 extends PlayMongoRepository[AgentReferenceMapping](
   mongoComponent = mongo,
   collectionName = s"agent-mapping-${collectionName.toLowerCase}",
-  domainFormat = AgentReferenceMapping.formats,
+  domainFormat = AgentReferenceMapping.databaseFormat,
   indexes = List(
     IndexModel(
       ascending("arn", "identifier"),
@@ -86,6 +100,10 @@ extends PlayMongoRepository[AgentReferenceMapping](
       IndexOptions()
         .name("preCreatedDate")
         .expireAfter(86400L, TimeUnit.SECONDS)
+    ),
+    IndexModel(
+      ascending("encrypted"),
+      IndexOptions().name("encryptionIndex")
     )
   ),
   replaceIndexes = true,
@@ -93,7 +111,8 @@ extends PlayMongoRepository[AgentReferenceMapping](
     Codecs.playFormatCodec(Format(Arn.arnReads, Arn.arnWrites)),
     Codecs.playFormatCodec(Format(Utr.utrReads, Utr.utrWrites))
   )
-) {
+)
+with Logging {
 
   override lazy val requiresTtlIndex = false // keep data
 
@@ -111,7 +130,8 @@ extends PlayMongoRepository[AgentReferenceMapping](
     .insertOne(AgentReferenceMapping(
       identifier,
       identifierValue,
-      createdTime
+      createdTime,
+      Some(true)
     ))
     .toFuture()
 
@@ -136,5 +156,36 @@ extends PlayMongoRepository[AgentReferenceMapping](
 
   // This is for testing purposes only
   def deleteAll(): Future[DeleteResult] = collection.deleteMany(BsonDocument()).toFuture()
+
+  def countUnencrypted(): Future[Long] = collection.countDocuments(exists("encrypted", exists = false)).toFuture()
+
+  def encryptOldRecords(rate: Int = 10): Unit = {
+    val observable = collection.find(exists("encrypted", exists = false))
+    countUnencrypted().map { count =>
+      logger.warn(s"[MappingRepository] automatic encryption has started, $count applications left to encrypt")
+    }
+    Source
+      .fromPublisher(observable)
+      .throttle(rate, 1.second)
+      .runForeach { record =>
+        collection.replaceOne(or(equal("arn", record.businessId), equal("utr", record.businessId)), record).toFuture()
+          .map { _ =>
+            logger.warn("[MappingRepository] successfully encrypted record")
+          }
+          .recover { case _: Throwable => logger.warn("[MappingRepository] failed to encrypt record") }
+        ()
+      }
+      .recover { case _: Throwable =>
+        logger.warn("[MappingRepository] failed to read application before encrypting, aborting process")
+        Done
+      }
+      .onComplete { _ =>
+        countUnencrypted().map { count =>
+          logger.warn(s"[MappingRepository] encryption completed, $count applications left unencrypted")
+        }
+      }
+  }
+
+  encryptOldRecords()
 
 }
