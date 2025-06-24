@@ -20,16 +20,17 @@ import org.apache.pekko.Done
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
 import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.model.Filters.and
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Filters.exists
 import org.mongodb.scala.model.Filters.or
 import org.mongodb.scala.model.Indexes.ascending
-import org.mongodb.scala.model.Updates.combine
-import org.mongodb.scala.model.Updates.set
-import org.mongodb.scala.model.Updates.unset
 import org.mongodb.scala.model.IndexModel
 import org.mongodb.scala.model.IndexOptions
 import org.mongodb.scala.model.UpdateOptions
+import org.mongodb.scala.model.Updates.combine
+import org.mongodb.scala.model.Updates.set
+import org.mongodb.scala.model.Updates.unset
 import org.mongodb.scala.result.DeleteResult
 import org.mongodb.scala.result.InsertOneResult
 import org.mongodb.scala.result.UpdateResult
@@ -168,7 +169,13 @@ with Logging {
       .fromPublisher(observable)
       .throttle(rate, 1.second)
       .runForeach { record =>
-        collection.replaceOne(or(equal("arn", record.businessId), equal("utr", record.businessId)), record).toFuture()
+        collection.replaceOne(
+          or(
+            and(equal("arn", record.businessId), equal("identifier", record.identifier)),
+            and(equal("utr", record.businessId), equal("identifier", record.identifier))
+          ),
+          record
+        ).toFuture()
           .map { _ =>
             logger.warn("[MappingRepository] successfully encrypted record")
           }
