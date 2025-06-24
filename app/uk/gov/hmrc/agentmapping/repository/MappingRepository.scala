@@ -179,7 +179,7 @@ with Logging {
           .map { _ =>
             logger.warn("[MappingRepository] successfully encrypted record")
           }
-          .recover { case _: Throwable => logger.warn("[MappingRepository] failed to encrypt record") }
+          .recover { case ex: Throwable => logger.warn("[MappingRepository] failed to encrypt record", ex) }
         ()
       }
       .recover { case _: Throwable =>
