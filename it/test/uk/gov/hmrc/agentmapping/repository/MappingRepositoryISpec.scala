@@ -357,14 +357,14 @@ with MetricTestSupport {
       ).toFuture().futureValue
       repository.collection.insertOne(
         AgentReferenceMapping(
-          Arn("ZARN1234567"),
-          "ABC123",
+          Arn("XARN1234567"),
+          "XYZ123",
           None,
           Some(true)
         )
       ).toFuture().futureValue
       repository.collection.updateOne(
-        Filters.equal("arn", "XARN1234567"),
+        Filters.and(Filters.equal("arn", "XARN1234567"), Filters.equal("identifier", "ABC123")),
         Updates.unset("encrypted")
       ).toFuture().futureValue
       repository.collection.updateOne(
@@ -372,7 +372,7 @@ with MetricTestSupport {
         Updates.unset("encrypted")
       ).toFuture().futureValue
       repository.collection.updateOne(
-        Filters.equal("arn", "ZARN1234567"),
+        Filters.and(Filters.equal("arn", "XARN1234567"), Filters.equal("identifier", "XYZ123")),
         Updates.unset("encrypted")
       ).toFuture().futureValue
 
