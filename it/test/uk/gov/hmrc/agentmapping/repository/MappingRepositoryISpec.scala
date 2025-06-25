@@ -16,20 +16,13 @@
 
 package uk.gov.hmrc.agentmapping.repository
 
-import org.apache.pekko.stream.Materializer
 import org.mongodb.scala.MongoWriteException
-import org.mongodb.scala.model.Filters
-import org.mongodb.scala.model.Updates
 import org.mongodb.scala.result.DeleteResult
 import org.scalatest.BeforeAndAfterAll
 import org.scalatest.OptionValues
-import org.scalatest.concurrent.Eventually.eventually
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
-import org.scalatest.time.Millis
-import org.scalatest.time.Seconds
-import org.scalatest.time.Span
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
@@ -44,7 +37,6 @@ import uk.gov.hmrc.crypto.SymmetricCryptoFactory
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
-import java.time.LocalDateTime
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.ClassTag
 
@@ -131,7 +123,6 @@ with IntegrationPatience
 with GuiceOneAppPerSuite
 with MetricTestSupport {
 
-  implicit val mat: Materializer = app.injector.instanceOf[Materializer]
   implicit val crypto: Encrypter
     with Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "GTfz3GZy0+gN0p/5wSqRBpWlbWVDMezXWtX+G9ENwCc=")
   def repository: MappingRepository
@@ -293,94 +284,6 @@ with MetricTestSupport {
 
       repository.findBy(arn1).futureValue shouldBe List(updatedMappings.head)
       repository.findBy(utr1).futureValue shouldBe List.empty
-    }
-  }
-
-  "countUnencrypted" should {
-
-    "return the number of items missing the 'encrypted' field and correctly ignore items with the field" in {
-      repository.collection.insertOne(
-        AgentReferenceMapping(
-          Arn("XARN1234567"),
-          "ABC123",
-          None,
-          Some(true)
-        )
-      ).toFuture().futureValue
-      repository.collection.insertOne(
-        AgentReferenceMapping(
-          Utr("1234567890"),
-          "ABC123",
-          Some(LocalDateTime.now()),
-          Some(true)
-        )
-      ).toFuture().futureValue
-      repository.collection.insertOne(
-        AgentReferenceMapping(
-          Arn("ZARN1234567"),
-          "ABC123",
-          None,
-          Some(true)
-        )
-      ).toFuture().futureValue
-      repository.collection.updateOne(
-        Filters.equal("arn", "XARN1234567"),
-        Updates.unset("encrypted")
-      ).toFuture().futureValue
-      repository.collection.updateOne(
-        Filters.equal("utr", "1234567890"),
-        Updates.unset("encrypted")
-      ).toFuture().futureValue
-
-      repository.countUnencrypted().futureValue shouldBe 2
-    }
-  }
-
-  "encryptOldRecords" should {
-
-    "iterate through all unencrypted items in the database and store them with encryption applied" in {
-      repository.collection.insertOne(
-        AgentReferenceMapping(
-          Arn("XARN1234567"),
-          "ABC123",
-          None,
-          Some(true)
-        )
-      ).toFuture().futureValue
-      repository.collection.insertOne(
-        AgentReferenceMapping(
-          Utr("1234567890"),
-          "ABC123",
-          Some(LocalDateTime.now()),
-          Some(true)
-        )
-      ).toFuture().futureValue
-      repository.collection.insertOne(
-        AgentReferenceMapping(
-          Arn("XARN1234567"),
-          "XYZ123",
-          None,
-          Some(true)
-        )
-      ).toFuture().futureValue
-      repository.collection.updateOne(
-        Filters.and(Filters.equal("arn", "XARN1234567"), Filters.equal("identifier", "ABC123")),
-        Updates.unset("encrypted")
-      ).toFuture().futureValue
-      repository.collection.updateOne(
-        Filters.equal("utr", "1234567890"),
-        Updates.unset("encrypted")
-      ).toFuture().futureValue
-      repository.collection.updateOne(
-        Filters.and(Filters.equal("arn", "XARN1234567"), Filters.equal("identifier", "XYZ123")),
-        Updates.unset("encrypted")
-      ).toFuture().futureValue
-
-      val throttleRate = 2
-      repository.encryptOldRecords(throttleRate)
-      eventually(timeout(Span(5, Seconds)), interval(Span(100, Millis))) {
-        repository.countUnencrypted().futureValue shouldBe 0
-      }
     }
   }
 

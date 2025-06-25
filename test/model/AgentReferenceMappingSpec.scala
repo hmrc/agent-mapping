@@ -47,14 +47,12 @@ with Matchers {
           val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
             Arn("XARN1234567"),
             "ABC123",
-            None,
             None
           )
           val json = Json.obj(
             "arn" -> "XARN1234567",
             "identifier" -> "ABC123",
-            "preCreatedDate" -> "2020-01-01T00:00:00.000",
-            "encrypted" -> false
+            "preCreatedDate" -> "2020-01-01T00:00:00.000"
           )
 
           json.as[AgentReferenceMapping] shouldBe expectedModel
@@ -64,14 +62,12 @@ with Matchers {
           val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
             Utr("1234567890"),
             "ABC123",
-            Some(LocalDateTime.parse("2020-01-01T00:00:00.000")),
-            None
+            Some(LocalDateTime.parse("2020-01-01T00:00:00.000"))
           )
           val json = Json.obj(
             "utr" -> "1234567890",
             "identifier" -> "ABC123",
-            "preCreatedDate" -> "2020-01-01T00:00:00.000",
-            "encrypted" -> false
+            "preCreatedDate" -> "2020-01-01T00:00:00.000"
           )
 
           json.as[AgentReferenceMapping] shouldBe expectedModel
@@ -84,14 +80,12 @@ with Matchers {
           val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
             Arn("XARN1234567"),
             "ABC123",
-            None,
-            Some(true)
+            None
           )
           val json: JsObject = Json.obj(
             "arn" -> "XARN1234567",
             "identifier" -> "xBz9KLLVGclaDNLxWSY/YA==",
-            "preCreatedDate" -> "2020-01-01T00:00:00.000",
-            "encrypted" -> true
+            "preCreatedDate" -> "2020-01-01T00:00:00.000"
           )
           json.as[AgentReferenceMapping](databaseFormat) shouldBe expectedModel
         }
@@ -100,14 +94,12 @@ with Matchers {
           val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
             Utr("1234567890"),
             "ABC123",
-            Some(LocalDateTime.parse("2020-01-01T00:00:00.000")),
-            Some(true)
+            Some(LocalDateTime.parse("2020-01-01T00:00:00.000"))
           )
           val json: JsObject = Json.obj(
             "utr" -> "1234567890",
             "identifier" -> "xBz9KLLVGclaDNLxWSY/YA==",
-            "preCreatedDate" -> "2020-01-01T00:00:00.000",
-            "encrypted" -> true
+            "preCreatedDate" -> "2020-01-01T00:00:00.000"
           )
           json.as[AgentReferenceMapping](databaseFormat) shouldBe expectedModel
         }
@@ -122,8 +114,7 @@ with Matchers {
           val model: AgentReferenceMapping = AgentReferenceMapping(
             Arn("XARN1234567"),
             "ABC123",
-            Some(LocalDateTime.parse("2020-01-01T00:00:00.000")),
-            Some(true)
+            Some(LocalDateTime.parse("2020-01-01T00:00:00.000"))
           )
           val expectedJson: JsObject = Json.obj(
             "arn" -> "XARN1234567",
@@ -136,8 +127,7 @@ with Matchers {
           val model: AgentReferenceMapping = AgentReferenceMapping(
             Utr("1234567890"),
             "ABC123",
-            Some(LocalDateTime.parse("2020-01-01T00:00:00.000")),
-            Some(true)
+            Some(LocalDateTime.parse("2020-01-01T00:00:00.000"))
           )
           val expectedJson: JsObject = Json.obj(
             "utr" -> "1234567890",
@@ -154,13 +144,11 @@ with Matchers {
           val model: AgentReferenceMapping = AgentReferenceMapping(
             Arn("XARN1234567"),
             "ABC123",
-            Some(LocalDateTime.parse("2020-01-01T00:00:00.000")),
-            Some(true)
+            Some(LocalDateTime.parse("2020-01-01T00:00:00.000"))
           )
           val expectedJson: JsObject = Json.obj(
             "arn" -> "XARN1234567",
-            "identifier" -> "xBz9KLLVGclaDNLxWSY/YA==",
-            "encrypted" -> true
+            "identifier" -> "xBz9KLLVGclaDNLxWSY/YA=="
           )
           Json.toJson(model)(databaseFormat) shouldBe expectedJson
         }
@@ -169,14 +157,12 @@ with Matchers {
           val model: AgentReferenceMapping = AgentReferenceMapping(
             Utr("1234567890"),
             "ABC123",
-            Some(LocalDateTime.parse("2020-01-01T00:00:00.000")),
-            Some(true)
+            Some(LocalDateTime.parse("2020-01-01T00:00:00.000"))
           )
           val expectedJson: JsObject = Json.obj(
             "utr" -> "1234567890",
             "identifier" -> "xBz9KLLVGclaDNLxWSY/YA==",
-            "preCreatedDate" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1577836800000")),
-            "encrypted" -> true
+            "preCreatedDate" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1577836800000"))
           )
           Json.toJson(model)(databaseFormat) shouldBe expectedJson
         }

@@ -16,7 +16,6 @@
 
 package uk.gov.hmrc.agentmapping.repository
 
-import org.apache.pekko.stream.Materializer
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.agentmtdidentifiers.model.Utr
@@ -83,8 +82,7 @@ class MappingRepositories @Inject() (
 class IRSAAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
   @Named("aes") crypto: Encrypter
-    with Decrypter,
-  mat: Materializer
+    with Decrypter
 )
 extends MappingRepository(collectionName = "IR-SA-AGENT", mongo = mongoComponent)
 
@@ -92,8 +90,7 @@ extends MappingRepository(collectionName = "IR-SA-AGENT", mongo = mongoComponent
 class NewAgentCodeMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
   @Named("aes") crypto: Encrypter
-    with Decrypter,
-  mat: Materializer
+    with Decrypter
 )
 extends MappingRepository(collectionName = "AgentCode", mongo = mongoComponent)
 
@@ -101,8 +98,7 @@ extends MappingRepository(collectionName = "AgentCode", mongo = mongoComponent)
 class HMCEVATAGNTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
   @Named("aes") crypto: Encrypter
-    with Decrypter,
-  mat: Materializer
+    with Decrypter
 )
 extends MappingRepository("HMCE-VAT-AGNT", mongo = mongoComponent)
 
@@ -110,8 +106,7 @@ extends MappingRepository("HMCE-VAT-AGNT", mongo = mongoComponent)
 class HMRCCHARAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
   @Named("aes") crypto: Encrypter
-    with Decrypter,
-  mat: Materializer
+    with Decrypter
 )
 extends MappingRepository("HMRC-CHAR-AGENT", mongo = mongoComponent)
 
@@ -119,8 +114,7 @@ extends MappingRepository("HMRC-CHAR-AGENT", mongo = mongoComponent)
 class HMRCGTSAGNTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
   @Named("aes") crypto: Encrypter
-    with Decrypter,
-  mat: Materializer
+    with Decrypter
 )
 extends MappingRepository("HMRC-GTS-AGNT", mongo = mongoComponent)
 
@@ -128,8 +122,7 @@ extends MappingRepository("HMRC-GTS-AGNT", mongo = mongoComponent)
 class HMRCMGDAGNTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
   @Named("aes") crypto: Encrypter
-    with Decrypter,
-  mat: Materializer
+    with Decrypter
 )
 extends MappingRepository("HMRC-MGD-AGNT", mongo = mongoComponent)
 
@@ -137,8 +130,7 @@ extends MappingRepository("HMRC-MGD-AGNT", mongo = mongoComponent)
 class HMRCNOVRNAGNTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
   @Named("aes") crypto: Encrypter
-    with Decrypter,
-  mat: Materializer
+    with Decrypter
 )
 extends MappingRepository("HMRC-NOVRN-AGNT", mongo = mongoComponent)
 
@@ -146,8 +138,7 @@ extends MappingRepository("HMRC-NOVRN-AGNT", mongo = mongoComponent)
 class IRCTAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
   @Named("aes") crypto: Encrypter
-    with Decrypter,
-  mat: Materializer
+    with Decrypter
 )
 extends MappingRepository("IR-CT-AGENT", mongo = mongoComponent)
 
@@ -155,8 +146,7 @@ extends MappingRepository("IR-CT-AGENT", mongo = mongoComponent)
 class IRPAYEAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
   @Named("aes") crypto: Encrypter
-    with Decrypter,
-  mat: Materializer
+    with Decrypter
 )
 extends MappingRepository("IR-PAYE-AGENT", mongo = mongoComponent)
 
@@ -164,7 +154,6 @@ extends MappingRepository("IR-PAYE-AGENT", mongo = mongoComponent)
 class IRSDLTAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
   @Named("aes") crypto: Encrypter
-    with Decrypter,
-  mat: Materializer
+    with Decrypter
 )
 extends MappingRepository("IR-SDLT-AGENT", mongo = mongoComponent)

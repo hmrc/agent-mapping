@@ -41,31 +41,12 @@ with Matchers {
       encrypted shouldBe JsString("dw94Wl9CDa8OMrGo1Abgkg==")
 
       val json = Json.obj("value" -> encrypted)
-      EncryptionUtils.decryptString(
-        "value",
-        Some(true),
-        json
-      ) shouldBe unencrypted
+      EncryptionUtils.decryptString("value", json) shouldBe unencrypted
     }
 
-    "not attempt to decrypt a string that has an encryption flag of false" in {
-      val unencrypted = "my secret"
-      val json = Json.obj("value" -> unencrypted)
-      EncryptionUtils.decryptString(
-        "value",
-        Some(false),
-        json
-      ) shouldBe unencrypted
-    }
-
-    "not attempt to decrypt a string that has no encryption flag" in {
-      val unencrypted = "my secret"
-      val json = Json.obj("value" -> unencrypted)
-      EncryptionUtils.decryptString(
-        "value",
-        None,
-        json
-      ) shouldBe unencrypted
+    "throw an exception when a string cannot be decrypted" in {
+      val json = Json.obj("value" -> "ABC123")
+      intercept[RuntimeException](EncryptionUtils.decryptString("value", json)).getMessage shouldBe "Failed decrypting data"
     }
   }
 
