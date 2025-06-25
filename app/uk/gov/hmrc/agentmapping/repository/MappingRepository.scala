@@ -19,6 +19,7 @@ package uk.gov.hmrc.agentmapping.repository
 import org.apache.pekko.Done
 import org.apache.pekko.stream.Materializer
 import org.apache.pekko.stream.scaladsl.Source
+import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.and
 import org.mongodb.scala.model.Filters.equal
@@ -179,7 +180,12 @@ with Logging {
           .map { _ =>
             logger.warn("[MappingRepository] successfully encrypted record")
           }
-          .recover { case ex: Throwable => logger.warn("[MappingRepository] failed to encrypt record", ex) }
+          .recover {
+            case ex: MongoWriteException if ex.getError.getCode == 11000 =>
+              logger.warn("[MappingRepository] failed to encrypt due to duplicate record, attempting to delete")
+              collection.deleteOne(and(equal("arn", record.businessId), equal("identifier", record.identifier))).toFuture()
+            case ex: Throwable => logger.warn("[MappingRepository] failed to encrypt record", ex)
+          }
         ()
       }
       .recover { case _: Throwable =>
