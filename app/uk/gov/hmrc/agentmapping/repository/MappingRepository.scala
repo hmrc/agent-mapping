@@ -16,22 +16,15 @@
 
 package uk.gov.hmrc.agentmapping.repository
 
-import org.apache.pekko.Done
-import org.apache.pekko.stream.Materializer
-import org.apache.pekko.stream.scaladsl.Source
-import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.Filters.and
 import org.mongodb.scala.model.Filters.equal
-import org.mongodb.scala.model.Filters.exists
-import org.mongodb.scala.model.Filters.or
 import org.mongodb.scala.model.Indexes.ascending
-import org.mongodb.scala.model.IndexModel
-import org.mongodb.scala.model.IndexOptions
-import org.mongodb.scala.model.UpdateOptions
 import org.mongodb.scala.model.Updates.combine
 import org.mongodb.scala.model.Updates.set
 import org.mongodb.scala.model.Updates.unset
+import org.mongodb.scala.model.IndexModel
+import org.mongodb.scala.model.IndexOptions
+import org.mongodb.scala.model.UpdateOptions
 import org.mongodb.scala.result.DeleteResult
 import org.mongodb.scala.result.InsertOneResult
 import org.mongodb.scala.result.UpdateResult
@@ -54,7 +47,6 @@ import java.util.concurrent.TimeUnit
 import javax.inject.Named
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
 
 //DO NOT DELETE (even if this microservice gets decommissioned)
 abstract class MappingRepository(
@@ -65,8 +57,7 @@ abstract class MappingRepository(
   implicit
   ec: ExecutionContext,
   @Named("aes") crypto: Encrypter
-    with Decrypter,
-  mat: Materializer
+    with Decrypter
 )
 extends PlayMongoRepository[AgentReferenceMapping](
   mongoComponent = mongo,
@@ -102,10 +93,6 @@ extends PlayMongoRepository[AgentReferenceMapping](
       IndexOptions()
         .name("preCreatedDate")
         .expireAfter(86400L, TimeUnit.SECONDS)
-    ),
-    IndexModel(
-      ascending("encrypted"),
-      IndexOptions().name("encryptionIndex")
     )
   ),
   replaceIndexes = true,
@@ -132,8 +119,7 @@ with Logging {
     .insertOne(AgentReferenceMapping(
       identifier,
       identifierValue,
-      createdTime,
-      Some(true)
+      createdTime
     ))
     .toFuture()
 
@@ -158,47 +144,5 @@ with Logging {
 
   // This is for testing purposes only
   def deleteAll(): Future[DeleteResult] = collection.deleteMany(BsonDocument()).toFuture()
-
-  def countUnencrypted(): Future[Long] = collection.countDocuments(exists("encrypted", exists = false)).toFuture()
-
-  def encryptOldRecords(rate: Int = 10): Unit = {
-    val observable = collection.find(exists("encrypted", exists = false))
-    countUnencrypted().map { count =>
-      logger.warn(s"[MappingRepository] automatic encryption has started, $count applications left to encrypt")
-    }
-    Source
-      .fromPublisher(observable)
-      .throttle(rate, 1.second)
-      .runForeach { record =>
-        collection.replaceOne(
-          or(
-            and(equal("arn", record.businessId), equal("identifier", record.identifier)),
-            and(equal("utr", record.businessId), equal("identifier", record.identifier))
-          ),
-          record
-        ).toFuture()
-          .map { _ =>
-            logger.warn("[MappingRepository] successfully encrypted record")
-          }
-          .recover {
-            case ex: MongoWriteException if ex.getError.getCode == 11000 =>
-              logger.warn("[MappingRepository] failed to encrypt due to duplicate record, attempting to delete")
-              collection.deleteOne(and(equal("arn", record.businessId), equal("identifier", record.identifier))).toFuture()
-            case ex: Throwable => logger.warn("[MappingRepository] failed to encrypt record", ex)
-          }
-        ()
-      }
-      .recover { case _: Throwable =>
-        logger.warn("[MappingRepository] failed to read application before encrypting, aborting process")
-        Done
-      }
-      .onComplete { _ =>
-        countUnencrypted().map { count =>
-          logger.warn(s"[MappingRepository] encryption completed, $count applications left unencrypted")
-        }
-      }
-  }
-
-  encryptOldRecords()
 
 }

@@ -26,18 +26,13 @@ object EncryptionUtils {
 
   def decryptString(
     fieldName: String,
-    isEncrypted: Option[Boolean],
     json: JsValue
   )(implicit
     crypto: Encrypter
       with Decrypter
   ): String =
-    isEncrypted match {
-      case Some(true) =>
-        (json \ fieldName).validate[String] match {
-          case JsSuccess(value, _) => crypto.decrypt(Crypted(value)).value
-          case _ => throw new RuntimeException(s"Failed to decrypt $fieldName")
-        }
-      case _ => (json \ fieldName).as[String]
+    (json \ fieldName).validate[String] match {
+      case JsSuccess(value, _) => crypto.decrypt(Crypted(value)).value
+      case _ => throw new RuntimeException(s"Failed to decrypt $fieldName")
     }
 }

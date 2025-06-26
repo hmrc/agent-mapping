@@ -44,8 +44,7 @@ trait ArnToIdentifierMapping {
 case class AgentReferenceMapping(
   businessId: TaxIdentifier,
   identifier: String,
-  createdDate: Option[LocalDateTime],
-  encrypted: Option[Boolean]
+  createdDate: Option[LocalDateTime]
 )
 extends ArnToIdentifierMapping
 
@@ -57,15 +56,13 @@ object AgentReferenceMapping {
     case AgentReferenceMapping(
           Arn(arn),
           identifier,
-          _,
           _
         ) =>
       Json.obj("arn" -> arn, "identifier" -> identifier)
     case AgentReferenceMapping(
           Utr(utr),
           identifier,
-          Some(createdDate),
-          _
+          Some(createdDate)
         ) =>
       Json.obj(
         "utr" -> utr,
@@ -83,7 +80,6 @@ object AgentReferenceMapping {
         JsSuccess(AgentReferenceMapping(
           arn,
           identifier,
-          None,
           None
         ))
       }
@@ -94,8 +90,7 @@ object AgentReferenceMapping {
         JsSuccess(AgentReferenceMapping(
           utr,
           identifier,
-          preCreatedDate,
-          None
+          preCreatedDate
         ))
       }
       else
@@ -112,25 +107,21 @@ object AgentReferenceMapping {
       case AgentReferenceMapping(
             Arn(arn),
             identifier,
-            _,
             _
           ) =>
         Json.obj(
           "arn" -> arn,
-          "identifier" -> stringEncrypter.writes(identifier),
-          "encrypted" -> Some(true)
+          "identifier" -> stringEncrypter.writes(identifier)
         )
       case AgentReferenceMapping(
             Utr(utr),
             identifier,
-            Some(createdDate),
-            _
+            Some(createdDate)
           ) =>
         Json.obj(
           "utr" -> utr,
           "identifier" -> stringEncrypter.writes(identifier),
-          "preCreatedDate" -> createdDate,
-          "encrypted" -> Some(true)
+          "preCreatedDate" -> createdDate
         )
       case o => throw new Exception(s"Unknown AgentReferenceMapping type: $o")
     }
@@ -138,34 +129,22 @@ object AgentReferenceMapping {
     val databaseReads: Reads[AgentReferenceMapping] =
       (json: JsValue) =>
         if ((json \ "arn").toOption.isDefined) {
-          val isEncrypted = (json \ "encrypted").asOpt[Boolean]
           val arn = (json \ "arn").as[Arn]
-          val identifier = decryptString(
-            "identifier",
-            isEncrypted,
-            json
-          )
+          val identifier = decryptString("identifier", json)
           JsSuccess(AgentReferenceMapping(
             arn,
             identifier,
-            None,
-            isEncrypted
+            None
           ))
         }
         else if ((json \ "utr").toOption.isDefined) {
-          val isEncrypted = (json \ "encrypted").asOpt[Boolean]
           val utr = (json \ "utr").as[Utr]
-          val identifier = decryptString(
-            "identifier",
-            isEncrypted,
-            json
-          )
+          val identifier = decryptString("identifier", json)
           val preCreatedDate = (json \ "preCreatedDate").asOpt[LocalDateTime]
           JsSuccess(AgentReferenceMapping(
             utr,
             identifier,
-            preCreatedDate,
-            isEncrypted
+            preCreatedDate
           ))
         }
         else
