@@ -31,8 +31,8 @@ import org.mongodb.scala.result.UpdateResult
 import play.api.Logging
 import play.api.libs.json.Format
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.Utr
+import uk.gov.hmrc.agentmapping.model.Arn
+import uk.gov.hmrc.agentmapping.model.Utr
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.domain.TaxIdentifier

@@ -19,8 +19,8 @@ package uk.gov.hmrc.agentmapping.controller.test
 import play.api.mvc.Action
 import play.api.mvc.AnyContent
 import play.api.mvc.ControllerComponents
+import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.agentmapping.repository.MappingRepositories
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject

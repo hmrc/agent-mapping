@@ -27,10 +27,7 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import test.uk.gov.hmrc.agentmapping.support.MetricTestSupport
 import uk.gov.hmrc.agentmapping.model._
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.Utr
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.SymmetricCryptoFactory
@@ -47,7 +44,6 @@ with BeforeAndAfterAll {
 
   override def beforeAll(): Unit = {
     super.beforeAll()
-    givenCleanMetricRegistry()
     ()
   }
   override lazy val repository = new IRSAAGENTMappingRepository(mongoComponent)
@@ -120,8 +116,7 @@ with Matchers
 with OptionValues
 with ScalaFutures
 with IntegrationPatience
-with GuiceOneAppPerSuite
-with MetricTestSupport {
+with GuiceOneAppPerSuite {
 
   implicit val crypto: Encrypter
     with Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "GTfz3GZy0+gN0p/5wSqRBpWlbWVDMezXWtX+G9ENwCc=")

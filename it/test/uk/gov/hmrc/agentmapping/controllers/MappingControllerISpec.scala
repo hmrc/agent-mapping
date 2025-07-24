@@ -39,12 +39,9 @@ import test.uk.gov.hmrc.agentmapping.stubs.AuthStubs
 import test.uk.gov.hmrc.agentmapping.stubs.DataStreamStub
 import test.uk.gov.hmrc.agentmapping.stubs.SubscriptionStub
 import test.uk.gov.hmrc.agentmapping.support.WireMockSupport
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.Utr
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.auth.core.Enrolment
 import uk.gov.hmrc.auth.core.EnrolmentIdentifier
-import uk.gov.hmrc.domain
 import uk.gov.hmrc.http.HeaderNames
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
@@ -219,7 +216,7 @@ with ScalaFutures {
 
   val AgentCodeUserMapping = UserMapping(
     authProviderId,
-    Some(domain.AgentCode("agent-code")),
+    Some(uk.gov.hmrc.domain.AgentCode("agent-code")),
     Seq.empty,
     0,
     ""

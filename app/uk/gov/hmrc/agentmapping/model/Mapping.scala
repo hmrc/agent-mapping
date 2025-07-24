@@ -19,8 +19,6 @@ package uk.gov.hmrc.agentmapping.model
 import play.api.libs.json.Json.format
 import play.api.libs.json._
 import uk.gov.hmrc.agentmapping.util.EncryptionUtils.decryptString
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.Utr
 import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypter
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter

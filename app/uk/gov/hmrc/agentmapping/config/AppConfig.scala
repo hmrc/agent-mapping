@@ -26,18 +26,12 @@ class AppConfig @Inject() (servicesConfig: ServicesConfig) {
 
   val appName = "agent-mapping"
 
-  def getConf(key: String): String = servicesConfig.getString(key)
-
   val clientCountMaxResults: Int = servicesConfig.getInt("clientCount.maxRecords")
   val clientCountBatchSize: Int = servicesConfig.getInt("clientCount.batchSize")
-
-  val authBaseUrl: String = servicesConfig.baseUrl("auth")
 
   val enrolmentStoreProxyBaseUrl: String = servicesConfig.baseUrl("enrolment-store-proxy")
 
   val agentSubscriptionBaseUrl: String = servicesConfig.baseUrl("agent-subscription")
-
-  val terminationStrideRole: String = servicesConfig.getString("termination.stride.enrolment")
 
   def expectedAuth: BasicAuthentication = {
     val username = servicesConfig.getString("agent-termination.username")

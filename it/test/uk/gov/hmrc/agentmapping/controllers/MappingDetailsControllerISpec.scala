@@ -33,7 +33,6 @@ import uk.gov.hmrc.agentmapping.repository.MappingDetailsRepository
 import test.uk.gov.hmrc.agentmapping.stubs.AuthStubs
 import test.uk.gov.hmrc.agentmapping.stubs.SubscriptionStub
 import test.uk.gov.hmrc.agentmapping.support.ServerBaseISpec
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.domain
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 

@@ -17,8 +17,6 @@
 package uk.gov.hmrc.agentmapping.repository
 
 import uk.gov.hmrc.agentmapping.model._
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.Utr
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.mongo.MongoComponent

@@ -18,6 +18,7 @@ package test.uk.gov.hmrc.agentmapping.connector
 
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
+import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
 import test.uk.gov.hmrc.agentmapping.stubs.EnrolmentStoreStubs
 import test.uk.gov.hmrc.agentmapping.support.BaseISpec
@@ -37,9 +38,9 @@ with WireMockSupport
 with GuiceOneAppPerSuite
 with EnrolmentStoreStubs {
 
-  implicit val request = FakeRequest()
+  implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
 
-  private implicit lazy val metrics = app.injector.instanceOf[Metrics]
+  private implicit lazy val metrics: Metrics = app.injector.instanceOf[Metrics]
   private lazy val http = app.injector.instanceOf[HttpClientV2]
 
   override implicit lazy val app: Application = appBuilder.build()

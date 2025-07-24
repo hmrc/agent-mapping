@@ -28,8 +28,6 @@ import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentmapping.connector.SubscriptionConnector
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository._
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.Utr
 import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
@@ -126,7 +124,7 @@ with Logging {
         true
     }
 
-  def findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] = Action.async {
+  def findSaMappings(arn: Arn): Action[AnyContent] = Action.async {
     repositories.get(IRAgentReference).findBy(arn) map { matches =>
       implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("saAgentReference")
       if (matches.nonEmpty)
@@ -136,7 +134,7 @@ with Logging {
     }
   }
 
-  def findAgentCodeMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn): Action[AnyContent] = Action.async {
+  def findAgentCodeMappings(arn: Arn): Action[AnyContent] = Action.async {
     repositories.get(AgentCode).findBy(arn) map { matches =>
       implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("agentCode")
       if (matches.nonEmpty)
@@ -148,7 +146,7 @@ with Logging {
 
   def findMappings(
     key: String,
-    arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn
+    arn: Arn
   ): Action[AnyContent] = Action.async {
     LegacyAgentEnrolmentType.findByDbKey(key) match {
       case Some(service) =>

@@ -17,8 +17,8 @@
 package uk.gov.hmrc.agentmapping.controller
 
 import play.api.mvc.PathBindable
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.Utr
+import uk.gov.hmrc.agentmapping.model.Arn
+import uk.gov.hmrc.agentmapping.model.Utr
 
 object UrlBinders {
 

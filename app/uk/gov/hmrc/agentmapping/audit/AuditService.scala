@@ -18,9 +18,9 @@ package uk.gov.hmrc.agentmapping.audit
 
 import com.google.inject.Singleton
 import play.api.mvc.Request
+import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.agentmapping.model.Identifier
 import uk.gov.hmrc.agentmapping.util.RequestSupport
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent

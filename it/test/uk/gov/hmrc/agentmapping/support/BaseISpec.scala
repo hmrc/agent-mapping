@@ -16,6 +16,7 @@
 
 package test.uk.gov.hmrc.agentmapping.support
 
+import org.apache.pekko.stream.Materializer
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
@@ -25,12 +26,8 @@ import play.api.i18n.Lang
 import play.api.i18n.Messages
 import play.api.i18n.MessagesApi
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.mvc.RequestHeader
-import play.api.test.FakeRequest
 import play.twirl.api.HtmlFormat
 import test.uk.gov.hmrc.agentmapping.stubs.DataStreamStub
-import uk.gov.hmrc.http.HeaderCarrier
-import uk.gov.hmrc.play.http.HeaderCarrierConverter
 
 abstract class BaseISpec
 extends AnyWordSpecLike
@@ -38,7 +35,6 @@ with Matchers
 with OptionValues
 with WireMockSupport
 with DataStreamStub
-with MetricTestSupport
 with ScalaFutures {
 
   def app: Application
@@ -59,12 +55,11 @@ with ScalaFutures {
     )
 
   override def commonStubs(): Unit = {
-    givenCleanMetricRegistry()
     givenAuditConnector
     ()
   }
 
-  protected implicit val materializer = app.materializer
+  protected implicit val materializer: Materializer = app.materializer
 
   private val messagesApi = app.injector.instanceOf[MessagesApi]
   private implicit val messages: Messages = messagesApi.preferred(Seq.empty[Lang])
