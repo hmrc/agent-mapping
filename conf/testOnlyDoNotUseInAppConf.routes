@@ -11,4 +11,4 @@
 
 # Add all the application routes to the prod.routes file
 ->            /                                             prod.Routes
-DELETE        /agent-mapping/test-only/mappings/:arn        @uk.gov.hmrc.agentmapping.controller.test.TestOnlyController.delete(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+DELETE        /agent-mapping/test-only/mappings/:arn        @uk.gov.hmrc.agentmapping.controller.test.TestOnlyController.delete(arn: uk.gov.hmrc.agentmapping.model.Arn)

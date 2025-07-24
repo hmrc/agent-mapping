@@ -18,12 +18,12 @@ package test.uk.gov.hmrc.agentmapping.repository
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
+import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.agentmapping.model.AuthProviderId
 import uk.gov.hmrc.agentmapping.model.GGTag
 import uk.gov.hmrc.agentmapping.model.MappingDetails
 import uk.gov.hmrc.agentmapping.model.MappingDetailsRepositoryRecord
 import uk.gov.hmrc.agentmapping.repository.MappingDetailsRepository
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 

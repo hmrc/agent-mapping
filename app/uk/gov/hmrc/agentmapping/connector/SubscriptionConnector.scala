@@ -22,7 +22,6 @@ import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentmapping.config.AppConfig
 import uk.gov.hmrc.agentmapping.model.AuthProviderId
 import uk.gov.hmrc.agentmapping.model.UserMapping
-import uk.gov.hmrc.agentmapping.util.HttpAPIMonitor
 import uk.gov.hmrc.agentmapping.util.RequestSupport.hc
 import uk.gov.hmrc.http.HttpReads.Implicits._
 import uk.gov.hmrc.http.HttpResponse
@@ -42,27 +41,22 @@ class SubscriptionConnector @Inject() (
   val metrics: Metrics
 )(implicit
   val ec: ExecutionContext
-)
-extends HttpAPIMonitor {
+) {
 
   def getUserMappings(internalId: AuthProviderId)(implicit rh: RequestHeader): Future[Option[List[UserMapping]]] = {
 
     val subscriptionJourneyUrl: URL = url"${appConfig.agentSubscriptionBaseUrl}/agent-subscription/subscription/journey/id/${encodePathSegment(internalId.id)}"
+    http
+      .get(subscriptionJourneyUrl).execute[HttpResponse]
+      .map { response =>
+        response.status match {
+          case 200 =>
+            val userMappings: JsLookupResult = Json.parse(response.body) \ "userMappings"
+            Some(userMappings.as[List[UserMapping]])
 
-    val timer = metrics.defaultRegistry.timer("ConsumedAPI-Agent-Subscription-getJourneyByPrimaryId-GET")
-    timer.time()
-    monitor("ConsumedAPI-Agent-Subscription-getJourneyByPrimaryId-GET") {
-      http
-        .get(subscriptionJourneyUrl).execute[HttpResponse]
-        .map { response =>
-          response.status match {
-            case 200 =>
-              val userMappings: JsLookupResult = Json.parse(response.body) \ "userMappings"
-              Some(userMappings.as[List[UserMapping]])
-
-            case 204 => None
-          }
+          case 204 => None
         }
-    }
+      }
+
   }
 }

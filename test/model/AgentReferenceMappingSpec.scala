@@ -21,9 +21,9 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
+import uk.gov.hmrc.agentmapping.model.Arn
+import uk.gov.hmrc.agentmapping.model.Utr
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping.databaseFormat
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
-import uk.gov.hmrc.agentmtdidentifiers.model.Utr
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.SymmetricCryptoFactory

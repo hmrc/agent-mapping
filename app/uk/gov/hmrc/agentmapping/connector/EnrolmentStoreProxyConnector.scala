@@ -53,8 +53,7 @@ class EnrolmentStoreProxyConnector @Inject() (
   val metrics: Metrics
 )(implicit
   val ec: ExecutionContext
-)
-extends HttpAPIMonitor {
+) {
 
   private val batchSize = appConfig.clientCountBatchSize
   private val maxClientRelationships = appConfig.clientCountMaxResults
@@ -106,18 +105,17 @@ extends HttpAPIMonitor {
     ): URL =
       url"$espBaseUrl/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated&service=$service&start-record=$startRecord&max-records=$batchSize"
 
-    monitor(s"ConsumedAPI-ESPes2-$service-GET") {
-      http.get(es2Url(
-        userId,
-        startRecord,
-        service
-      )).execute[EnrolmentResponse].map { enrolmentResponse =>
-        val filteredCount = enrolmentResponse.enrolments
-          .count(e => e.state.toLowerCase == "activated" || e.state.toLowerCase == "unknown")
+    http.get(es2Url(
+      userId,
+      startRecord,
+      service
+    )).execute[EnrolmentResponse].map { enrolmentResponse =>
+      val filteredCount = enrolmentResponse.enrolments
+        .count(e => e.state.toLowerCase == "activated" || e.state.toLowerCase == "unknown")
 
-        (enrolmentResponse.enrolments.length, filteredCount)
-      }
+      (enrolmentResponse.enrolments.length, filteredCount)
     }
+
   }
 
 }

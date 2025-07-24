@@ -24,9 +24,9 @@ import org.mongodb.scala.model.IndexOptions
 import org.mongodb.scala.model.Updates
 import play.api.Logging
 import play.api.libs.json.Format
+import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.agentmapping.model.MappingDetails
 import uk.gov.hmrc.agentmapping.model.MappingDetailsRepositoryRecord
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.Codecs
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository

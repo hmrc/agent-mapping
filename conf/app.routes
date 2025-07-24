@@ -1,29 +1,29 @@
 # microservice specific routes
 
-PUT           /mappings/pre-subscription/utr/:utr         @uk.gov.hmrc.agentmapping.controller.MappingController.createPreSubscriptionMapping(utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr)
-PUT           /mappings/post-subscription/utr/:utr        @uk.gov.hmrc.agentmapping.controller.MappingController.createPostSubscriptionMapping(utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr)
-DELETE        /mappings/pre-subscription/utr/:utr         @uk.gov.hmrc.agentmapping.controller.MappingController.deletePreSubscriptionMapping(utr: uk.gov.hmrc.agentmtdidentifiers.model.Utr)
+PUT           /mappings/pre-subscription/utr/:utr         @uk.gov.hmrc.agentmapping.controller.MappingController.createPreSubscriptionMapping(utr: uk.gov.hmrc.agentmapping.model.Utr)
+PUT           /mappings/post-subscription/utr/:utr        @uk.gov.hmrc.agentmapping.controller.MappingController.createPostSubscriptionMapping(utr: uk.gov.hmrc.agentmapping.model.Utr)
+DELETE        /mappings/pre-subscription/utr/:utr         @uk.gov.hmrc.agentmapping.controller.MappingController.deletePreSubscriptionMapping(utr: uk.gov.hmrc.agentmapping.model.Utr)
 
-PUT           /mappings/arn/:arn                          @uk.gov.hmrc.agentmapping.controller.MappingController.createMapping(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
-PUT           /mappings/task-list/arn/:arn                @uk.gov.hmrc.agentmapping.controller.MappingController.createMappingsFromSubscriptionJourneyRecord(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+PUT           /mappings/arn/:arn                          @uk.gov.hmrc.agentmapping.controller.MappingController.createMapping(arn: uk.gov.hmrc.agentmapping.model.Arn)
+PUT           /mappings/task-list/arn/:arn                @uk.gov.hmrc.agentmapping.controller.MappingController.createMappingsFromSubscriptionJourneyRecord(arn: uk.gov.hmrc.agentmapping.model.Arn)
 
 GET           /mappings/eligibility                       @uk.gov.hmrc.agentmapping.controller.MappingController.hasEligibleEnrolments()
 
 GET           /client-count                               @uk.gov.hmrc.agentmapping.controller.MappingController.getClientCount
 
 # DEPRECATED, use /mappings/sa/:arn
-GET           /mappings/:arn                              @uk.gov.hmrc.agentmapping.controller.MappingController.findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+GET           /mappings/:arn                              @uk.gov.hmrc.agentmapping.controller.MappingController.findSaMappings(arn: uk.gov.hmrc.agentmapping.model.Arn)
 
-GET           /mappings/sa/:arn                           @uk.gov.hmrc.agentmapping.controller.MappingController.findSaMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
-GET           /mappings/agentcode/:arn                    @uk.gov.hmrc.agentmapping.controller.MappingController.findAgentCodeMappings(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+GET           /mappings/sa/:arn                           @uk.gov.hmrc.agentmapping.controller.MappingController.findSaMappings(arn: uk.gov.hmrc.agentmapping.model.Arn)
+GET           /mappings/agentcode/:arn                    @uk.gov.hmrc.agentmapping.controller.MappingController.findAgentCodeMappings(arn: uk.gov.hmrc.agentmapping.model.Arn)
 
 # supported keys: char,gts,mgd,novrn,ct,paye,sdlt
-GET           /mappings/key/:key/arn/:arn                 @uk.gov.hmrc.agentmapping.controller.MappingController.findMappings(key: String, arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+GET           /mappings/key/:key/arn/:arn                 @uk.gov.hmrc.agentmapping.controller.MappingController.findMappings(key: String, arn: uk.gov.hmrc.agentmapping.model.Arn)
 
-POST          /mappings/details/arn/:arn                  @uk.gov.hmrc.agentmapping.controller.MappingDetailsController.createOrUpdateRecord(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
-GET           /mappings/details/arn/:arn                  @uk.gov.hmrc.agentmapping.controller.MappingDetailsController.findRecordByArn(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
-PUT           /mappings/task-list/details/arn/:arn        @uk.gov.hmrc.agentmapping.controller.MappingDetailsController.transferSubscriptionRecordToMappingDetails(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+POST          /mappings/details/arn/:arn                  @uk.gov.hmrc.agentmapping.controller.MappingDetailsController.createOrUpdateRecord(arn: uk.gov.hmrc.agentmapping.model.Arn)
+GET           /mappings/details/arn/:arn                  @uk.gov.hmrc.agentmapping.controller.MappingDetailsController.findRecordByArn(arn: uk.gov.hmrc.agentmapping.model.Arn)
+PUT           /mappings/task-list/details/arn/:arn        @uk.gov.hmrc.agentmapping.controller.MappingDetailsController.transferSubscriptionRecordToMappingDetails(arn: uk.gov.hmrc.agentmapping.model.Arn)
 
 # Stride Routes
 # --------------------------------
-DELETE        /agent/:arn/terminate                       @uk.gov.hmrc.agentmapping.controller.MappingController.removeMappingsForAgent(arn: uk.gov.hmrc.agentmtdidentifiers.model.Arn)
+DELETE        /agent/:arn/terminate                       @uk.gov.hmrc.agentmapping.controller.MappingController.removeMappingsForAgent(arn: uk.gov.hmrc.agentmapping.model.Arn)

@@ -19,10 +19,10 @@ package uk.gov.hmrc.agentmapping.auth
 import play.api.Logging
 import play.api.mvc._
 import uk.gov.hmrc.agentmapping.model.AgentCode
+import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.agentmapping.model.BasicAuthentication
 import uk.gov.hmrc.agentmapping.model.Identifier
 import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
 import uk.gov.hmrc.auth.core._

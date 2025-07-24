@@ -20,7 +20,6 @@ import play.api.libs.functional.syntax._
 import play.api.libs.json.Json.format
 import play.api.libs.json.JsPath
 import play.api.libs.json.OFormat
-import uk.gov.hmrc.agentmtdidentifiers.model.Arn
 
 import java.time.LocalDateTime
 
