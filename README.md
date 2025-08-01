@@ -12,6 +12,12 @@ The relationships are not stored in a normalised data store that can be queried.
 we have to retrieve the client record and check if the CESA Agent Ref is present. 
 A prerequisite for this check is knowing the CESA Agent Ref, this is captured and linked to the Agents ARN via the Mapping journey.
 
+### Automated testing
+This service is tested by the following automated test repositories:
+- [agent-services-account-ui-tests](https://github.com/hmrc/agent-services-account-ui-tests)
+- [agent-onboarding-ui-tests](https://github.com/hmrc/agent-onboarding-ui-tests)
+- [agent-mapping-performance-tests](https://github.com/hmrc/agent-mapping-performance-tests)
+
 ## API
 
 ### check if current logged in user has any enrolments that are eligible for mapping
