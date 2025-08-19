@@ -11,12 +11,13 @@ GET           /mappings/eligibility                       @uk.gov.hmrc.agentmapp
 
 GET           /client-count                               @uk.gov.hmrc.agentmapping.controller.MappingController.getClientCount
 
+# DEPRECATED, use /mappings/sa/:arn
 GET           /mappings/:arn                              @uk.gov.hmrc.agentmapping.controller.MappingController.findSaMappings(arn: uk.gov.hmrc.agentmapping.model.Arn)
 
 GET           /mappings/sa/:arn                           @uk.gov.hmrc.agentmapping.controller.MappingController.findSaMappings(arn: uk.gov.hmrc.agentmapping.model.Arn)
-
 GET           /mappings/agentcode/:arn                    @uk.gov.hmrc.agentmapping.controller.MappingController.findAgentCodeMappings(arn: uk.gov.hmrc.agentmapping.model.Arn)
 
+# supported keys: char,gts,mgd,novrn,ct,paye,sdlt
 GET           /mappings/key/:key/arn/:arn                 @uk.gov.hmrc.agentmapping.controller.MappingController.findMappings(key: String, arn: uk.gov.hmrc.agentmapping.model.Arn)
 
 POST          /mappings/details/arn/:arn                  @uk.gov.hmrc.agentmapping.controller.MappingDetailsController.createOrUpdateRecord(arn: uk.gov.hmrc.agentmapping.model.Arn)
