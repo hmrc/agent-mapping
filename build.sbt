@@ -5,6 +5,7 @@ val appName = "agent-mapping"
 
 ThisBuild / majorVersion := 1
 ThisBuild / scalaVersion := "2.13.16"
+ThisBuild / scalafmtOnCompile := true
 
 val scalaCOptions = Seq(
   "-Xfatal-warnings",

@@ -16,9 +16,6 @@
 
 package uk.gov.hmrc.agentmapping.controller
 
-import java.time.LocalDateTime
-
-import javax.inject.Inject
 import play.api.Logging
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
@@ -30,8 +27,11 @@ import uk.gov.hmrc.agentmapping.auth.AuthActions
 import uk.gov.hmrc.agentmapping.connector.SubscriptionConnector
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository.MappingDetailsRepository
+import uk.gov.hmrc.http.BadRequestException
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
+import java.time.LocalDateTime
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -46,37 +46,44 @@ with Logging {
 
   import authActions._
 
-  def createOrUpdateRecord(arn: Arn): Action[JsValue] =
-    Action.async(parse.json) { implicit request: Request[JsValue] =>
-      withJsonBody[MappingDetailsRequest] { mappingDetailsRequest =>
-        val details: MappingDetails = MappingDetails(
+  def createOrUpdateRecord(arn: Arn): Action[AnyContent] = authorisedAsSubscribedAgent { request: Request[AnyContent] => arnFromEnrolments =>
+    implicit val jsonRequest: Request[JsValue] = request.map(_.asJson
+      .getOrElse(throw new BadRequestException(s"Invalid content or content type, not a Json")))
+    withJsonBody[MappingDetailsRequest] { mappingDetailsRequest =>
+      for {
+        _ <- requireArnMatchesFromEnrolments(arnFromRequest = arn, arnFromEnrolments = arnFromEnrolments)
+        details: MappingDetails = MappingDetails(
           mappingDetailsRequest.authProviderId,
           mappingDetailsRequest.ggTag,
           mappingDetailsRequest.count,
           LocalDateTime.now()
         )
+        maybeMappingDetailsRepositoryRecord <- repository.findByArn(arn)
+        result <-
+          maybeMappingDetailsRepositoryRecord match {
+            case Some(record) =>
+              if (record.mappingDetails.exists(m => m.authProviderId == mappingDetailsRequest.authProviderId)) {
+                logger.error("already mapped")
+                Future successful Conflict
+              }
+              else
+                repository.updateMappingDisplayDetails(arn, details).map(_ => Ok)
+            case None =>
+              val record = MappingDetailsRepositoryRecord(arn, Seq(details))
+              repository.create(record).map(_ => Created)
+          }
+      } yield result
+    }
+  }
 
-        repository.findByArn(arn).flatMap {
-          case Some(record) =>
-            if (record.mappingDetails.exists(m => m.authProviderId == mappingDetailsRequest.authProviderId)) {
-              logger.error("already mapped")
-              Future successful Conflict
-            }
-            else
-              repository.updateMappingDisplayDetails(arn, details).map(_ => Ok)
-
-          case None =>
-            val record = MappingDetailsRepositoryRecord(arn, Seq(details))
-            repository.create(record).map(_ => Created)
-        }
+  def findRecordByArn(arn: Arn): Action[AnyContent] = authorisedAsSubscribedAgent { request => arnFromEnrolments =>
+    for {
+      _ <- requireArnMatchesFromEnrolments(arnFromRequest = arn, arnFromEnrolments = arnFromEnrolments)
+      result <- repository.findByArn(arn).map {
+        case Some(record) => Ok(Json.toJson(record))
+        case None => NotFound(s"no record found for this arn: $arn")
       }
-    }
-
-  def findRecordByArn(arn: Arn): Action[AnyContent] = Action.async { request =>
-    repository.findByArn(arn).map {
-      case Some(record) => Ok(Json.toJson(record))
-      case None => NotFound(s"no record found for this arn: $arn")
-    }
+    } yield result
   }
 
   def transferSubscriptionRecordToMappingDetails(arn: Arn): Action[AnyContent] = authorisedWithProviderId { implicit request => implicit providerId =>

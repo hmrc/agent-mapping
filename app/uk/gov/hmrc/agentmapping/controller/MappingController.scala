@@ -29,6 +29,7 @@ import uk.gov.hmrc.agentmapping.connector.SubscriptionConnector
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository._
 import uk.gov.hmrc.domain.TaxIdentifier
+import uk.gov.hmrc.http.BadRequestException
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
@@ -124,8 +125,11 @@ with Logging {
         true
     }
 
-  def findSaMappings(arn: Arn): Action[AnyContent] = Action.async {
-    repositories.get(IRAgentReference).findBy(arn) map { matches =>
+  def findSaMappings(arn: Arn): Action[AnyContent] = authorisedAsSubscribedAgent { request => arnFromEnrolments =>
+    for {
+      _ <- requireArnMatchesFromEnrolments(arnFromRequest = arn, arnFromEnrolments = arnFromEnrolments)
+      matches <- repositories.get(IRAgentReference).findBy(arn)
+    } yield {
       implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("saAgentReference")
       if (matches.nonEmpty)
         Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
@@ -134,8 +138,11 @@ with Logging {
     }
   }
 
-  def findAgentCodeMappings(arn: Arn): Action[AnyContent] = Action.async {
-    repositories.get(AgentCode).findBy(arn) map { matches =>
+  def findAgentCodeMappings(arn: Arn): Action[AnyContent] = authorisedAsSubscribedAgent { request => arnFromEnrolments =>
+    for {
+      _ <- requireArnMatchesFromEnrolments(arnFromRequest = arn, arnFromEnrolments = arnFromEnrolments)
+      matches <- repositories.get(AgentCode).findBy(arn)
+    } yield {
       implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("agentCode")
       if (matches.nonEmpty)
         Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
@@ -147,16 +154,18 @@ with Logging {
   def findMappings(
     key: String,
     arn: Arn
-  ): Action[AnyContent] = Action.async {
-    LegacyAgentEnrolmentType.findByDbKey(key) match {
-      case Some(service) =>
-        repositories.get(service).findBy(arn) map { matches =>
-          if (matches.nonEmpty)
-            Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
-          else
-            NotFound
-        }
-      case None => Future.successful(BadRequest(s"No service found for the key $key"))
+  ): Action[AnyContent] = authorisedAsSubscribedAgent { request => arnFromEnrolments =>
+    for {
+      _ <- requireArnMatchesFromEnrolments(arnFromRequest = arn, arnFromEnrolments = arnFromEnrolments)
+      service <- Future
+        .successful(LegacyAgentEnrolmentType.findByDbKey(key))
+        .map(_.getOrElse(throw new BadRequestException(s"No service found for the key $key")))
+      matches <- repositories.get(service).findBy(arn)
+    } yield {
+      if (matches.nonEmpty)
+        Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+      else
+        NotFound
     }
   }
 

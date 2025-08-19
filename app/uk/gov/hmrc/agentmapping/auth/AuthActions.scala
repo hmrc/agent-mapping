@@ -33,6 +33,7 @@ import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.credentials
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.auth.core.retrieve.~
 import uk.gov.hmrc.http.HeaderNames
+import uk.gov.hmrc.http.UnauthorizedException
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import java.nio.charset.StandardCharsets.UTF_8
@@ -97,6 +98,15 @@ with Logging {
         case _: AuthorisationException => Forbidden
       }
   }
+
+  def requireArnMatchesFromEnrolments(
+    arnFromRequest: Arn,
+    arnFromEnrolments: Arn
+  ): Future[Unit] =
+    if (arnFromEnrolments == arnFromRequest)
+      Future.successful(())
+    else
+      Future.failed(new UnauthorizedException(s"Invalid arn: $arnFromRequest didn't match $arnFromEnrolments"))
 
   def authorisedAsSubscribedAgent(
     body: Request[AnyContent] => Arn => Future[Result]
