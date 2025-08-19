@@ -76,7 +76,7 @@ with DefaultPlayMongoRepositorySupport[MappingDetailsRepositoryRecord] {
   "POST /mappings/details/arn/:arn" should {
 
     "create a new record when one doesn't exist" in {
-
+      isLoggedIn
       val request: Request[JsValue] = FakeRequest("POST", "agent-mapping/mappings/details/arn/:arn")
         .withBody(Json.parse(s"""{"authProviderId": "cred-123", "ggTag": "1234", "count": 10}"""))
         .withHeaders("Authorization" -> "Bearer XYZ")
@@ -100,10 +100,11 @@ with DefaultPlayMongoRepositorySupport[MappingDetailsRepositoryRecord] {
     }
 
     "update a records mappings when it does exist" in {
+      isLoggedIn
 
       val request: Request[JsValue] = FakeRequest("POST", "agent-mapping/mappings/details/arn/:arn").withBody(
         Json.parse(s"""{"authProviderId": "cred-456", "ggTag": "5678", "count": 20}""")
-      )
+      ).withHeaders("Authorization" -> "Bearer XYZ")
 
       repository
         .create(MappingDetailsRepositoryRecord(
@@ -145,7 +146,7 @@ with DefaultPlayMongoRepositorySupport[MappingDetailsRepositoryRecord] {
     }
 
     "return conflict if the mapping already exists" in {
-
+      isLoggedIn
       val request: Request[JsValue] = FakeRequest("POST", "agent-mapping/mappings/details/arn/:arn")
         .withBody(Json.parse(s"""{"authProviderId": "cred-123", "ggTag": "1234", "count": 10}"""))
         .withHeaders("Authorization" -> "Bearer XYZ")
@@ -170,7 +171,7 @@ with DefaultPlayMongoRepositorySupport[MappingDetailsRepositoryRecord] {
   "GET /mappings/details/arn/:arn" should {
 
     "find and return record if it exists for the arn" in {
-
+      isLoggedIn
       repository
         .create(MappingDetailsRepositoryRecord(
           arn,
@@ -204,7 +205,7 @@ with DefaultPlayMongoRepositorySupport[MappingDetailsRepositoryRecord] {
     }
 
     "return not found if there is not record found for the arn" in {
-
+      isLoggedIn
       val result =
         controller.findRecordByArn(arn)(
           FakeRequest("GET", "agent-mapping/mappings/details/arn/:arn")
