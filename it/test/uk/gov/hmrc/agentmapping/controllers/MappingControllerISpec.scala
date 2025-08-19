@@ -533,6 +533,7 @@ with ScalaFutures {
 
   "find mapping requests" should {
     "return 200 status with a json body representing the mappings that match the supplied arn" in {
+      isLoggedIn
       saRepo.store(registeredArn, "A1111A").futureValue
       saRepo.store(registeredArn, "A1111B").futureValue
 
@@ -545,6 +546,7 @@ with ScalaFutures {
     }
 
     "return 200 status with a json body representing the mappings that match the supplied arn for sa" in {
+      isLoggedIn
       saRepo.store(registeredArn, "A1111A").futureValue
       saRepo.store(registeredArn, "A1111B").futureValue
 
@@ -554,6 +556,7 @@ with ScalaFutures {
     }
 
     "return 200 status with a json body representing the mappings that match the supplied arn for agent code" in {
+      isLoggedIn
       agentCodeRepo.store(registeredArn, "ABCDE1").futureValue
       agentCodeRepo.store(registeredArn, "ABCDE2").futureValue
 
@@ -576,6 +579,7 @@ with ScalaFutures {
       IRSDLTAGENTTestFixture
     ).foreach { f =>
       s"return 200 status with a json body representing the mappings that match the supplied arn for ${f.dbKey}" in {
+        isLoggedIn
         val repo = repositories.get(f.legacyAgentEnrolmentType)
         repo.store(registeredArn, "ABCDE123456").futureValue
         repo.store(registeredArn, "ABCDE298980").futureValue
@@ -590,19 +594,23 @@ with ScalaFutures {
       }
 
       s"return 404 when there are no ${f.dbKey} mappings that match the supplied arn" in {
+        isLoggedIn
         callGet(findMappingsRequestByKey(f.dbKey)).status shouldBe 404
       }
     }
 
     "return 404 when there are no mappings that match the supplied arn" in {
+      isLoggedIn
       callGet(findMappingsRequest).status shouldBe 404
     }
 
     "return 404 when there are no mappings that match the supplied arn for sa" in {
+      isLoggedIn
       callGet(findSAMappingsRequest).status shouldBe 404
     }
 
     "return 404 when there are no mappings that match the supplied arn for vat" in {
+      isLoggedIn
       callGet(findVATMappingsRequest).status shouldBe 404
     }
   }
@@ -616,6 +624,7 @@ with ScalaFutures {
       val deleteResponse = callDelete(deleteMappingsRequest)
       deleteResponse.status shouldBe 204
 
+      isLoggedIn
       val notFoundResponse = callGet(findMappingsRequest)
       notFoundResponse.status shouldBe 404
     }

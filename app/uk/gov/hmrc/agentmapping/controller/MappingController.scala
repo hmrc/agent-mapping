@@ -124,39 +124,45 @@ with Logging {
         true
     }
 
-  def findSaMappings(arn: Arn): Action[AnyContent] = Action.async {
-    repositories.get(IRAgentReference).findBy(arn) map { matches =>
-      implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("saAgentReference")
-      if (matches.nonEmpty)
-        Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
-      else
-        NotFound
+  def findSaMappings(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    authActions.authorised() {
+      repositories.get(IRAgentReference).findBy(arn) map { matches =>
+        implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("saAgentReference")
+        if (matches.nonEmpty)
+          Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+        else
+          NotFound
+      }
     }
   }
 
-  def findAgentCodeMappings(arn: Arn): Action[AnyContent] = Action.async {
-    repositories.get(AgentCode).findBy(arn) map { matches =>
-      implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("agentCode")
-      if (matches.nonEmpty)
-        Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
-      else
-        NotFound
+  def findAgentCodeMappings(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    authActions.authorised() {
+      repositories.get(AgentCode).findBy(arn) map { matches =>
+        implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("agentCode")
+        if (matches.nonEmpty)
+          Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+        else
+          NotFound
+      }
     }
   }
 
   def findMappings(
     key: String,
     arn: Arn
-  ): Action[AnyContent] = Action.async {
-    LegacyAgentEnrolmentType.findByDbKey(key) match {
-      case Some(service) =>
-        repositories.get(service).findBy(arn) map { matches =>
-          if (matches.nonEmpty)
-            Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
-          else
-            NotFound
-        }
-      case None => Future.successful(BadRequest(s"No service found for the key $key"))
+  ): Action[AnyContent] = Action.async { implicit request =>
+    authActions.authorised() {
+      LegacyAgentEnrolmentType.findByDbKey(key) match {
+        case Some(service) =>
+          repositories.get(service).findBy(arn) map { matches =>
+            if (matches.nonEmpty)
+              Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+            else
+              NotFound
+          }
+        case None => Future.successful(BadRequest(s"No service found for the key $key"))
+      }
     }
   }
 

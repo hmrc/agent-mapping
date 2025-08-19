@@ -48,34 +48,38 @@ with Logging {
 
   def createOrUpdateRecord(arn: Arn): Action[JsValue] =
     Action.async(parse.json) { implicit request: Request[JsValue] =>
-      withJsonBody[MappingDetailsRequest] { mappingDetailsRequest =>
-        val details: MappingDetails = MappingDetails(
-          mappingDetailsRequest.authProviderId,
-          mappingDetailsRequest.ggTag,
-          mappingDetailsRequest.count,
-          LocalDateTime.now()
-        )
+      authActions.authorised() {
+        withJsonBody[MappingDetailsRequest] { mappingDetailsRequest =>
+          val details: MappingDetails = MappingDetails(
+            mappingDetailsRequest.authProviderId,
+            mappingDetailsRequest.ggTag,
+            mappingDetailsRequest.count,
+            LocalDateTime.now()
+          )
 
-        repository.findByArn(arn).flatMap {
-          case Some(record) =>
-            if (record.mappingDetails.exists(m => m.authProviderId == mappingDetailsRequest.authProviderId)) {
-              logger.error("already mapped")
-              Future successful Conflict
-            }
-            else
-              repository.updateMappingDisplayDetails(arn, details).map(_ => Ok)
+          repository.findByArn(arn).flatMap {
+            case Some(record) =>
+              if (record.mappingDetails.exists(m => m.authProviderId == mappingDetailsRequest.authProviderId)) {
+                logger.error("already mapped")
+                Future successful Conflict
+              }
+              else
+                repository.updateMappingDisplayDetails(arn, details).map(_ => Ok)
 
-          case None =>
-            val record = MappingDetailsRepositoryRecord(arn, Seq(details))
-            repository.create(record).map(_ => Created)
+            case None =>
+              val record = MappingDetailsRepositoryRecord(arn, Seq(details))
+              repository.create(record).map(_ => Created)
+          }
         }
       }
     }
 
-  def findRecordByArn(arn: Arn): Action[AnyContent] = Action.async { request =>
-    repository.findByArn(arn).map {
-      case Some(record) => Ok(Json.toJson(record))
-      case None => NotFound(s"no record found for this arn: $arn")
+  def findRecordByArn(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
+    authActions.authorised() {
+      repository.findByArn(arn).map {
+        case Some(record) => Ok(Json.toJson(record))
+        case None => NotFound(s"no record found for this arn: $arn")
+      }
     }
   }
 
