@@ -11,27 +11,15 @@ GET           /mappings/eligibility                       @uk.gov.hmrc.agentmapp
 
 GET           /client-count                               @uk.gov.hmrc.agentmapping.controller.MappingController.getClientCount
 
-# DEPRECATED, use /mappings/sa/:arn
-# this is used by ACR: https://github.com/hmrc/agent-client-relationships/blob/main/app/uk/gov/hmrc/agentclientrelationships/connectors/MappingConnector.scala#L81
-#TODO: update ACR to use proper endpoint and remove this endpoint.
 GET           /mappings/:arn                              @uk.gov.hmrc.agentmapping.controller.MappingController.findSaMappings(arn: uk.gov.hmrc.agentmapping.model.Arn)
 
-#used by agent-fi-relationship and mappings frontend
-#TODO: agent-fi-relationship their endpoint is not secured
-#agent-fi-relationship's endpoint is used by ACR, which is also not secured (ApiCheckRelationshipController.checkRelationship, POST          /api/:arn/relationship)
-#ACR's endpoint is used by agent-authorisation-api
 GET           /mappings/sa/:arn                           @uk.gov.hmrc.agentmapping.controller.MappingController.findSaMappings(arn: uk.gov.hmrc.agentmapping.model.Arn)
 
-#used by ACR only, their endpoint needs to be secured first
 GET           /mappings/agentcode/:arn                    @uk.gov.hmrc.agentmapping.controller.MappingController.findAgentCodeMappings(arn: uk.gov.hmrc.agentmapping.model.Arn)
 
-# supported keys: char,gts,mgd,novrn,ct,paye,sdlt
-#used by agent-access-control authorised(AuthProviders(GovernmentGateway).and(AffinityGroup.Agent))
 GET           /mappings/key/:key/arn/:arn                 @uk.gov.hmrc.agentmapping.controller.MappingController.findMappings(key: String, arn: uk.gov.hmrc.agentmapping.model.Arn)
 
-#used by agent-mapping-frontend
 POST          /mappings/details/arn/:arn                  @uk.gov.hmrc.agentmapping.controller.MappingDetailsController.createOrUpdateRecord(arn: uk.gov.hmrc.agentmapping.model.Arn)
-#used by agent-mapping-frontend
 GET           /mappings/details/arn/:arn                  @uk.gov.hmrc.agentmapping.controller.MappingDetailsController.findRecordByArn(arn: uk.gov.hmrc.agentmapping.model.Arn)
 PUT           /mappings/task-list/details/arn/:arn        @uk.gov.hmrc.agentmapping.controller.MappingDetailsController.transferSubscriptionRecordToMappingDetails(arn: uk.gov.hmrc.agentmapping.model.Arn)
 
