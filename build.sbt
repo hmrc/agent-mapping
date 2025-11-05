@@ -34,6 +34,7 @@ lazy val root = (project in file("."))
     Test / scalafmtOnCompile := true,
     Compile / unmanagedResourceDirectories += baseDirectory.value / "resources",
     Test / parallelExecution := false,
+    Test / logBuffered := false,
     scoverageSettings
   )
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
@@ -47,6 +48,7 @@ lazy val it = project
   .settings(libraryDependencies ++= AppDependencies.test)
   .settings(
     Compile / scalafmtOnCompile := true,
-    Test / scalafmtOnCompile := true
+    Test / scalafmtOnCompile := true,
+    Test / logBuffered := false
   )
 
