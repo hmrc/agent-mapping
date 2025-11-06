@@ -22,13 +22,10 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmapping.model.Arn
-import uk.gov.hmrc.agentmapping.model.Utr
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping.databaseFormat
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.SymmetricCryptoFactory
-
-import java.time.LocalDateTime
 
 class AgentReferenceMappingSpec
 extends AnyWordSpecLike
@@ -38,134 +35,56 @@ with Matchers {
     with Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "GTfz3GZy0+gN0p/5wSqRBpWlbWVDMezXWtX+G9ENwCc=")
 
   "AgentReferenceMapping model" should {
-
     "read from JSON" when {
+      "the default reads is used (unencrypted)" in {
+        val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
+          Arn("XARN1234567"),
+          "ABC123"
+        )
+        val json = Json.obj(
+          "arn" -> "XARN1234567",
+          "identifier" -> "ABC123"
+        )
 
-      "the default reads is used (unencrypted)" when {
-
-        "an ARN is the business identifier - the date and encryption status should not be read" in {
-          val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
-            Arn("XARN1234567"),
-            "ABC123",
-            None
-          )
-          val json = Json.obj(
-            "arn" -> "XARN1234567",
-            "identifier" -> "ABC123",
-            "preCreatedDate" -> "2020-01-01T00:00:00.000"
-          )
-
-          json.as[AgentReferenceMapping] shouldBe expectedModel
-        }
-
-        "a UTR is the business identifier - the encryption status should not be read" in {
-          val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
-            Utr("1234567890"),
-            "ABC123",
-            Some(LocalDateTime.parse("2020-01-01T00:00:00.000"))
-          )
-          val json = Json.obj(
-            "utr" -> "1234567890",
-            "identifier" -> "ABC123",
-            "preCreatedDate" -> "2020-01-01T00:00:00.000"
-          )
-
-          json.as[AgentReferenceMapping] shouldBe expectedModel
-        }
+        json.as[AgentReferenceMapping] shouldBe expectedModel
       }
 
-      "the database reads is used (encrypted)" when {
-
-        "an ARN is the business identifier - the date should not be read" in {
-          val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
-            Arn("XARN1234567"),
-            "ABC123",
-            None
-          )
-          val json: JsObject = Json.obj(
-            "arn" -> "XARN1234567",
-            "identifier" -> "xBz9KLLVGclaDNLxWSY/YA==",
-            "preCreatedDate" -> "2020-01-01T00:00:00.000"
-          )
-          json.as[AgentReferenceMapping](databaseFormat) shouldBe expectedModel
-        }
-
-        "a UTR is the business identifier" in {
-          val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
-            Utr("1234567890"),
-            "ABC123",
-            Some(LocalDateTime.parse("2020-01-01T00:00:00.000"))
-          )
-          val json: JsObject = Json.obj(
-            "utr" -> "1234567890",
-            "identifier" -> "xBz9KLLVGclaDNLxWSY/YA==",
-            "preCreatedDate" -> "2020-01-01T00:00:00.000"
-          )
-          json.as[AgentReferenceMapping](databaseFormat) shouldBe expectedModel
-        }
+      "the database reads is used (encrypted)" in {
+        val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
+          Arn("XARN1234567"),
+          "ABC123"
+        )
+        val json: JsObject = Json.obj(
+          "arn" -> "XARN1234567",
+          "identifier" -> "xBz9KLLVGclaDNLxWSY/YA=="
+        )
+        json.as[AgentReferenceMapping](databaseFormat) shouldBe expectedModel
       }
     }
 
     "write to JSON" when {
-
-      "the default writes is used (unencrypted)" should {
-
-        "an ARN is the business identifier - the date and encryption status should not be written" in {
-          val model: AgentReferenceMapping = AgentReferenceMapping(
-            Arn("XARN1234567"),
-            "ABC123",
-            Some(LocalDateTime.parse("2020-01-01T00:00:00.000"))
-          )
-          val expectedJson: JsObject = Json.obj(
-            "arn" -> "XARN1234567",
-            "identifier" -> "ABC123"
-          )
-          Json.toJson(model) shouldBe expectedJson
-        }
-
-        "a UTR is the business identifier - the encryption status should not be written" in {
-          val model: AgentReferenceMapping = AgentReferenceMapping(
-            Utr("1234567890"),
-            "ABC123",
-            Some(LocalDateTime.parse("2020-01-01T00:00:00.000"))
-          )
-          val expectedJson: JsObject = Json.obj(
-            "utr" -> "1234567890",
-            "identifier" -> "ABC123",
-            "preCreatedDate" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1577836800000"))
-          )
-          Json.toJson(model) shouldBe expectedJson
-        }
+      "the default writes is used (unencrypted)" in {
+        val model: AgentReferenceMapping = AgentReferenceMapping(
+          Arn("XARN1234567"),
+          "ABC123"
+        )
+        val expectedJson: JsObject = Json.obj(
+          "arn" -> "XARN1234567",
+          "identifier" -> "ABC123"
+        )
+        Json.toJson(model) shouldBe expectedJson
       }
 
-      "the database writes is used (encrypted)" should {
-
-        "an ARN is the business identifier - the date should not be written" in {
-          val model: AgentReferenceMapping = AgentReferenceMapping(
-            Arn("XARN1234567"),
-            "ABC123",
-            Some(LocalDateTime.parse("2020-01-01T00:00:00.000"))
-          )
-          val expectedJson: JsObject = Json.obj(
-            "arn" -> "XARN1234567",
-            "identifier" -> "xBz9KLLVGclaDNLxWSY/YA=="
-          )
-          Json.toJson(model)(databaseFormat) shouldBe expectedJson
-        }
-
-        "a UTR is the business identifier" in {
-          val model: AgentReferenceMapping = AgentReferenceMapping(
-            Utr("1234567890"),
-            "ABC123",
-            Some(LocalDateTime.parse("2020-01-01T00:00:00.000"))
-          )
-          val expectedJson: JsObject = Json.obj(
-            "utr" -> "1234567890",
-            "identifier" -> "xBz9KLLVGclaDNLxWSY/YA==",
-            "preCreatedDate" -> Json.obj("$date" -> Json.obj("$numberLong" -> "1577836800000"))
-          )
-          Json.toJson(model)(databaseFormat) shouldBe expectedJson
-        }
+      "the database writes is used (encrypted)" in {
+        val model: AgentReferenceMapping = AgentReferenceMapping(
+          Arn("XARN1234567"),
+          "ABC123"
+        )
+        val expectedJson: JsObject = Json.obj(
+          "arn" -> "XARN1234567",
+          "identifier" -> "xBz9KLLVGclaDNLxWSY/YA=="
+        )
+        Json.toJson(model)(databaseFormat) shouldBe expectedJson
       }
     }
   }

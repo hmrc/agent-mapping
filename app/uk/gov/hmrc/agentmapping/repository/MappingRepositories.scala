@@ -61,19 +61,6 @@ class MappingRepositories @Inject() (
   def deleteDataForArn(arn: Arn)(implicit ec: ExecutionContext): Future[Seq[Int]] = Future
     .sequence(repositories.map { case (_, repository) => repository.deleteByArn(arn).map(dr => dr.getDeletedCount.toInt) }.toSeq)
 
-  def deleteDataForUtr(utr: Utr)(implicit ec: ExecutionContext): Future[Seq[Int]] = Future
-    .sequence(repositories.map { case (_, repository) => repository.deleteByUtr(utr).map(dr => dr.getDeletedCount.toInt) }.toSeq)
-
-  def updateUtrToArn(
-    arn: Arn,
-    utr: Utr
-  )(implicit ec: ExecutionContext): Future[Unit] = Future
-    .sequence(repositories.map { case (_, repository) =>
-      repository
-        .updateUtrToArn(utr, arn)
-    })
-    .map(_ => ())
-
 }
 
 @Singleton

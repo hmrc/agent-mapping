@@ -31,7 +31,6 @@ import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.SymmetricCryptoFactory
-import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
 import scala.concurrent.ExecutionContext.Implicits.global
@@ -108,7 +107,7 @@ with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
 }
 
 abstract class BaseRepositoryISpec[
-  T <: ArnToIdentifierMapping,
+  T <: AgentReferenceMapping,
   R <: MappingRepository: ClassTag
 ]
 extends AnyWordSpecLike
@@ -135,9 +134,6 @@ with GuiceOneAppPerSuite {
   val arn1: Arn = Arn("ARN00001")
   val arn2: Arn = Arn("ARN00002")
 
-  val utr1: Utr = Utr("4000000009")
-  val utr2: Utr = Utr("7000000002")
-
   val reference1 = "Ref0001"
   val reference2 = "Ref0002"
 
@@ -145,44 +141,43 @@ with GuiceOneAppPerSuite {
 
   s"$repoName" should {
     behave like checkMapping(arn1, Seq(reference1, reference2))
-    behave like checkMapping(utr1, Seq(reference1, reference2))
 
     def checkMapping(
-      businessId: TaxIdentifier,
+      arn: Arn,
       references: Seq[String]
     ): Unit = {
       val reference1 = references.head
       val reference2 = references.last
 
-      s"create a mapping for {${businessId.getClass.getSimpleName}}" in {
-        repository.store(businessId, reference1).futureValue
+      s"create a mapping for Arn" in {
+        repository.store(arn, reference1).futureValue
 
         val result = repository.findAll().futureValue
 
         result.size shouldBe 1
-        result.head.businessId.value shouldBe businessId.value
+        result.head.arn.value shouldBe arn.value
         result.head.identifier shouldBe reference1
       }
 
-      s"not allow duplicate mappings to be created for the same {${businessId.getClass.getSimpleName} and identifier" in {
-        repository.store(businessId, reference1).futureValue
+      s"not allow duplicate mappings to be created for the same Arn and identifier" in {
+        repository.store(arn, reference1).futureValue
 
-        val e = repository.store(businessId, reference1).failed.futureValue
+        val e = repository.store(arn, reference1).failed.futureValue
 
         e shouldBe a[MongoWriteException]
         e.getMessage should include("E11000")
       }
 
-      s"allow more than one identifier to be mapped to the same {${businessId.getClass.getSimpleName}" in {
-        repository.store(businessId, reference1).futureValue
-        repository.store(businessId, reference2).futureValue
+      s"allow more than one identifier to be mapped to the same Arn" in {
+        repository.store(arn, reference1).futureValue
+        repository.store(arn, reference2).futureValue
 
         val result = repository.findAll().futureValue
 
         result.size shouldBe 2
-        result.head.businessId.value shouldBe businessId.value
+        result.head.arn.value shouldBe arn.value
         result.head.identifier shouldBe reference1
-        result(1).businessId.value shouldBe businessId.value
+        result(1).arn.value shouldBe arn.value
         result(1).identifier shouldBe reference2
       }
     }
@@ -192,7 +187,7 @@ with GuiceOneAppPerSuite {
       repository.store(arn1, reference2).futureValue
       repository.store(arn2, reference2).futureValue
 
-      val result: Seq[ArnToIdentifierMapping] = repository.findBy(arn1).futureValue
+      val result: Seq[AgentReferenceMapping] = repository.findBy(arn1).futureValue
 
       result.size shouldBe 2
     }
@@ -207,78 +202,22 @@ with GuiceOneAppPerSuite {
       repository.store(arn1, reference1).futureValue
       repository.store(arn2, reference2).futureValue
 
-      val mappings: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
+      val mappings: Seq[AgentReferenceMapping] = repository.findAll().futureValue
       mappings.size shouldBe 2
 
       val result: DeleteResult = repository.deleteByArn(arn1).futureValue
       result.getDeletedCount shouldBe 1L
 
-      val mappingsAfterDelete: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
+      val mappingsAfterDelete: Seq[AgentReferenceMapping] = repository.findAll().futureValue
       mappingsAfterDelete.size shouldBe 1
     }
 
     "do not fail delete when no matching records exist for Arn" in {
-      val mappings: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
+      val mappings: Seq[AgentReferenceMapping] = repository.findAll().futureValue
       mappings.size shouldBe 0
 
       val result: DeleteResult = repository.deleteByArn(arn1).futureValue
       result.getDeletedCount shouldBe 0L
-    }
-
-    "find all mappings for Utr" in {
-      repository.store(utr1, reference1).futureValue
-      repository.store(utr1, reference2).futureValue
-      repository.store(utr2, reference2).futureValue
-
-      val result: Seq[ArnToIdentifierMapping] = repository.findBy(utr1).futureValue
-
-      result.size shouldBe 2
-    }
-
-    "return an empty list when no match is found for Utr" in {
-      repository.store(utr1, reference1).futureValue
-      val result = repository.findBy(utr2).futureValue
-      result.size shouldBe 0
-    }
-
-    "delete a matching records by Utr" in {
-      repository.store(utr1, reference1).futureValue
-      repository.store(utr2, reference2).futureValue
-
-      val mappings: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
-      mappings.size shouldBe 2
-
-      val result: DeleteResult = repository.deleteByUtr(utr1).futureValue
-      result.getDeletedCount shouldBe 1L
-
-      val mappingsAfterDelete: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
-      mappingsAfterDelete.size shouldBe 1
-    }
-
-    "do not fail delete when no matching records exist for Utr" in {
-      val mappings: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
-      mappings.size shouldBe 0
-
-      val result: DeleteResult = repository.deleteByUtr(utr1).futureValue
-      result.getDeletedCount shouldBe 0L
-    }
-
-    "update records with utr to arn" in {
-      repository.store(utr1, reference1).futureValue
-
-      val mappings: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
-      mappings.size shouldBe 1
-
-      repository.updateUtrToArn(utr1, arn1).futureValue
-
-      val updatedMappings: Seq[ArnToIdentifierMapping] = repository.findAll().futureValue
-      updatedMappings.size shouldBe 1
-
-      updatedMappings.head.businessId shouldBe arn1
-      updatedMappings.head.identifier shouldBe reference1
-
-      repository.findBy(arn1).futureValue shouldBe List(updatedMappings.head)
-      repository.findBy(utr1).futureValue shouldBe List.empty
     }
   }
 

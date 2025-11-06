@@ -16,32 +16,23 @@
 
 package uk.gov.hmrc.agentmapping.repository
 
-import org.apache.pekko.Done
 import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.Filters.{equal, exists}
+import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.Indexes.ascending
-import org.mongodb.scala.model.Updates.combine
-import org.mongodb.scala.model.Updates.set
-import org.mongodb.scala.model.Updates.unset
-import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, UpdateOptions}
+import org.mongodb.scala.model.IndexModel
+import org.mongodb.scala.model.IndexOptions
 import org.mongodb.scala.result.DeleteResult
 import org.mongodb.scala.result.InsertOneResult
-import org.mongodb.scala.result.UpdateResult
 import play.api.Logging
 import play.api.libs.json.Format
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmapping.model.Arn
-import uk.gov.hmrc.agentmapping.model.Utr
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
-import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.Codecs
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
-import java.time.Instant
-import java.time.LocalDateTime
-import java.time.ZoneOffset
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
 import scala.concurrent.ExecutionContext
@@ -50,7 +41,6 @@ import scala.concurrent.Future
 //DO NOT DELETE (even if this microservice gets decommissioned)
 abstract class MappingRepository(
   collectionName: String,
-  identifierKey: String = "identifier",
   mongo: MongoComponent
 )(
   implicit
@@ -71,21 +61,9 @@ extends PlayMongoRepository[AgentReferenceMapping](
         .partialFilterExpression(BsonDocument("arn" -> BsonDocument("$exists" -> true)))
     ),
     IndexModel(
-      ascending("utr", identifierKey),
-      IndexOptions()
-        .name("utrWithIdentifier")
-        .unique(true)
-        .partialFilterExpression(BsonDocument("utr" -> BsonDocument("$exists" -> true)))
-    ),
-    IndexModel(
       ascending("arn"),
       IndexOptions()
         .name("AgentReferenceNumber")
-    ),
-    IndexModel(
-      ascending("utr"),
-      IndexOptions()
-        .name("Utr")
     ),
     IndexModel(
       ascending("preCreatedDate"),
@@ -96,8 +74,7 @@ extends PlayMongoRepository[AgentReferenceMapping](
   ),
   replaceIndexes = true,
   extraCodecs = List(
-    Codecs.playFormatCodec(Format(Arn.arnReads, Arn.arnWrites)),
-    Codecs.playFormatCodec(Format(Utr.utrReads, Utr.utrWrites))
+    Codecs.playFormatCodec(Format(Arn.arnReads, Arn.arnWrites))
   )
 )
 with Logging {
@@ -106,55 +83,21 @@ with Logging {
 
   def findBy(arn: Arn): Future[Seq[AgentReferenceMapping]] = collection.find(equal("arn", arn.value)).toFuture()
 
-  def findBy(utr: Utr): Future[Seq[AgentReferenceMapping]] = collection.find(equal("utr", utr.value)).toFuture()
-
   def findAll(): Future[Seq[AgentReferenceMapping]] = collection.find().toFuture()
 
   def store(
-    identifier: TaxIdentifier,
-    identifierValue: String,
-    createdTime: Option[LocalDateTime] = Some(Instant.now().atZone(ZoneOffset.UTC).toLocalDateTime)
+    arn: Arn,
+    identifierValue: String
   ): Future[InsertOneResult] = collection
     .insertOne(AgentReferenceMapping(
-      identifier,
-      identifierValue,
-      createdTime
+      arn,
+      identifierValue
     ))
-    .toFuture()
-
-  def updateUtrToArn(
-    utr: Utr,
-    arn: Arn
-  ): Future[UpdateResult] = collection
-    .updateOne(
-      equal("utr", utr.value),
-      combine(
-        set("arn", arn.value),
-        unset("preCreatedDate"),
-        unset("utr")
-      ),
-      UpdateOptions().upsert(false)
-    )
     .toFuture()
 
   def deleteByArn(arn: Arn): Future[DeleteResult] = collection.deleteOne(equal("arn", arn.value)).toFuture()
 
-  def deleteByUtr(utr: Utr): Future[DeleteResult] = collection.deleteOne(equal("utr", utr.value)).toFuture()
-
   // This is for testing purposes only
   def deleteAll(): Future[DeleteResult] = collection.deleteMany(BsonDocument()).toFuture()
-
-  private def checkAllWithUtr(): Future[Done] = {
-    for {
-      count1 <- collection.countDocuments(exists("utr")).toFuture()
-      _ = logger.warn(s"Found $count1 documents with a 'utr' in ${collectionName.toLowerCase}")
-      count2 <- collection.countDocuments(exists("preCreatedDate")).toFuture()
-      _ = logger.warn(s"Found $count2 documents with a 'preCreatedDate' in ${collectionName.toLowerCase}")
-      count3 <- collection.countDocuments(Filters.and(exists("utr"), exists("arn"))).toFuture()
-      _ = logger.warn(s"Found $count3 documents with both a 'utr' and an 'arn' in ${collectionName.toLowerCase}")
-    } yield Done
-  }
-
-  checkAllWithUtr()
 
 }

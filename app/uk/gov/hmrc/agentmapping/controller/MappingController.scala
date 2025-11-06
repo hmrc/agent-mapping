@@ -28,7 +28,6 @@ import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentmapping.connector.SubscriptionConnector
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository._
-import uk.gov.hmrc.domain.TaxIdentifier
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
@@ -84,42 +83,34 @@ with Logging {
       .map(clientCount => Ok(Json.obj("clientCount" -> clientCount)))
   }
 
-  /** Add mapping for the passed identifier against an ARN or UTR (businessId) The identifier key (enrolment type) determines which data store to use Returns
-    * true IF the mapping already exists, false otherwise
+  /** Add mapping for the passed identifier against an ARN. The identifier key (enrolment type) determines which data store to use Returns true IF the mapping
+    * already exists, false otherwise
     */
   private def createMappingInRepository(
-    businessId: TaxIdentifier,
+    arn: Arn,
     identifier: Identifier,
     ggCredId: String
   )(implicit
     request: Request[Any]
   ): Future[Boolean] = repositories
     .get(identifier.enrolmentType)
-    .store(businessId, identifier.value)
+    .store(arn, identifier.value)
     .map { _ =>
-      businessId match {
-        case arn: Arn =>
-          sendCreateMappingAuditEvent(
-            arn,
-            identifier,
-            ggCredId
-          )
-        case _ => ()
-      }
+      sendCreateMappingAuditEvent(
+        arn,
+        identifier,
+        ggCredId
+      )
       false
     }
     .recover {
       case e: MongoWriteException if e.getMessage().contains("E11000") =>
-        businessId match {
-          case arn: Arn =>
-            sendCreateMappingAuditEvent(
-              arn,
-              identifier,
-              ggCredId,
-              duplicate = true
-            )
-          case _ => ()
-        }
+        sendCreateMappingAuditEvent(
+          arn,
+          identifier,
+          ggCredId,
+          duplicate = true
+        )
         logger.warn(s"Duplicated mapping attempt for ${identifier.enrolmentType}")
         true
     }
@@ -188,24 +179,8 @@ with Logging {
     }
   }
 
-  def createPreSubscriptionMapping(utr: Utr): Action[AnyContent] = authorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
-    createMapping(utr, identifiers)
-  }
-
-  def deletePreSubscriptionMapping(utr: Utr): Action[AnyContent] = basicAuth { request =>
-    repositories
-      .deleteDataForUtr(utr)
-      .map { _ =>
-        NoContent
-      }
-  }
-
-  def createPostSubscriptionMapping(utr: Utr): Action[AnyContent] = authorisedAsSubscribedAgent { request => arn =>
-    repositories.updateUtrToArn(arn, utr).map(_ => Ok)
-  }
-
   private def createMapping(
-    businessId: TaxIdentifier,
+    arn: Arn,
     identifiers: Set[Identifier]
   )(implicit
     ec: ExecutionContext,
@@ -216,7 +191,7 @@ with Logging {
     val mappingResults: Set[Future[Boolean]] = identifiers
       .map(identifier =>
         createMappingInRepository(
-          businessId,
+          arn,
           identifier,
           providerId
         )
@@ -251,7 +226,7 @@ with Logging {
   }
 
   private def writeAgentReferenceMappingWith(identifierFieldName: String): Writes[AgentReferenceMapping] = Writes[AgentReferenceMapping](m =>
-    Json.obj("arn" -> JsString(m.businessId.value), identifierFieldName -> JsString(m.identifier))
+    Json.obj("arn" -> JsString(m.arn.value), identifierFieldName -> JsString(m.identifier))
   )
 
 }
