@@ -58,7 +58,6 @@ extends PlayMongoRepository[AgentReferenceMapping](
       IndexOptions()
         .name("arnWithIdentifier")
         .unique(true)
-        .partialFilterExpression(BsonDocument("arn" -> BsonDocument("$exists" -> true)))
     ),
     IndexModel(
       ascending("arn"),
