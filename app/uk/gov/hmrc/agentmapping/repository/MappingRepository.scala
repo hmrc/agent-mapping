@@ -16,15 +16,14 @@
 
 package uk.gov.hmrc.agentmapping.repository
 
+import org.apache.pekko.Done
 import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.Filters.equal
+import org.mongodb.scala.model.Filters.{equal, exists}
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.Updates.combine
 import org.mongodb.scala.model.Updates.set
 import org.mongodb.scala.model.Updates.unset
-import org.mongodb.scala.model.IndexModel
-import org.mongodb.scala.model.IndexOptions
-import org.mongodb.scala.model.UpdateOptions
+import org.mongodb.scala.model.{Filters, IndexModel, IndexOptions, UpdateOptions}
 import org.mongodb.scala.result.DeleteResult
 import org.mongodb.scala.result.InsertOneResult
 import org.mongodb.scala.result.UpdateResult
@@ -144,5 +143,18 @@ with Logging {
 
   // This is for testing purposes only
   def deleteAll(): Future[DeleteResult] = collection.deleteMany(BsonDocument()).toFuture()
+
+  private def checkAllWithUtr(): Future[Done] = {
+    for {
+      count1 <- collection.countDocuments(exists("utr")).toFuture()
+      _ = logger.warn(s"Found $count1 documents with a 'utr' in ${collectionName.toLowerCase}")
+      count2 <- collection.countDocuments(exists("preCreatedDate")).toFuture()
+      _ = logger.warn(s"Found $count2 documents with a 'preCreatedDate' in ${collectionName.toLowerCase}")
+      count3 <- collection.countDocuments(Filters.and(exists("utr"), exists("arn"))).toFuture()
+      _ = logger.warn(s"Found $count3 documents with both a 'utr' and an 'arn' in ${collectionName.toLowerCase}")
+    } yield Done
+  }
+
+  checkAllWithUtr()
 
 }
