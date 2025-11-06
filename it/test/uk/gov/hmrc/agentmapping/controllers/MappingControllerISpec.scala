@@ -321,6 +321,7 @@ with ScalaFutures {
             givenUserIsAuthorisedFor(f)
             callPut(createMappingRequest, None).status shouldBe 201
 
+            verifyCreateMappingAuditEventSent(f)
           }
 
           "return created upon success w/o agent code" in {
@@ -332,6 +333,8 @@ with ScalaFutures {
               agentCodeOpt = None
             )
             callPut(createMappingRequest, None).status shouldBe 201
+
+            verifyCreateMappingAuditEventSent(f)
           }
 
           "return conflict when the mapping already exists" in {
@@ -341,6 +344,7 @@ with ScalaFutures {
             callPut(createMappingRequest, None).status shouldBe 409
 
             verifyCreateMappingAuditEventSent(f)
+            verifyCreateMappingAuditEventSent(f, duplicate = true)
           }
 
           "return forbidden when an authorisation error occurs" in {
