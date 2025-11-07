@@ -47,6 +47,7 @@ import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
 
 import java.nio.charset.StandardCharsets.UTF_8
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Base64
@@ -133,8 +134,6 @@ with ScalaFutures {
   val createMappingRequest: String = s"/agent-mapping/mappings/arn/${registeredArn.value}"
 
   val createMappingFromSubscriptionJourneyRecordRequest: String = s"/agent-mapping/mappings/task-list/arn/${registeredArn.value}"
-
-  val findMappingsRequest: String = s"/agent-mapping/mappings/${registeredArn.value}"
 
   val findSAMappingsRequest: String = s"/agent-mapping/mappings/sa/${registeredArn.value}"
 
@@ -460,19 +459,6 @@ with ScalaFutures {
   }
 
   "find mapping requests" should {
-    "return 200 status with a json body representing the mappings that match the supplied arn" in {
-      isLoggedIn
-      saRepo.store(registeredArn, "A1111A").futureValue
-      saRepo.store(registeredArn, "A1111B").futureValue
-
-      val response = callGet(findMappingsRequest)
-
-      response.status shouldBe 200
-      val body = response.body
-      body shouldBe """{"mappings":[{"arn":"AARN0000002","saAgentReference":"A1111A"},{"arn":"AARN0000002","saAgentReference":"A1111B"}]}"""
-
-    }
-
     "return 200 status with a json body representing the mappings that match the supplied arn for sa" in {
       isLoggedIn
       saRepo.store(registeredArn, "A1111A").futureValue
@@ -480,7 +466,21 @@ with ScalaFutures {
 
       val response = callGet(findSAMappingsRequest)
 
-      response.body shouldBe """{"mappings":[{"arn":"AARN0000002","saAgentReference":"A1111A"},{"arn":"AARN0000002","saAgentReference":"A1111B"}]}"""
+      response.status shouldBe 200
+      response.json shouldBe Json.obj(
+        "mappings" -> Json.arr(
+          Json.obj(
+            "arn" -> "AARN0000002",
+            "saAgentReference" -> "A1111A",
+            "created" -> LocalDate.now()
+          ),
+          Json.obj(
+            "arn" -> "AARN0000002",
+            "saAgentReference" -> "A1111B",
+            "created" -> LocalDate.now()
+          )
+        )
+      )
     }
 
     "return 200 status with a json body representing the mappings that match the supplied arn for agent code" in {
@@ -491,10 +491,20 @@ with ScalaFutures {
       val response = callGet(findAgentCodeMappingsRequest)
 
       response.status shouldBe 200
-      val body = response.body
-
-      body should include("""{"arn":"AARN0000002","agentCode":"ABCDE1"}""")
-      body should include("""{"arn":"AARN0000002","agentCode":"ABCDE2"}""")
+      response.json shouldBe Json.obj(
+        "mappings" -> Json.arr(
+          Json.obj(
+            "arn" -> "AARN0000002",
+            "agentCode" -> "ABCDE1",
+            "created" -> LocalDate.now()
+          ),
+          Json.obj(
+            "arn" -> "AARN0000002",
+            "agentCode" -> "ABCDE2",
+            "created" -> LocalDate.now()
+          )
+        )
+      )
     }
 
     Seq(
@@ -515,21 +525,26 @@ with ScalaFutures {
         val response = callGet(findMappingsRequestByKey(f.dbKey))
 
         response.status shouldBe 200
-        val body = response.body
-
-        body should include("""{"arn":"AARN0000002","identifier":"ABCDE298980"}""")
-        body should include("""{"arn":"AARN0000002","identifier":"ABCDE123456"}""")
+        response.json shouldBe Json.obj(
+          "mappings" -> Json.arr(
+            Json.obj(
+              "arn" -> "AARN0000002",
+              "identifier" -> "ABCDE123456",
+              "created" -> LocalDate.now()
+            ),
+            Json.obj(
+              "arn" -> "AARN0000002",
+              "identifier" -> "ABCDE298980",
+              "created" -> LocalDate.now()
+            )
+          )
+        )
       }
 
       s"return 404 when there are no ${f.dbKey} mappings that match the supplied arn" in {
         isLoggedIn
         callGet(findMappingsRequestByKey(f.dbKey)).status shouldBe 404
       }
-    }
-
-    "return 404 when there are no mappings that match the supplied arn" in {
-      isLoggedIn
-      callGet(findMappingsRequest).status shouldBe 404
     }
 
     "return 404 when there are no mappings that match the supplied arn for sa" in {
@@ -553,7 +568,7 @@ with ScalaFutures {
       deleteResponse.status shouldBe 204
 
       isLoggedIn
-      val notFoundResponse = callGet(findMappingsRequest)
+      val notFoundResponse = callGet(findSAMappingsRequest)
       notFoundResponse.status shouldBe 404
     }
 

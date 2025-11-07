@@ -16,6 +16,7 @@
 
 package model
 
+import org.bson.types.ObjectId
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.libs.json.JsObject
@@ -36,25 +37,14 @@ with Matchers {
 
   "AgentReferenceMapping model" should {
     "read from JSON" when {
-      "the default reads is used (unencrypted)" in {
-        val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
-          Arn("XARN1234567"),
-          "ABC123"
-        )
-        val json = Json.obj(
-          "arn" -> "XARN1234567",
-          "identifier" -> "ABC123"
-        )
-
-        json.as[AgentReferenceMapping] shouldBe expectedModel
-      }
-
       "the database reads is used (encrypted)" in {
         val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
+          Some(new ObjectId("69038f00be7a033d7d28132f")),
           Arn("XARN1234567"),
           "ABC123"
         )
         val json: JsObject = Json.obj(
+          "_id" -> Json.obj("$oid" -> "69038f00be7a033d7d28132f"),
           "arn" -> "XARN1234567",
           "identifier" -> "xBz9KLLVGclaDNLxWSY/YA=="
         )
@@ -63,8 +53,9 @@ with Matchers {
     }
 
     "write to JSON" when {
-      "the default writes is used (unencrypted)" in {
+      "the api writes is used (not timestamped)" in {
         val model: AgentReferenceMapping = AgentReferenceMapping(
+          None,
           Arn("XARN1234567"),
           "ABC123"
         )
@@ -72,11 +63,40 @@ with Matchers {
           "arn" -> "XARN1234567",
           "identifier" -> "ABC123"
         )
-        Json.toJson(model) shouldBe expectedJson
+        Json.toJson(model)(AgentReferenceMapping.apiWrites()) shouldBe expectedJson
+      }
+
+      "the api writes is used (timestamped)" in {
+        val model: AgentReferenceMapping = AgentReferenceMapping(
+          Some(new ObjectId("69038f00be7a033d7d28132f")),
+          Arn("XARN1234567"),
+          "ABC123"
+        )
+        val expectedJson: JsObject = Json.obj(
+          "arn" -> "XARN1234567",
+          "identifier" -> "ABC123",
+          "created" -> "2025-10-30"
+        )
+        Json.toJson(model)(AgentReferenceMapping.apiWrites()) shouldBe expectedJson
+      }
+
+      "the api writes is used with identifier key override (timestamped)" in {
+        val model: AgentReferenceMapping = AgentReferenceMapping(
+          Some(new ObjectId("69038f00be7a033d7d28132f")),
+          Arn("XARN1234567"),
+          "ABC123"
+        )
+        val expectedJson: JsObject = Json.obj(
+          "arn" -> "XARN1234567",
+          "agentCode" -> "ABC123",
+          "created" -> "2025-10-30"
+        )
+        Json.toJson(model)(AgentReferenceMapping.apiWrites("agentCode")) shouldBe expectedJson
       }
 
       "the database writes is used (encrypted)" in {
         val model: AgentReferenceMapping = AgentReferenceMapping(
+          None,
           Arn("XARN1234567"),
           "ABC123"
         )
