@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package test.uk.gov.hmrc.agentmapping.controllers
+package uk.gov.hmrc.agentmapping.controllers
 
 import org.apache.pekko.actor.ActorSystem
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
@@ -61,7 +61,6 @@ with ScalaFutures {
 
   val registeredArn: Arn = Arn("AARN0000002")
 
-  private val utr = Utr("2000000000")
   private val agentCode = "TZRXXV"
 
   val IRSAAgentReference = "IRAgentReference"
@@ -135,10 +134,6 @@ with ScalaFutures {
 
   val createMappingFromSubscriptionJourneyRecordRequest: String = s"/agent-mapping/mappings/task-list/arn/${registeredArn.value}"
 
-  val createPreSubscriptionMappingRequest: String = s"/agent-mapping/mappings/pre-subscription/utr/${utr.value}"
-
-  val updatePostSubscriptionMappingRequest: String = s"/agent-mapping/mappings/post-subscription/utr/${utr.value}"
-
   val findMappingsRequest: String = s"/agent-mapping/mappings/${registeredArn.value}"
 
   val findSAMappingsRequest: String = s"/agent-mapping/mappings/sa/${registeredArn.value}"
@@ -150,8 +145,6 @@ with ScalaFutures {
   def findMappingsRequestByKey(key: String): String = s"/agent-mapping/mappings/key/$key/arn/${registeredArn.value}"
 
   val deleteMappingsRequest: String = s"/agent-mapping/test-only/mappings/${registeredArn.value}"
-
-  val deletePreSubscriptionMappingsRequest: String = s"/agent-mapping/mappings/pre-subscription/utr/${utr.value}"
 
   def terminateAgentsMapping(arn: Arn): String = s"/agent-mapping/agent/${arn.value}/terminate"
 
@@ -379,41 +372,6 @@ with ScalaFutures {
       }
     }
 
-    fixtures.foreach { f =>
-      s"capture ${f.legacyAgentEnrolmentType.key} enrolment for pre-subscription" when {
-        "return created upon success" in {
-          givenUserIsAuthorisedFor(f)
-
-          callPut(createPreSubscriptionMappingRequest, None).status shouldBe 201
-        }
-
-        "return created upon success w/o agent code" in {
-          givenUserIsAuthorisedFor(
-            f.legacyAgentEnrolmentType.key,
-            f.identifierKey,
-            f.identifierValue,
-            "testCredId",
-            agentCodeOpt = None
-          )
-
-          callPut(createPreSubscriptionMappingRequest, None).status shouldBe 201
-        }
-
-        "return conflict when the mapping already exists" in {
-          givenUserIsAuthorisedFor(f)
-
-          callPut(createPreSubscriptionMappingRequest, None).status shouldBe 201
-          callPut(createPreSubscriptionMappingRequest, None).status shouldBe 409
-        }
-
-        "return forbidden when an authorisation error occurs" in {
-          givenUserNotAuthorisedWithError("InsufficientEnrolments")
-
-          callPut(createPreSubscriptionMappingRequest, None).status shouldBe 403
-        }
-      }
-    }
-
     // Then test all fixtures at once
     s"capture all ${fixtures.size} enrolments" when {
       s"return created upon success" in {
@@ -498,40 +456,6 @@ with ScalaFutures {
         )
         callPut(createMappingRequest, None).status shouldBe 403
       }
-    }
-  }
-
-  "update enrolment for post-subscription" should {
-    "return 200 when succeeds" in {
-
-      saRepo.store(utr, "A1111A").futureValue
-      givenUserIsAuthorisedAsAgent(registeredArn.value)
-
-      callPut(updatePostSubscriptionMappingRequest, None).status shouldBe 200
-
-      val updatedMapping = saRepo.findAll().futureValue
-      updatedMapping.size shouldBe 1
-      updatedMapping.head.businessId.value shouldBe registeredArn.value
-    }
-
-    "return 200 when user does not have mappings" in {
-      givenUserIsAuthorisedAsAgent(registeredArn.value)
-
-      saRepo.findAll().futureValue.size shouldBe 0
-
-      callPut(updatePostSubscriptionMappingRequest, None).status shouldBe 200
-    }
-
-    "return 401 when user is not authenticated" in {
-      givenUserNotAuthorisedWithError("MissingBearerToken")
-
-      callPut(updatePostSubscriptionMappingRequest, None).status shouldBe 401
-    }
-
-    "return 403 when an authorisation error occurs" in {
-      givenUserNotAuthorisedWithError("InsufficientEnrolments")
-
-      callPut(updatePostSubscriptionMappingRequest, None).status shouldBe 403
     }
   }
 
@@ -634,29 +558,6 @@ with ScalaFutures {
     }
 
     "return no content when no record is deleted" in {
-      val deleteResponse = callDelete(deleteMappingsRequest)
-      deleteResponse.status shouldBe 204
-    }
-  }
-
-  "delete records with utr for pre-subscription" should {
-    "return no content when a record is deleted" in {
-      isLoggedIn
-      saRepo.store(utr, "foo").futureValue
-
-      val foundResponse = saRepo.findAll().futureValue
-      foundResponse.size shouldBe 1
-
-      val deleteResponse = callDelete(deletePreSubscriptionMappingsRequest)
-
-      deleteResponse.status shouldBe 204
-
-      val notFoundResponse = saRepo.findAll().futureValue
-      notFoundResponse.size shouldBe 0
-    }
-
-    "return no content when no record is deleted" in {
-      isLoggedIn
       val deleteResponse = callDelete(deleteMappingsRequest)
       deleteResponse.status shouldBe 204
     }
