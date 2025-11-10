@@ -50,6 +50,31 @@ with Matchers {
         )
         json.as[AgentReferenceMapping](databaseFormat) shouldBe expectedModel
       }
+      "the database reads is used (encrypted) but ObjectId is invalid" in {
+        val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
+          None,
+          Arn("XARN1234567"),
+          "ABC123"
+        )
+        val json: JsObject = Json.obj(
+          "_id" -> Json.obj("$oid" -> "invalidObjectId"),
+          "arn" -> "XARN1234567",
+          "identifier" -> "xBz9KLLVGclaDNLxWSY/YA=="
+        )
+        json.as[AgentReferenceMapping](databaseFormat) shouldBe expectedModel
+      }
+      "the database reads is used (encrypted) but ObjectId is missing" in {
+        val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
+          None,
+          Arn("XARN1234567"),
+          "ABC123"
+        )
+        val json: JsObject = Json.obj(
+          "arn" -> "XARN1234567",
+          "identifier" -> "xBz9KLLVGclaDNLxWSY/YA=="
+        )
+        json.as[AgentReferenceMapping](databaseFormat) shouldBe expectedModel
+      }
     }
 
     "write to JSON" when {

@@ -69,8 +69,8 @@ object AgentReferenceMapping {
       )(mapping => (mapping.arn, mapping.identifier))
 
     val databaseReads: Reads[AgentReferenceMapping] =
-      (
-        (__ \ "_id").readNullable[ObjectId](MongoFormats.objectIdFormat) and
+      ( // defaulting _id to None if it is missing or invalid because database is old (unknown if this can happen in practice)
+        (__ \ "_id").readNullable[ObjectId](MongoFormats.objectIdFormat).orElse(Reads.pure(None)) and
           (__ \ "arn").read[Arn] and
           (__ \ "identifier").read[String](stringEncrypterDecrypter)
       )(AgentReferenceMapping.apply _)
