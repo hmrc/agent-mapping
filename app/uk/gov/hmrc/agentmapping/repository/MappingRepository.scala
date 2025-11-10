@@ -89,6 +89,7 @@ with Logging {
     identifierValue: String
   ): Future[InsertOneResult] = collection
     .insertOne(AgentReferenceMapping(
+      None,
       arn,
       identifierValue
     ))

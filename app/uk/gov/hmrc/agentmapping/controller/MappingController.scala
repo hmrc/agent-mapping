@@ -118,9 +118,8 @@ with Logging {
   def findSaMappings(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     authActions.authorised() {
       repositories.get(IRAgentReference).findBy(arn) map { matches =>
-        implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("saAgentReference")
         if (matches.nonEmpty)
-          Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+          Ok(toJson(AgentReferenceMappings(matches))(AgentReferenceMappings.apiWrites("saAgentReference")))
         else
           NotFound
       }
@@ -130,9 +129,8 @@ with Logging {
   def findAgentCodeMappings(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     authActions.authorised() {
       repositories.get(AgentCode).findBy(arn) map { matches =>
-        implicit val writes: Writes[AgentReferenceMapping] = writeAgentReferenceMappingWith("agentCode")
         if (matches.nonEmpty)
-          Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+          Ok(toJson(AgentReferenceMappings(matches))(AgentReferenceMappings.apiWrites("agentCode")))
         else
           NotFound
       }
@@ -148,7 +146,7 @@ with Logging {
         case Some(service) =>
           repositories.get(service).findBy(arn) map { matches =>
             if (matches.nonEmpty)
-              Ok(toJson(AgentReferenceMappings(matches))(Json.writes[AgentReferenceMappings]))
+              Ok(toJson(AgentReferenceMappings(matches))(AgentReferenceMappings.apiWrites()))
             else
               NotFound
           }
@@ -224,9 +222,5 @@ with Logging {
 
     agentCodeIdentifiers ++ legacyIdentifiers
   }
-
-  private def writeAgentReferenceMappingWith(identifierFieldName: String): Writes[AgentReferenceMapping] = Writes[AgentReferenceMapping](m =>
-    Json.obj("arn" -> JsString(m.arn.value), identifierFieldName -> JsString(m.identifier))
-  )
 
 }
