@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -734,11 +734,11 @@ with MongoSupport {
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
     .configure(
       Map(
-        "microservice.services.auth.port" -> wireMockPort,
-        "microservice.services.agent-subscription.port" -> wireMockPort,
+        "microservice.services.auth.port" -> wireMockPort.toString,
+        "microservice.services.agent-subscription.port" -> wireMockPort.toString,
         "microservice.services.agent-subscription.host" -> wireMockHost,
         "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort,
+        "auditing.consumer.baseUri.port" -> wireMockPort.toString,
         "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
         "migrate-repositories" -> "false",
         "termination.stride.enrolment" -> "caat",
