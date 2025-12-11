@@ -49,11 +49,11 @@ extends Logging {
   )
 
   def runDuplicateArnScanLocked(): Future[Unit] = lockService.withLock {
-    logger.info("Acquired lock for mapping-duplicate-arn-scan; starting duplicate ARN analysis")
+    logger.warn("Acquired lock for mapping-duplicate-arn-scan; starting duplicate ARN analysis")
     runDuplicateArnScan()
   }.map {
-    case Some(_) => logger.info("Duplicate ARN scan completed; lock released")
-    case None => logger.info("Duplicate ARN scan skipped (another instance already running)")
+    case Some(_) => logger.warn("Duplicate ARN scan completed; lock released")
+    case None => logger.warn("Duplicate ARN scan skipped (another instance already running)")
   }
 
   private[service] def findIdentifierArnCounts(collection: MongoCollection[AgentReferenceMapping])(implicit ec: ExecutionContext): Future[Seq[ArnCount]] = {
