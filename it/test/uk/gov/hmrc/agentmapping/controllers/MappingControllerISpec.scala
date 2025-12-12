@@ -39,6 +39,7 @@ import test.uk.gov.hmrc.agentmapping.stubs.AuthStubs
 import test.uk.gov.hmrc.agentmapping.stubs.DataStreamStub
 import test.uk.gov.hmrc.agentmapping.stubs.SubscriptionStub
 import test.uk.gov.hmrc.agentmapping.support.WireMockSupport
+import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.auth.core.Enrolment
 import uk.gov.hmrc.auth.core.EnrolmentIdentifier
@@ -732,6 +733,7 @@ with MongoSupport {
   implicit val actorSystem: ActorSystem = ActorSystem()
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
+    .disable[DuplicateArnScanModule]
     .configure(
       Map(
         "microservice.services.auth.port" -> wireMockPort.toString,

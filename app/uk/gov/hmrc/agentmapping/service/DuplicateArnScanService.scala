@@ -106,4 +106,6 @@ extends Logging {
     Future.sequence(tasks).map(_ => ())
   }
 
+  runDuplicateArnScanLocked()
+
 }

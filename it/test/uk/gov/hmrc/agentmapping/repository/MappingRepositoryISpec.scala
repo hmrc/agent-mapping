@@ -28,6 +28,7 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentmapping.model._
+import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.SymmetricCryptoFactory
@@ -123,6 +124,7 @@ with GuiceOneAppPerSuite {
 
   override implicit lazy val app: Application = appBuilder.build()
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
+    .disable[DuplicateArnScanModule]
     .configure(
       Map(
         "metrics.enabled" -> "false",

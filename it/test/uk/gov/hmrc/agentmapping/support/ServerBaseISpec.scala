@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentmapping.model.MappingDetailsRepositoryRecord
+import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
 
 abstract class ServerBaseISpec
 extends BaseISpec
@@ -33,13 +34,14 @@ with ScalaFutures {
   override implicit lazy val app: Application = appBuilder.build()
 
   override protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
+    .disable[DuplicateArnScanModule]
     .configure(
       Map(
-        "microservice.services.auth.port" -> wireMockPort,
-        "microservice.services.agent-subscription.port" -> wireMockPort,
+        "microservice.services.auth.port" -> wireMockPort.toString,
+        "microservice.services.agent-subscription.port" -> wireMockPort.toString,
         "microservice.services.agent-subscription.host" -> wireMockHost,
         "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort,
+        "auditing.consumer.baseUri.port" -> wireMockPort.toString,
         "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
         "migrate-repositories" -> "false",
         "termination.stride.enrolment" -> "caat"

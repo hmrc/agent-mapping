@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import play.api.i18n.MessagesApi
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.twirl.api.HtmlFormat
 import test.uk.gov.hmrc.agentmapping.stubs.DataStreamStub
+import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
 
 abstract class BaseISpec
 extends AnyWordSpecLike
@@ -40,6 +41,7 @@ with ScalaFutures {
   def app: Application
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
+    .disable[DuplicateArnScanModule]
     .configure(
       "microservice.services.auth.port" -> wireMockPort,
       "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
@@ -52,6 +54,7 @@ with ScalaFutures {
       "auditing.consumer.baseUri.port" -> wireMockPort,
       "migrate-repositories" -> "false",
       "termination.stride.enrolment" -> "caat"
+//      "play.modules.disabled" -> Seq("uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule")
     )
 
   override def commonStubs(): Unit = {
