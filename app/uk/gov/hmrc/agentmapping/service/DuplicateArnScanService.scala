@@ -73,7 +73,7 @@ extends Logging {
     )
 
     collection
-      .aggregate[Document](pipeline) // returns BSON documents
+      .aggregate[Document](pipeline)
       .toFuture()
       .map(_.map { doc =>
         ArnCount(

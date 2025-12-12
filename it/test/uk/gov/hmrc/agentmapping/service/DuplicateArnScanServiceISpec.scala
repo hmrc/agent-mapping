@@ -46,11 +46,11 @@ with GuiceOneAppPerSuite {
     "return a row for each identifier that has more than one ARN" in {
       repository.store(Arn("ARN0001"), "X").futureValue
       repository.store(Arn("ARN0002"), "X").futureValue
-      repository.store(Arn("ARN0003"), "Y").futureValue // single ARN → should not appear
+      repository.store(Arn("ARN0003"), "Y").futureValue
 
       val results: Seq[ArnCount] =
         service
-          .findIdentifierArnCounts(repository.collection) // visible because test is in same package
+          .findIdentifierArnCounts(repository.collection)
           .futureValue
 
       results.map(_.arnCount) should contain only 2

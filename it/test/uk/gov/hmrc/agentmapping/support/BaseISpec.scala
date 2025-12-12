@@ -54,7 +54,6 @@ with ScalaFutures {
       "auditing.consumer.baseUri.port" -> wireMockPort,
       "migrate-repositories" -> "false",
       "termination.stride.enrolment" -> "caat"
-//      "play.modules.disabled" -> Seq("uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule")
     )
 
   override def commonStubs(): Unit = {
