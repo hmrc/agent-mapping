@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -39,6 +39,7 @@ import test.uk.gov.hmrc.agentmapping.stubs.AuthStubs
 import test.uk.gov.hmrc.agentmapping.stubs.DataStreamStub
 import test.uk.gov.hmrc.agentmapping.stubs.SubscriptionStub
 import test.uk.gov.hmrc.agentmapping.support.WireMockSupport
+import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.auth.core.Enrolment
 import uk.gov.hmrc.auth.core.EnrolmentIdentifier
@@ -732,13 +733,14 @@ with MongoSupport {
   implicit val actorSystem: ActorSystem = ActorSystem()
 
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
+    .disable[DuplicateArnScanModule]
     .configure(
       Map(
-        "microservice.services.auth.port" -> wireMockPort,
-        "microservice.services.agent-subscription.port" -> wireMockPort,
+        "microservice.services.auth.port" -> wireMockPort.toString,
+        "microservice.services.agent-subscription.port" -> wireMockPort.toString,
         "microservice.services.agent-subscription.host" -> wireMockHost,
         "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort,
+        "auditing.consumer.baseUri.port" -> wireMockPort.toString,
         "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
         "migrate-repositories" -> "false",
         "termination.stride.enrolment" -> "caat",

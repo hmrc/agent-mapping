@@ -1,5 +1,5 @@
 /*
- * Copyright 2024 HM Revenue & Customs
+ * Copyright 2025 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
 import uk.gov.hmrc.agentmapping.model._
+import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.SymmetricCryptoFactory
@@ -123,9 +124,10 @@ with GuiceOneAppPerSuite {
 
   override implicit lazy val app: Application = appBuilder.build()
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
+    .disable[DuplicateArnScanModule]
     .configure(
       Map(
-        "metrics.enabled" -> false,
+        "metrics.enabled" -> "false",
         "migrate-repositories" -> "false",
         "termination.stride.enrolment" -> "caat"
       )
