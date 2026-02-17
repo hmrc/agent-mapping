@@ -77,7 +77,7 @@ with EnrolmentStoreStubs {
     else {
       EnrolmentResponse(ModelEnrolment(
         IR_SA,
-        "Not Activated",
+        "Pending",
         Seq(EnrolmentIdentifier("UTR", "1234567890"))
       ) :: List.fill(recordsToReturn - 1)(ModelEnrolment(
         AgentCode.key,

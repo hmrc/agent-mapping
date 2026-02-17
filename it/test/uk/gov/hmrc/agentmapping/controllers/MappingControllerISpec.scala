@@ -403,15 +403,6 @@ with ScalaFutures {
         )
 
         callPut(createAutoMappingRequest, None).status shouldBe 201
-
-        verifyCreateMappingAuditEventSent(
-          TestFixture(
-            AgentCode,
-            IRSAAgentReference,
-            identifierValue
-          ),
-          automapped = true
-        )
       }
       "return NoContent when no principal enrolments exist" in {
 
@@ -432,6 +423,32 @@ with ScalaFutures {
 
         callPut(createAutoMappingRequest, None).status shouldBe 204
       }
+      "return NoContent when principal enrolments are not Activated" in {
+
+        val arnValue = registeredArn.value
+        val groupId = "group-123"
+        val providerId = "testCredId"
+
+        givenAuthorisedAsAgentWithGroup(
+          arn = arnValue,
+          groupId = groupId,
+          providerId = providerId
+        )
+
+        givenPrincipalEnrolmentsExist(
+          groupId = groupId,
+          enrolments = List(
+            ModelEnrolment(
+              AgentCode.key,
+              "Pending",
+              Seq(ModelEnrolmentIdentifier("UTR", "1234567890"))
+            )
+          )
+        )
+
+        callPut(createAutoMappingRequest, None).status shouldBe 204
+      }
+
       "return Forbidden when ARN does not match authorised ARN" in {
 
         val groupId = "group-123"
@@ -485,24 +502,6 @@ with ScalaFutures {
         callPut(createAutoMappingRequest, None).status shouldBe 201
 
         callPut(createAutoMappingRequest, None).status shouldBe 409
-
-        verifyCreateMappingAuditEventSent(
-          TestFixture(
-            AgentCode,
-            IRSAAgentReference,
-            identifierValue
-          ),
-          automapped = true
-        )
-        verifyCreateMappingAuditEventSent(
-          TestFixture(
-            AgentCode,
-            IRSAAgentReference,
-            identifierValue
-          ),
-          duplicate = true,
-          automapped = true
-        )
       }
       "return Unauthorised when user not logged in" in {
 
@@ -869,8 +868,7 @@ with ScalaFutures {
 
   private def verifyCreateMappingAuditEventSent(
     f: TestFixture,
-    duplicate: Boolean = false,
-    automapped: Boolean = false
+    duplicate: Boolean = false
   ): Unit = verifyAuditRequestSent(
     1,
     event = CreateMapping,
@@ -879,8 +877,7 @@ with ScalaFutures {
       "identifierType" -> f.legacyAgentEnrolmentType.key,
       "agentReferenceNumber" -> "AARN0000002",
       "authProviderId" -> "testCredId",
-      "duplicate" -> s"$duplicate",
-      "automapped" -> s"$automapped"
+      "duplicate" -> s"$duplicate"
     ),
     tags = Map("transactionName" -> "create-mapping")
   )

@@ -83,7 +83,7 @@ with Logging {
     else
       for {
         es3Response <- espConnector.getPrincipalEnrolments(groupId)
-        identifiers = extractRelevantIdentifiers(es3Response.enrolments)
+        identifiers = extractActiveIdentifiers(es3Response.enrolments)
 
         result <-
           if (identifiers.isEmpty)
@@ -243,10 +243,11 @@ with Logging {
     agentCodeIdentifiers ++ legacyIdentifiers
   }
 
-  private def extractRelevantIdentifiers(
+  private def extractActiveIdentifiers(
     enrolments: Seq[Enrolment]
   ): Set[Identifier] =
     enrolments
+      .filter(_.state.equalsIgnoreCase("Activated"))
       .flatMap { enrolment =>
         LegacyAgentEnrolmentType
           .find(enrolment.service)
@@ -308,16 +309,7 @@ with Logging {
         false
       }
       .recover {
-        case e: MongoWriteException if e.getMessage.contains("E11000") =>
-          sendCreateMappingAuditEvent(
-            arn,
-            identifier,
-            ggCredId,
-            duplicate = true,
-            automapped = true
-          )
-          logger.warn(s"Duplicated automapping attempt for ${identifier.enrolmentType}")
-          true
+        case e: MongoWriteException if e.getMessage.contains("E11000") => true // duplicate — silently ignore
       }
   }
 
