@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentmapping.connector
 
+import play.api.http.Status
 import play.api.libs.json.Json.format
 import play.api.libs.json.Json
 import play.api.libs.json.OFormat
@@ -23,12 +24,14 @@ import play.api.libs.json.Writes
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentmapping.config.AppConfig
 import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector.responseHandler
+import uk.gov.hmrc.agentmapping.model.{Enrolment => ModelEnrolment}
 import uk.gov.hmrc.agentmapping.util.RequestSupport.hc
 import uk.gov.hmrc.agentmapping.util._
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HttpReads
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
+import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import java.net.URL
@@ -38,13 +41,11 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Try
 
-case class Enrolment(state: String)
-
 object Enrolment {
-  implicit val formats: OFormat[Enrolment] = format
+  implicit val formats: OFormat[ModelEnrolment] = format
 }
 
-case class EnrolmentResponse(enrolments: Seq[Enrolment])
+case class EnrolmentResponse(enrolments: Seq[ModelEnrolment])
 
 @Singleton
 class EnrolmentStoreProxyConnector @Inject() (
@@ -90,6 +91,38 @@ class EnrolmentStoreProxyConnector @Inject() (
         }
     }
 
+  def getPrincipalEnrolments(
+    groupId: String
+  )(implicit
+    rh: RequestHeader
+  ): Future[EnrolmentResponse] = {
+
+    val url = url"$espBaseUrl/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=principal"
+    import uk.gov.hmrc.http.HttpReads.Implicits._
+
+    http
+      .get(url)
+      .execute[HttpResponse]
+      .map { response =>
+        response.status match {
+
+          case Status.OK =>
+            EnrolmentResponse(
+              (response.json \ "enrolments").as[Seq[ModelEnrolment]]
+            )
+
+          case Status.NO_CONTENT => EnrolmentResponse(Seq.empty)
+
+          case other =>
+            throw UpstreamErrorResponse(
+              response.body,
+              other,
+              other
+            )
+        }
+      }
+  }
+
   // ES2 - delegated
   private def getDelegatedEnrolmentsCountFor(
     userId: String,
@@ -129,7 +162,7 @@ object EnrolmentStoreProxyConnector {
         url: String,
         response: HttpResponse
       ): EnrolmentResponse = Try(response.status match {
-        case 200 => EnrolmentResponse((response.json \ "enrolments").as[Seq[Enrolment]])
+        case 200 => EnrolmentResponse((response.json \ "enrolments").as[Seq[ModelEnrolment]])
         case 204 => EnrolmentResponse(Seq.empty)
       }).getOrElse(
         throw new RuntimeException(

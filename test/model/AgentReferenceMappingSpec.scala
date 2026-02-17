@@ -127,7 +127,8 @@ with Matchers {
         )
         val expectedJson: JsObject = Json.obj(
           "arn" -> "XARN1234567",
-          "identifier" -> "xBz9KLLVGclaDNLxWSY/YA=="
+          "identifier" -> "xBz9KLLVGclaDNLxWSY/YA==",
+          "automapped" -> false
         )
         Json.toJson(model)(databaseFormat) shouldBe expectedJson
       }

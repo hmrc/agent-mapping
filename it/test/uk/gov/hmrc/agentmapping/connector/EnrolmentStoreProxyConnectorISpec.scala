@@ -16,6 +16,7 @@
 
 package test.uk.gov.hmrc.agentmapping.connector
 
+import org.scalatest.RecoverMethods.recoverToExceptionIf
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.mvc.AnyContentAsEmpty
@@ -24,7 +25,9 @@ import test.uk.gov.hmrc.agentmapping.stubs.EnrolmentStoreStubs
 import test.uk.gov.hmrc.agentmapping.support.BaseISpec
 import test.uk.gov.hmrc.agentmapping.support.WireMockSupport
 import uk.gov.hmrc.agentmapping.config.AppConfig
-import uk.gov.hmrc.agentmapping.connector.Enrolment
+import uk.gov.hmrc.agentmapping.model.AgentCode
+import uk.gov.hmrc.agentmapping.model.EnrolmentIdentifier
+import uk.gov.hmrc.agentmapping.model.{Enrolment => ModelEnrolment}
 import uk.gov.hmrc.agentmapping.connector.EnrolmentResponse
 import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.http.client.HttpClientV2
@@ -64,9 +67,23 @@ with EnrolmentStoreStubs {
     allActive: Boolean = true
   ) =
     if (allActive)
-      EnrolmentResponse(List.fill(recordsToReturn)(Enrolment("Activated")))
+      EnrolmentResponse(List.fill(recordsToReturn)(
+        ModelEnrolment(
+          IR_SA,
+          "Activated",
+          Seq(EnrolmentIdentifier("UTR", "1234567890"))
+        )
+      ))
     else {
-      EnrolmentResponse(Enrolment("Not Activated") :: List.fill(recordsToReturn - 1)(Enrolment("Activated")))
+      EnrolmentResponse(ModelEnrolment(
+        IR_SA,
+        "Not Activated",
+        Seq(EnrolmentIdentifier("UTR", "1234567890"))
+      ) :: List.fill(recordsToReturn - 1)(ModelEnrolment(
+        AgentCode.key,
+        "Activated",
+        Seq(EnrolmentIdentifier("UTR", "1234567890"))
+      )))
     }
 
   "runEs2ForServices" should {
@@ -187,6 +204,66 @@ with EnrolmentStoreStubs {
         connector.getClientCount("agent1").futureValue
       }
       exception.getMessage.contains("Error retrieving client list from") shouldBe true
+    }
+
+  }
+  "getPrincipalEnrolments" should {
+
+    "return enrolments when ESP responds with 200 OK" in {
+
+      val groupId = "group-123"
+
+      val enrolments = Seq(
+        uk.gov.hmrc.agentmapping.model.Enrolment(
+          service = "IR-SA",
+          state = "Activated",
+          identifiers = Seq.empty
+        ),
+        uk.gov.hmrc.agentmapping.model.Enrolment(
+          service = "IR-CT",
+          state = "Activated",
+          identifiers = Seq.empty
+        )
+      )
+
+      givenPrincipalEnrolmentsExist(groupId, enrolments)
+
+      val result = connector.getPrincipalEnrolments(groupId).futureValue
+
+      result.enrolments shouldBe enrolments
+    }
+
+    "return empty sequence when ESP responds with 204 NO_CONTENT" in {
+
+      val groupId = "group-123"
+
+      givenPrincipalEnrolmentsExist(
+        groupId = groupId,
+        enrolments = Seq.empty,
+        status = 204
+      )
+
+      val result = connector.getPrincipalEnrolments(groupId).futureValue
+
+      result.enrolments shouldBe Seq.empty
+    }
+
+    "throw UpstreamErrorResponse when ESP responds with non-200/204 status" in {
+
+      val groupId = "group-123"
+
+      givenPrincipalEnrolmentsExist(
+        groupId = groupId,
+        enrolments = Seq.empty,
+        status = 502
+      )
+
+      val exception =
+        recoverToExceptionIf[uk.gov.hmrc.http.UpstreamErrorResponse] {
+          connector.getPrincipalEnrolments(groupId)
+        }.futureValue
+
+      exception.statusCode shouldBe 502
     }
 
   }

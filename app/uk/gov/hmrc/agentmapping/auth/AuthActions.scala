@@ -30,6 +30,7 @@ import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.agentCode
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.allEnrolments
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.authorisedEnrolments
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.credentials
+import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.groupIdentifier
 import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.auth.core.retrieve.~
 import uk.gov.hmrc.http.HeaderNames
@@ -120,6 +121,35 @@ with Logging {
       .recover {
         case _: NoActiveSession => Unauthorized
         case _: AuthorisationException => Forbidden
+      }
+  }
+
+  def authorisedAsSubscribedAgentWithGroup(
+    body: Request[AnyContent] => Arn => String => String => Future[Result]
+  )(implicit ec: ExecutionContext): Action[AnyContent] = Action.async { implicit request =>
+    authorised(
+      Enrolment("HMRC-AS-AGENT")
+        and AuthProviders(GovernmentGateway)
+    )
+      .retrieve(authorisedEnrolments and groupIdentifier and credentials) {
+        case enrolments ~ maybeGroupId ~ maybeCreds =>
+
+          val maybeArn = getEnrolmentInfo(
+            enrolments.enrolments,
+            "HMRC-AS-AGENT",
+            "AgentReferenceNumber"
+          )
+
+          (maybeArn, maybeGroupId, maybeCreds) match {
+
+            case (Some(arn), Some(groupId), Some(creds)) => body(request)(Arn(arn))(groupId)(creds.providerId)
+
+            case _ => Future.successful(Forbidden)
+          }
+      }
+      .recover {
+        case e: NoActiveSession => Unauthorized
+        case e: AuthorisationException => Forbidden
       }
   }
 
