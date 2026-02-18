@@ -41,7 +41,8 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
     arn: Arn,
     identifier: Identifier,
     authProviderId: String,
-    duplicate: Boolean = false
+    duplicate: Boolean = false,
+    automapped: Boolean = false
   )(implicit
     request: Request[Any]
   ): Unit = {
@@ -53,7 +54,8 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
         "identifierType" -> identifier.enrolmentType.key,
         "identifier" -> identifier.value,
         "agentReferenceNumber" -> arn.value,
-        "duplicate" -> duplicate.toString
+        "duplicate" -> duplicate.toString,
+        "automapped" -> automapped.toString
       )
     )
     ()

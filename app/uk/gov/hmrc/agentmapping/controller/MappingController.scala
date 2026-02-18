@@ -77,6 +77,26 @@ with Logging {
     } yield createMappingsResult
   }
 
+  def autoMapEnrolments(arn: Arn): Action[AnyContent] = authorisedAsSubscribedAgentWithGroup { implicit request => authArn => groupId => providerId =>
+    if (authArn != arn)
+      Future.successful(Forbidden)
+    else
+      for {
+        es3Response <- espConnector.getPrincipalEnrolments(groupId)
+        identifiers = extractActiveIdentifiers(es3Response.enrolments)
+
+        result <-
+          if (identifiers.isEmpty)
+            Future.successful(NoContent)
+          else
+            createAutoMappings(arn, identifiers)(
+              ec,
+              request,
+              providerId
+            )
+      } yield result
+  }
+
   def getClientCount: Action[AnyContent] = authorisedWithProviderId { implicit request => providerId =>
     espConnector
       .getClientCount(providerId)
@@ -221,6 +241,76 @@ with Logging {
       } yield enrolmentIdentifier).toSet
 
     agentCodeIdentifiers ++ legacyIdentifiers
+  }
+
+  private def extractActiveIdentifiers(
+    enrolments: Seq[Enrolment]
+  ): Set[Identifier] =
+    enrolments
+      .filter(_.state.equalsIgnoreCase("Activated"))
+      .flatMap { enrolment =>
+        LegacyAgentEnrolmentType
+          .find(enrolment.service)
+          .fold(Seq.empty[Identifier]) { service =>
+            enrolment.identifiers.map(id =>
+              Identifier(service, id.value)
+            )
+          }
+      }
+      .toSet
+
+  private def createAutoMappings(
+    arn: Arn,
+    identifiers: Set[Identifier]
+  )(implicit
+    ec: ExecutionContext,
+    request: Request[AnyContent],
+    providerId: String
+  ): Future[Result] = {
+
+    val mappingResults: Set[Future[Boolean]] = identifiers.map(identifier =>
+      createAutoMappingInRepository(
+        arn,
+        identifier,
+        providerId
+      )
+    )
+
+    Future
+      .sequence(mappingResults)
+      .map { resultSet =>
+        if (resultSet.contains(false))
+          Created
+        else
+          Conflict
+      }
+  }
+
+  private def createAutoMappingInRepository(
+    arn: Arn,
+    identifier: Identifier,
+    ggCredId: String
+  )(implicit request: Request[Any]): Future[Boolean] = {
+
+    repositories
+      .get(identifier.enrolmentType)
+      .store(
+        arn,
+        identifier.value,
+        automapped = true
+      )
+      .map { _ =>
+        sendCreateMappingAuditEvent(
+          arn,
+          identifier,
+          ggCredId,
+          automapped = true
+        )
+        false
+      }
+      .recover {
+        case e: MongoWriteException if e.getMessage.contains("E11000") => true // duplicate — silently ignore
+      }
   }
 
 }

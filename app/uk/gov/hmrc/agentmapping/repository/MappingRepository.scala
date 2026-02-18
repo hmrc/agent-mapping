@@ -86,12 +86,14 @@ with Logging {
 
   def store(
     arn: Arn,
-    identifierValue: String
+    identifierValue: String,
+    automapped: Boolean = false
   ): Future[InsertOneResult] = collection
     .insertOne(AgentReferenceMapping(
       None,
       arn,
-      identifierValue
+      identifierValue,
+      automapped
     ))
     .toFuture()
 

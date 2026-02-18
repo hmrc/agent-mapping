@@ -40,7 +40,8 @@ object AgentReferenceMappings {
 case class AgentReferenceMapping(
   id: Option[ObjectId],
   arn: Arn,
-  identifier: String
+  identifier: String,
+  automapped: Boolean = false
 )
 
 object AgentReferenceMapping {
@@ -65,14 +66,18 @@ object AgentReferenceMapping {
     val databaseWrites: Writes[AgentReferenceMapping] =
       ( // Not writing _id as MongoDB creates this automatically
         (__ \ "arn").write[Arn] and
-          (__ \ "identifier").write[String](stringEncrypterDecrypter)
-      )(mapping => (mapping.arn, mapping.identifier))
+          (__ \ "identifier").write[String](stringEncrypterDecrypter) and
+          (__ \ "automapped").write[Boolean]
+      )(mapping =>
+        (mapping.arn, mapping.identifier, mapping.automapped)
+      )
 
     val databaseReads: Reads[AgentReferenceMapping] =
       ( // defaulting _id to None if it is missing or invalid because database is old (unknown if this can happen in practice)
         (__ \ "_id").readNullable[ObjectId](MongoFormats.objectIdFormat).orElse(Reads.pure(None)) and
           (__ \ "arn").read[Arn] and
-          (__ \ "identifier").read[String](stringEncrypterDecrypter)
+          (__ \ "identifier").read[String](stringEncrypterDecrypter) and
+          (__ \ "automapped").readNullable[Boolean].map(_.getOrElse(false))
       )(AgentReferenceMapping.apply _)
 
     Format(databaseReads, databaseWrites)

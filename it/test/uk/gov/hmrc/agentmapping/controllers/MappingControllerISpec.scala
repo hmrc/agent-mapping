@@ -33,12 +33,14 @@ import play.api.libs.ws.WSClient
 import play.api.libs.ws.WSResponse
 import uk.gov.hmrc.agentmapping.audit.CreateMapping
 import uk.gov.hmrc.agentmapping.controller.MappingController
-import uk.gov.hmrc.agentmapping.model._
+import uk.gov.hmrc.agentmapping.model.{Enrolment => ModelEnrolment, EnrolmentIdentifier => ModelEnrolmentIdentifier, _}
 import uk.gov.hmrc.agentmapping.repository._
 import test.uk.gov.hmrc.agentmapping.stubs.AuthStubs
 import test.uk.gov.hmrc.agentmapping.stubs.DataStreamStub
+import test.uk.gov.hmrc.agentmapping.stubs.EnrolmentStoreStubs
 import test.uk.gov.hmrc.agentmapping.stubs.SubscriptionStub
 import test.uk.gov.hmrc.agentmapping.support.WireMockSupport
+import uk.gov.hmrc.agentmapping.config.AppConfig
 import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.auth.core.Enrolment
@@ -135,6 +137,8 @@ with ScalaFutures {
   val createMappingRequest: String = s"/agent-mapping/mappings/arn/${registeredArn.value}"
 
   val createMappingFromSubscriptionJourneyRecordRequest: String = s"/agent-mapping/mappings/task-list/arn/${registeredArn.value}"
+
+  val createAutoMappingRequest: String = s"/agent-mapping/mappings/auto-map/arn/${registeredArn.value}"
 
   val findSAMappingsRequest: String = s"/agent-mapping/mappings/sa/${registeredArn.value}"
 
@@ -369,6 +373,155 @@ with ScalaFutures {
         givenUserMappingsNotFoundForAuthProviderId(authProviderId)
 
         callPut(createMappingFromSubscriptionJourneyRecordRequest, None).status shouldBe 204
+      }
+    }
+
+    "/mappings/auto-map/arn/:arn" should {
+
+      "return Created when principal enrolments exist" in {
+
+        val arnValue = registeredArn.value
+        val groupId = "group-123"
+        val providerId = "testCredId"
+        val identifierValue = "1234567890"
+
+        givenAuthorisedAsAgentWithGroup(
+          arn = arnValue,
+          groupId = groupId,
+          providerId = providerId
+        )
+
+        givenPrincipalEnrolmentsExist(
+          groupId = groupId,
+          enrolments = List(
+            ModelEnrolment(
+              AgentCode.key,
+              "Activated",
+              Seq(ModelEnrolmentIdentifier("UTR", identifierValue))
+            )
+          )
+        )
+
+        callPut(createAutoMappingRequest, None).status shouldBe 201
+      }
+      "return NoContent when no principal enrolments exist" in {
+
+        val arnValue = registeredArn.value
+        val groupId = "group-123"
+        val providerId = "testCredId"
+
+        givenAuthorisedAsAgentWithGroup(
+          arn = arnValue,
+          groupId = groupId,
+          providerId = providerId
+        )
+
+        givenPrincipalEnrolmentsExist(
+          groupId = groupId,
+          enrolments = Seq.empty
+        )
+
+        callPut(createAutoMappingRequest, None).status shouldBe 204
+      }
+      "return NoContent when principal enrolments are not Activated" in {
+
+        val arnValue = registeredArn.value
+        val groupId = "group-123"
+        val providerId = "testCredId"
+
+        givenAuthorisedAsAgentWithGroup(
+          arn = arnValue,
+          groupId = groupId,
+          providerId = providerId
+        )
+
+        givenPrincipalEnrolmentsExist(
+          groupId = groupId,
+          enrolments = List(
+            ModelEnrolment(
+              AgentCode.key,
+              "Pending",
+              Seq(ModelEnrolmentIdentifier("UTR", "1234567890"))
+            )
+          )
+        )
+
+        callPut(createAutoMappingRequest, None).status shouldBe 204
+      }
+
+      "return Forbidden when ARN does not match authorised ARN" in {
+
+        val groupId = "group-123"
+        val providerId = "testCredId"
+
+        givenAuthorisedAsAgentWithGroup(
+          arn = "AARN9999999",
+          groupId = groupId,
+          providerId = providerId
+        )
+
+        givenPrincipalEnrolmentsExist(
+          groupId = groupId,
+          enrolments = List(
+            ModelEnrolment(
+              AgentCode.key,
+              "Activated",
+              Seq(ModelEnrolmentIdentifier("UTR", "1234567890"))
+            )
+          )
+        )
+
+        givenUserIsSubscribedAgentWithGroup(authArn = Arn("AARN9999999"))
+
+        callPut(createAutoMappingRequest, None).status shouldBe 403
+      }
+      "return Conflict when mappings already exist" in {
+
+        val arnValue = registeredArn.value
+        val groupId = "group-123"
+        val providerId = "testCredId"
+        val identifierValue = "1234567890"
+
+        givenAuthorisedAsAgentWithGroup(
+          arn = arnValue,
+          groupId = groupId,
+          providerId = providerId
+        )
+
+        givenPrincipalEnrolmentsExist(
+          groupId = groupId,
+          enrolments = List(
+            ModelEnrolment(
+              AgentCode.key,
+              "Activated",
+              Seq(ModelEnrolmentIdentifier("UTR", identifierValue))
+            )
+          )
+        )
+
+        callPut(createAutoMappingRequest, None).status shouldBe 201
+
+        callPut(createAutoMappingRequest, None).status shouldBe 409
+      }
+      "return Unauthorised when user not logged in" in {
+
+        val arnValue = registeredArn.value
+        val groupId = "group-123"
+
+        givenUserNotAuthorisedWithError("MissingBearerToken")
+
+        givenPrincipalEnrolmentsExist(
+          groupId = groupId,
+          enrolments = List(
+            ModelEnrolment(
+              AgentCode.key,
+              "Activated",
+              Seq(ModelEnrolmentIdentifier("UTR", "1234567890"))
+            )
+          )
+        )
+
+        callPut(createAutoMappingRequest, None).status shouldBe 401
       }
     }
 
@@ -683,6 +836,19 @@ with ScalaFutures {
     agentCodeOpt = Some(agentCode)
   )
 
+  private def givenUserIsSubscribedAgentWithGroup(
+    authArn: Arn = registeredArn,
+    groupId: String = "group-123",
+    providerId: String = "testCredId"
+  ): StubMapping = {
+
+    givenAuthorisedAsAgentWithGroup(
+      arn = authArn.value,
+      groupId = groupId,
+      providerId = providerId
+    )
+  }
+
   private def givenUserIsAuthorisedForMultiple(fixtures: Seq[TestFixture]): StubMapping = givenUserIsAuthorisedForMultiple(
     asEnrolments(fixtures),
     "testCredId",
@@ -716,6 +882,8 @@ with ScalaFutures {
     tags = Map("transactionName" -> "create-mapping")
   )
 
+  override val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
+
 }
 
 sealed trait MappingControllerISpecSetup
@@ -727,6 +895,7 @@ with WireMockSupport
 with AuthStubs
 with DataStreamStub
 with SubscriptionStub
+with EnrolmentStoreStubs
 with ScalaFutures
 with MongoSupport {
 
@@ -739,6 +908,7 @@ with MongoSupport {
         "microservice.services.auth.port" -> wireMockPort.toString,
         "microservice.services.agent-subscription.port" -> wireMockPort.toString,
         "microservice.services.agent-subscription.host" -> wireMockHost,
+        "microservice.services.enrolment-store-proxy.port" -> wireMockPort.toString,
         "auditing.consumer.baseUri.host" -> wireMockHost,
         "auditing.consumer.baseUri.port" -> wireMockPort.toString,
         "application.router" -> "testOnlyDoNotUseInAppConf.Routes",

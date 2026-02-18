@@ -176,6 +176,107 @@ with ScalaFutures {
     }
   }
 
+  "AuthorisedAsSubscribedAgentWithGroup" should {
+
+    def response = mockAuthActions
+      .authorisedAsSubscribedAgentWithGroup(authorisedAsAgentWithGroupAction)
+      .apply(fakeRequestAny)
+
+    "return 200 with arn, groupId and providerId when all values are present" in {
+
+      authStub[~[~[Enrolments, Option[String]], Option[Credentials]]](
+        Future.successful(
+          new ~(
+            new ~(
+              Enrolments(agentEnrolment),
+              Some("group-123")
+            ),
+            Some(Credentials("providerId-123", "providerType"))
+          )
+        )
+      )
+
+      status(response) shouldBe 200
+      contentAsString(response) shouldBe "AARN001-group-123-providerId-123"
+    }
+
+    "return 403 if arn is missing" in {
+
+      authStub[~[~[Enrolments, Option[String]], Option[Credentials]]](
+        Future.successful(
+          new ~(
+            new ~(
+              Enrolments(saEnrolment),
+              Some("group-123")
+            ),
+            Some(Credentials("providerId-123", "providerType"))
+          )
+        )
+      )
+
+      status(response) shouldBe 403
+    }
+
+    "return 403 if groupId is missing" in {
+
+      authStub[~[~[Enrolments, Option[String]], Option[Credentials]]](
+        Future.successful(
+          new ~(
+            new ~(
+              Enrolments(agentEnrolment),
+              None
+            ),
+            Some(Credentials("providerId-123", "providerType"))
+          )
+        )
+      )
+
+      status(response) shouldBe 403
+    }
+
+    "return 403 if credentials are missing" in {
+
+      authStub[~[~[Enrolments, Option[String]], Option[Credentials]]](
+        Future.successful(
+          new ~(
+            new ~(
+              Enrolments(agentEnrolment),
+              Some("group-123")
+            ),
+            None
+          )
+        )
+      )
+
+      status(response) shouldBe 403
+    }
+
+    "return 401 when there is no active session" in {
+
+      authStub[~[~[Enrolments, Option[String]], Option[Credentials]]](
+        Future.failed(SessionRecordNotFound("no session"))
+      )
+
+      status(response) shouldBe 401
+    }
+
+    "return 403 when authorisation fails" in {
+
+      authStub[~[~[Enrolments, Option[String]], Option[Credentials]]](
+        Future.failed(InsufficientEnrolments())
+      )
+
+      status(response) shouldBe 403
+    }
+  }
+
+  private val authorisedAsAgentWithGroupAction: Request[AnyContent] => Arn => String => String => Future[Result] =
+    request =>
+      arn =>
+        groupId =>
+          providerId =>
+            Future.successful(Ok(s"${arn.value}-$groupId-$providerId"))
+
   private val basicAction: Request[AnyContent] => Future[Result] = { request => Future.successful(Ok) }
   private val authorisedWithEnrolmentsAction: Request[AnyContent] => Boolean => Future[Result] = {
     request => eligibility => Future.successful(Ok(eligibility.toString))

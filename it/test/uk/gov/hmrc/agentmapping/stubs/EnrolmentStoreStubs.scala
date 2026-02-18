@@ -50,4 +50,29 @@ trait EnrolmentStoreStubs {
     )
   }
 
+  def givenPrincipalEnrolmentsExist(
+    groupId: String,
+    enrolments: Seq[uk.gov.hmrc.agentmapping.model.Enrolment],
+    status: Int = 200
+  ) = {
+
+    stubFor(
+      get(urlPathEqualTo(s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments"))
+        .withQueryParam("type", equalTo("principal"))
+        .willReturn(
+          aResponse()
+            .withStatus(status)
+            .withHeader("Content-Type", "application/json")
+            .withBody(
+              if (status == 204)
+                ""
+              else
+                Json.stringify(Json.obj(
+                  "enrolments" -> enrolments
+                ))
+            )
+        )
+    )
+  }
+
 }

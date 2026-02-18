@@ -331,4 +331,40 @@ trait AuthStubs {
     this
   }
 
+  def givenAuthorisedAsAgentWithGroup(
+    arn: String,
+    groupId: String,
+    providerId: String
+  ): StubMapping = stubFor(
+    post(urlEqualTo("/auth/authorise"))
+      .willReturn(
+        aResponse()
+          .withStatus(200)
+          .withHeader("Content-Type", "application/json")
+          .withBody(
+            s"""
+               |{
+               |  "optionalCredentials": {
+               |    "providerId": "$providerId",
+               |    "providerType": "GovernmentGateway"
+               |  },
+               |  "groupIdentifier": "$groupId",
+               |  "authorisedEnrolments": [
+               |    {
+               |      "key": "HMRC-AS-AGENT",
+               |      "identifiers": [
+               |        {
+               |          "key": "AgentReferenceNumber",
+               |          "value": "$arn"
+               |        }
+               |      ],
+               |      "state": "Activated"
+               |    }
+               |  ]
+               |}
+           """.stripMargin
+          )
+      )
+  )
+
 }
