@@ -18,12 +18,9 @@ package test.uk.gov.hmrc.agentmapping.support
 
 import com.google.inject.AbstractModule
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.matchers.MatchResult
-import org.scalatest.matchers.Matcher
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.agentmapping.model.MappingDetailsRepositoryRecord
 import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
 
 abstract class ServerBaseISpec
@@ -53,25 +50,5 @@ with ScalaFutures {
   extends AbstractModule {
     override def configure(): Unit = {}
   }
-
-  def matchRecordIgnoringDateTime(
-    mappingDisplayRecord: MappingDetailsRepositoryRecord
-  ): Matcher[MappingDetailsRepositoryRecord] =
-    new Matcher[MappingDetailsRepositoryRecord] {
-      override def apply(left: MappingDetailsRepositoryRecord): MatchResult =
-        if (
-          mappingDisplayRecord.arn == left.arn &&
-          mappingDisplayRecord.mappingDetails.map(m => (m.ggTag, m.count)) == left.mappingDetails
-            .map(m => (m.ggTag, m.count))
-        )
-          MatchResult(
-            matches = true,
-            "",
-            ""
-          )
-        else
-          throw new RuntimeException("matchRecord error")
-
-    }
 
 }

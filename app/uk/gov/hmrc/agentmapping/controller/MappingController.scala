@@ -23,9 +23,7 @@ import play.api.libs.json._
 import play.api.mvc._
 import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.auth.AuthActions
-import uk.gov.hmrc.agentmapping.config.AppConfig
 import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentmapping.connector.SubscriptionConnector
 import uk.gov.hmrc.agentmapping.model._
 import uk.gov.hmrc.agentmapping.repository._
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
@@ -37,11 +35,8 @@ import scala.concurrent.Future
 
 @Singleton
 class MappingController @Inject() (
-  appConfig: AppConfig,
   repositories: MappingRepositories,
-  detailsRepository: MappingDetailsRepository,
   auditService: AuditService,
-  subscriptionConnector: SubscriptionConnector,
   espConnector: EnrolmentStoreProxyConnector,
   cc: ControllerComponents,
   val authActions: AuthActions
@@ -58,23 +53,6 @@ with Logging {
 
   def createMapping(arn: Arn): Action[AnyContent] = authorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
     createMapping(arn, identifiers)
-  }
-
-  def createMappingsFromSubscriptionJourneyRecord(arn: Arn): Action[AnyContent] = authorisedWithProviderId { implicit request => implicit providerId =>
-    for {
-      userMappings <- subscriptionConnector.getUserMappings(AuthProviderId(providerId))
-      createMappingsResult <-
-        userMappings match {
-          case Some(mappings) =>
-            val identifiers = createIdentifiersFromUserMappings(mappings)
-            createMapping(arn, identifiers)
-          case None =>
-            logger.error(
-              "no subscription journey record found when attempting to create mappings"
-            )
-            Future successful NoContent
-        }
-    } yield createMappingsResult
   }
 
   def autoMapEnrolments(arn: Arn): Action[AnyContent] = authorisedAsSubscribedAgentWithGroup { implicit request => authArn => groupId => providerId =>
@@ -175,28 +153,6 @@ with Logging {
     }
   }
 
-  def removeMappingsForAgent(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    withBasicAuth(appConfig.expectedAuth) {
-      (for {
-        mappingRecords <- repositories.deleteDataForArn(arn).map(_.sum)
-        detailRecords <- detailsRepository.removeMappingDetailsForAgent(arn)
-      } yield Ok(
-        Json.toJson[TerminationResponse](
-          TerminationResponse(
-            Seq(DeletionCount(
-              appConfig.appName,
-              "all-regimes",
-              mappingRecords.toInt + detailRecords
-            ))
-          )
-        )
-      )).recover { case e =>
-        logger.warn(s"Something has gone for $arn due to: ${e.getMessage}")
-        InternalServerError
-      }
-    }
-  }
-
   private def createMapping(
     arn: Arn,
     identifiers: Set[Identifier]
@@ -223,24 +179,6 @@ with Logging {
         else
           Conflict
       )
-  }
-
-  private def createIdentifiersFromUserMappings(userMappings: List[UserMapping]): Set[Identifier] = {
-
-    val agentCodeIdentifiers: Set[Identifier] =
-      userMappings
-        .flatMap(userMapping => userMapping.agentCode.map(ac => Identifier(AgentCode, ac.value)))
-        .toSet
-
-    val legacyIdentifiers: Set[Identifier] =
-      (for {
-        userMapping <- userMappings
-        enrolment <- userMapping.legacyEnrolments
-        service <- LegacyAgentEnrolmentType.find(enrolment.enrolmentType.key)
-        enrolmentIdentifier = Identifier(service, enrolment.identifierValue.value)
-      } yield enrolmentIdentifier).toSet
-
-    agentCodeIdentifiers ++ legacyIdentifiers
   }
 
   private def extractActiveIdentifiers(
