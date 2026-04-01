@@ -45,7 +45,6 @@ with ScalaFutures {
     .configure(
       "microservice.services.auth.port" -> wireMockPort,
       "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-      "microservice.services.agent-subscription.port" -> wireMockPort,
       "metrics.enabled" -> false,
       "auditing.enabled" -> false,
       "clientCount.maxRecords" -> 40,

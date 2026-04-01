@@ -16,9 +16,9 @@
 
 package uk.gov.hmrc.agentmapping.controllers
 
-import org.apache.pekko.actor.ActorSystem
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import com.google.inject.AbstractModule
+import org.apache.pekko.actor.ActorSystem
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
@@ -26,38 +26,34 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.api.libs.json.JsObject
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.libs.ws.WSClient
 import play.api.libs.ws.WSResponse
-import uk.gov.hmrc.agentmapping.audit.CreateMapping
-import uk.gov.hmrc.agentmapping.controller.MappingController
-import uk.gov.hmrc.agentmapping.model.{Enrolment => ModelEnrolment, EnrolmentIdentifier => ModelEnrolmentIdentifier, _}
-import uk.gov.hmrc.agentmapping.repository._
 import test.uk.gov.hmrc.agentmapping.stubs.AuthStubs
 import test.uk.gov.hmrc.agentmapping.stubs.DataStreamStub
 import test.uk.gov.hmrc.agentmapping.stubs.EnrolmentStoreStubs
-import test.uk.gov.hmrc.agentmapping.stubs.SubscriptionStub
 import test.uk.gov.hmrc.agentmapping.support.WireMockSupport
+import uk.gov.hmrc.agentmapping.audit.CreateMapping
 import uk.gov.hmrc.agentmapping.config.AppConfig
+import uk.gov.hmrc.agentmapping.controller.MappingController
+import uk.gov.hmrc.agentmapping.model.{Enrolment => ModelEnrolment, EnrolmentIdentifier => ModelEnrolmentIdentifier, _}
 import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
+import uk.gov.hmrc.agentmapping.repository._
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.auth.core.Enrolment
 import uk.gov.hmrc.auth.core.EnrolmentIdentifier
-import uk.gov.hmrc.http.HeaderNames
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.test.MongoSupport
 
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.LocalDate
-import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Base64
 import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.duration.DurationInt
 import scala.concurrent.Await
 import scala.concurrent.Future
+import scala.concurrent.duration.DurationInt
 
 class MappingControllerISpec
 extends MappingControllerISpecSetup
@@ -71,18 +67,7 @@ with ScalaFutures {
   val AgentReferenceNo = "AgentRefNo"
   val authProviderId = AuthProviderId("testCredId")
 
-  private val ggTag = GGTag("1234")
-  private val count = 10
   private val dateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-  private val dateTime: LocalDateTime = LocalDateTime.parse("2019-10-10 12:00", dateTimeFormatter)
-  private val mappingDisplayDetails = MappingDetails(
-    authProviderId,
-    ggTag,
-    count,
-    dateTime
-  )
-
-  private val record = MappingDetailsRepositoryRecord(registeredArn, Seq(mappingDisplayDetails))
 
   val url = s"http://localhost:$port"
   val wsClient = app.injector.instanceOf[WSClient]
@@ -135,8 +120,6 @@ with ScalaFutures {
   val hasEligibleRequest: String = s"/agent-mapping/mappings/eligibility"
 
   val createMappingRequest: String = s"/agent-mapping/mappings/arn/${registeredArn.value}"
-
-  val createMappingFromSubscriptionJourneyRecordRequest: String = s"/agent-mapping/mappings/task-list/arn/${registeredArn.value}"
 
   val createAutoMappingRequest: String = s"/agent-mapping/mappings/auto-map/arn/${registeredArn.value}"
 
@@ -353,29 +336,6 @@ with ScalaFutures {
       }
     }
 
-    "/mappings/task-list/arn/:arn" should {
-      userMappings.foreach { u =>
-        s"for agent code: ${if (u.agentCode.isDefined)
-            "agentCode"
-          else
-            u.legacyEnrolments.head.enrolmentType}" when {
-          "return created upon success" in {
-            givenUserIsAuthorisedForCreds(IRSAAGENTTestFixture)
-            givenUserMappingsExistsForAuthProviderId(authProviderId, Seq(u))
-
-            callPut(createMappingFromSubscriptionJourneyRecordRequest, None).status shouldBe 201
-          }
-        }
-      }
-
-      "return NoContent when there are no user mappings found" in {
-        givenUserIsAuthorisedForCreds(IRSAAGENTTestFixture)
-        givenUserMappingsNotFoundForAuthProviderId(authProviderId)
-
-        callPut(createMappingFromSubscriptionJourneyRecordRequest, None).status shouldBe 204
-      }
-    }
-
     "/mappings/auto-map/arn/:arn" should {
 
       "return Created when principal enrolments exist" in {
@@ -505,7 +465,6 @@ with ScalaFutures {
       }
       "return Unauthorised when user not logged in" in {
 
-        val arnValue = registeredArn.value
         val groupId = "group-123"
 
         givenUserNotAuthorisedWithError("MissingBearerToken")
@@ -787,48 +746,9 @@ with ScalaFutures {
     (Seq(AgentCodeTestFixture) ++ fixtures).foreach { f =>
       repositories.get(f.legacyAgentEnrolmentType).store(registeredArn, f.identifierValue).futureValue
     }
-    detailsRepository.create(record).futureValue
-
-  }
-
-  "removeMappingsForAgent" should {
-    "return 200 for successfully deleting all agent records" in new TestSetup {
-
-      val response =
-        wsClient
-          .url(s"$url${terminateAgentsMapping(registeredArn)}")
-          .addHttpHeaders(HeaderNames.authorisation -> s"Basic ${basicAuth("username:password")}")
-          .delete()
-          .futureValue
-
-      response.status shouldBe 200
-      val json = response.json
-      json.as[JsObject] shouldBe Json.toJson[TerminationResponse](
-        TerminationResponse(Seq(DeletionCount(
-          "agent-mapping",
-          "all-regimes",
-          11
-        )))
-      )
-    }
-
-    "return 400 for invalid ARN" in {
-      givenOnlyStrideStub("caat", "12345")
-      val response = callDelete(terminateAgentsMapping(Arn("MARN01")))
-
-      response.status shouldBe 400
-    }
   }
 
   private def givenUserIsAuthorisedFor(f: TestFixture): StubMapping = givenUserIsAuthorisedFor(
-    f.legacyAgentEnrolmentType.key,
-    f.identifierKey,
-    f.identifierValue,
-    "testCredId",
-    agentCodeOpt = Some(agentCode)
-  )
-
-  private def givenUserIsAuthorisedForCreds(f: TestFixture): StubMapping = givenUserIsAuthorisedForCreds(
     f.legacyAgentEnrolmentType.key,
     f.identifierKey,
     f.identifierValue,
@@ -894,7 +814,6 @@ with OptionValues
 with WireMockSupport
 with AuthStubs
 with DataStreamStub
-with SubscriptionStub
 with EnrolmentStoreStubs
 with ScalaFutures
 with MongoSupport {
@@ -906,8 +825,6 @@ with MongoSupport {
     .configure(
       Map(
         "microservice.services.auth.port" -> wireMockPort.toString,
-        "microservice.services.agent-subscription.port" -> wireMockPort.toString,
-        "microservice.services.agent-subscription.host" -> wireMockHost,
         "microservice.services.enrolment-store-proxy.port" -> wireMockPort.toString,
         "auditing.consumer.baseUri.host" -> wireMockHost,
         "auditing.consumer.baseUri.port" -> wireMockPort.toString,
@@ -921,8 +838,6 @@ with MongoSupport {
 
   override implicit lazy val app: Application = appBuilder.build()
 
-  protected lazy val detailsRepository = new MappingDetailsRepository(mongoComponent)
-
   protected lazy val repositories: MappingRepositories = app.injector.instanceOf[MappingRepositories]
 
   lazy val controller = app.injector.instanceOf[MappingController]
@@ -935,7 +850,6 @@ with MongoSupport {
   extends AbstractModule {
     override def configure = {
       bind(classOf[MongoComponent]).toInstance(mongoComponent)
-      bind(classOf[MappingDetailsRepository]).toInstance(detailsRepository)
     }
   }
 

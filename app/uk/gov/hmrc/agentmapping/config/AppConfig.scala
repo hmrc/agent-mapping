@@ -31,8 +31,6 @@ class AppConfig @Inject() (servicesConfig: ServicesConfig) {
 
   val enrolmentStoreProxyBaseUrl: String = servicesConfig.baseUrl("enrolment-store-proxy")
 
-  val agentSubscriptionBaseUrl: String = servicesConfig.baseUrl("agent-subscription")
-
   def expectedAuth: BasicAuthentication = {
     val username = servicesConfig.getString("agent-termination.username")
     val password = servicesConfig.getString("agent-termination.password")
