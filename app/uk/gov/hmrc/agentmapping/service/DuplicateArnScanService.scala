@@ -22,6 +22,8 @@ import org.mongodb.scala.model.Accumulators
 import org.mongodb.scala.model.Aggregates
 import org.mongodb.scala.model.Filters
 import org.mongodb.scala.model.Projections
+import org.mongodb.scala.ObservableFuture
+import org.mongodb.scala.documentToUntypedDocument
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -48,7 +50,7 @@ extends Logging {
     ttl = 10.minutes
   )
 
-  def runDuplicateArnScanLocked(): Future[Unit] = lockService.withLock {
+  private def runDuplicateArnScanLocked(): Future[Unit] = lockService.withLock {
     logger.warn("Acquired lock for mapping-duplicate-arn-scan; starting duplicate ARN analysis")
     runDuplicateArnScan()
   }.map {

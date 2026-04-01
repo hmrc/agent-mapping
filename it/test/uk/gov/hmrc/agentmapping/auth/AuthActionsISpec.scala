@@ -49,16 +49,42 @@ with ScalaFutures {
 
   lazy val app: Application = appBuilder.build()
 
-  val cc = app.injector.instanceOf[ControllerComponents]
+  val cc: ControllerComponents = app.injector.instanceOf[ControllerComponents]
 
-  val mockAuthConnector = mock[AuthConnector]
+  val mockAuthConnector: AuthConnector = mock[AuthConnector]
   val mockAuthActions = new AuthActions(mockAuthConnector, cc)
 
   val newStrideId = "maintain_agent_relationships"
   val terminateStrideId = "caat"
 
-  val newStrideEnrolment = Set(Enrolment(newStrideId))
-  val terminateStrideEnrolment = Set(Enrolment(terminateStrideId))
+  val newStrideEnrolment: Set[Enrolment] = Set(Enrolment(newStrideId))
+  val terminateStrideEnrolment: Set[Enrolment] = Set(Enrolment(terminateStrideId))
+
+  private val saEnrolment = Set(
+    Enrolment(
+      "IR-SA-AGENT",
+      Seq(EnrolmentIdentifier("sa", "00001")),
+      state = "",
+      delegatedAuthRule = None
+    )
+  )
+
+  private val agentEnrolment = Set(
+    Enrolment(
+      "HMRC-AS-AGENT",
+      Seq(EnrolmentIdentifier("AgentReferenceNumber", "AARN001")),
+      state = "",
+      delegatedAuthRule = None
+    )
+  )
+
+  val onlyStride: Set[Enrolment] => Future[Enrolments] = strideEnrolments => Future successful Enrolments(strideEnrolments)
+
+  val strideAction: Request[AnyContent] => Future[Result] = { _ => Future.successful(Ok) }
+
+  private val fakeRequestAny: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
+
+  val onlyStrideFail: Future[Enrolments] = Future failed new UnsupportedAuthProvider
 
   override def beforeEach(): Unit = reset(mockAuthConnector)
 
@@ -271,53 +297,27 @@ with ScalaFutures {
   }
 
   private val authorisedAsAgentWithGroupAction: Request[AnyContent] => Arn => String => String => Future[Result] =
-    request =>
+    _ =>
       arn =>
         groupId =>
           providerId =>
             Future.successful(Ok(s"${arn.value}-$groupId-$providerId"))
 
-  private val basicAction: Request[AnyContent] => Future[Result] = { request => Future.successful(Ok) }
+  private val basicAction: Request[AnyContent] => Future[Result] = { _ => Future.successful(Ok) }
   private val authorisedWithEnrolmentsAction: Request[AnyContent] => Boolean => Future[Result] = {
-    request => eligibility => Future.successful(Ok(eligibility.toString))
+    _ => eligibility => Future.successful(Ok(eligibility.toString))
   }
-  private val authorisedAsAgentAction: Request[AnyContent] => Arn => Future[Result] = { request => arn =>
+  private val authorisedAsAgentAction: Request[AnyContent] => Arn => Future[Result] = { _ => arn =>
     Future.successful(Ok(arn.value))
   }
   private val authorisedWithAgentCodeAction: Request[AnyContent] => Set[Identifier] => String => Future[Result] = {
-    request => identifier => provider => Future.successful(Ok)
+    _ => _ => _ => Future.successful(Ok)
   }
-
-  val strideAction: Request[AnyContent] => Future[Result] = { request => Future successful Ok }
 
   private def authStub[A](returnValue: Future[A]) = when(mockAuthConnector.authorise(
     any[Predicate](),
     any[Retrieval[A]]
-  )(any[HeaderCarrier], any[ExecutionContext]))
+  )(using any[HeaderCarrier], any[ExecutionContext]))
     .thenReturn(returnValue)
-
-  private val fakeRequestAny: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
-
-  private val agentEnrolment = Set(
-    Enrolment(
-      "HMRC-AS-AGENT",
-      Seq(EnrolmentIdentifier("AgentReferenceNumber", "AARN001")),
-      state = "",
-      delegatedAuthRule = None
-    )
-  )
-
-  private val saEnrolment = Set(
-    Enrolment(
-      "IR-SA-AGENT",
-      Seq(EnrolmentIdentifier("sa", "00001")),
-      state = "",
-      delegatedAuthRule = None
-    )
-  )
-
-  val onlyStride: Set[Enrolment] => Future[Enrolments] = strideEnrolments => Future successful Enrolments(strideEnrolments)
-
-  val onlyStrideFail: Future[Enrolments] = Future failed new UnsupportedAuthProvider
 
 }

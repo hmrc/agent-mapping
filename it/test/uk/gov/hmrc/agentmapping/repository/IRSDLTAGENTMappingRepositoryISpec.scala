@@ -1,0 +1,153 @@
+/*
+ * Copyright 2025 HM Revenue & Customs
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package uk.gov.hmrc.agentmapping.repository
+
+import org.mongodb.scala.MongoWriteException
+import org.mongodb.scala.result.DeleteResult
+import org.scalatest.OptionValues
+import org.scalatest.concurrent.IntegrationPatience
+import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
+import org.scalatestplus.play.guice.GuiceOneAppPerSuite
+import play.api.Application
+import play.api.inject.guice.GuiceApplicationBuilder
+import uk.gov.hmrc.agentmapping.model.*
+import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.SymmetricCryptoFactory
+import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
+
+import scala.concurrent.ExecutionContext.Implicits.global
+import scala.reflect.ClassTag
+
+class IRSDLTAGENTMappingRepositoryISpec
+extends AnyWordSpecLike
+with Matchers
+with OptionValues
+with ScalaFutures
+with IntegrationPatience
+with GuiceOneAppPerSuite
+with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+
+  val crypto: Encrypter & Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "GTfz3GZy0+gN0p/5wSqRBpWlbWVDMezXWtX+G9ENwCc=")
+  override val repository: MappingRepository = new IRSDLTAGENTMappingRepository(mongoComponent)(using global, crypto)
+
+  override implicit lazy val app: Application = appBuilder.build()
+
+  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
+    .disable[DuplicateArnScanModule]
+    .configure(
+      Map(
+        "metrics.enabled" -> "false",
+        "migrate-repositories" -> "false",
+        "termination.stride.enrolment" -> "caat"
+      )
+    )
+
+  val arn1: Arn = Arn("ARN00001")
+  val arn2: Arn = Arn("ARN00002")
+
+  val reference1 = "Ref0001"
+  val reference2 = "Ref0002"
+
+  private val repoName = repository.getClass.getSimpleName
+
+  s"$repoName" should {
+    behave like checkMapping(arn1, Seq(reference1, reference2))
+
+    def checkMapping(
+      arn: Arn,
+      references: Seq[String]
+    ): Unit = {
+      val reference1 = references.head
+      val reference2 = references.last
+
+      s"create a mapping for Arn" in {
+        repository.store(arn, reference1).futureValue
+
+        val result = repository.findAll().futureValue
+
+        result.size shouldBe 1
+        result.head.arn.value shouldBe arn.value
+        result.head.identifier shouldBe reference1
+      }
+
+      s"not allow duplicate mappings to be created for the same Arn and identifier" in {
+        repository.store(arn, reference1).futureValue
+
+        val e = repository.store(arn, reference1).failed.futureValue
+
+        e shouldBe a[MongoWriteException]
+        e.getMessage should include("E11000")
+      }
+
+      s"allow more than one identifier to be mapped to the same Arn" in {
+        repository.store(arn, reference1).futureValue
+        repository.store(arn, reference2).futureValue
+
+        val result = repository.findAll().futureValue
+
+        result.size shouldBe 2
+        result.head.arn.value shouldBe arn.value
+        result.head.identifier shouldBe reference1
+        result(1).arn.value shouldBe arn.value
+        result(1).identifier shouldBe reference2
+      }
+    }
+
+    "find all mappings for Arn" in {
+      repository.store(arn1, reference1).futureValue
+      repository.store(arn1, reference2).futureValue
+      repository.store(arn2, reference2).futureValue
+
+      val result: Seq[AgentReferenceMapping] = repository.findBy(arn1).futureValue
+
+      result.size shouldBe 2
+    }
+
+    "return an empty list when no match is found for Arn" in {
+      repository.store(arn1, reference1).futureValue
+      val result = repository.findBy(arn2).futureValue
+      result.size shouldBe 0
+    }
+
+    "delete a matching records by Arn" in {
+      repository.store(arn1, reference1).futureValue
+      repository.store(arn2, reference2).futureValue
+
+      val mappings: Seq[AgentReferenceMapping] = repository.findAll().futureValue
+      mappings.size shouldBe 2
+
+      val result: DeleteResult = repository.deleteByArn(arn1).futureValue
+      result.getDeletedCount shouldBe 1L
+
+      val mappingsAfterDelete: Seq[AgentReferenceMapping] = repository.findAll().futureValue
+      mappingsAfterDelete.size shouldBe 1
+    }
+
+    "do not fail delete when no matching records exist for Arn" in {
+      val mappings: Seq[AgentReferenceMapping] = repository.findAll().futureValue
+      mappings.size shouldBe 0
+
+      val result: DeleteResult = repository.deleteByArn(arn1).futureValue
+      result.getDeletedCount shouldBe 0L
+    }
+  }
+
+}

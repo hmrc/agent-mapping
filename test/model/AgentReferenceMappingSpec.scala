@@ -32,8 +32,7 @@ class AgentReferenceMappingSpec
 extends AnyWordSpecLike
 with Matchers {
 
-  implicit val crypto: Encrypter
-    with Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "GTfz3GZy0+gN0p/5wSqRBpWlbWVDMezXWtX+G9ENwCc=")
+  implicit val crypto: Encrypter & Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "GTfz3GZy0+gN0p/5wSqRBpWlbWVDMezXWtX+G9ENwCc=")
 
   "AgentReferenceMapping model" should {
     "read from JSON" when {
@@ -48,7 +47,7 @@ with Matchers {
           "arn" -> "XARN1234567",
           "identifier" -> "xBz9KLLVGclaDNLxWSY/YA=="
         )
-        json.as[AgentReferenceMapping](databaseFormat) shouldBe expectedModel
+        json.as[AgentReferenceMapping](using databaseFormat) shouldBe expectedModel
       }
       "the database reads is used (encrypted) but ObjectId is invalid" in {
         val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
@@ -61,7 +60,7 @@ with Matchers {
           "arn" -> "XARN1234567",
           "identifier" -> "xBz9KLLVGclaDNLxWSY/YA=="
         )
-        json.as[AgentReferenceMapping](databaseFormat) shouldBe expectedModel
+        json.as[AgentReferenceMapping](using databaseFormat) shouldBe expectedModel
       }
       "the database reads is used (encrypted) but ObjectId is missing" in {
         val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
@@ -73,7 +72,7 @@ with Matchers {
           "arn" -> "XARN1234567",
           "identifier" -> "xBz9KLLVGclaDNLxWSY/YA=="
         )
-        json.as[AgentReferenceMapping](databaseFormat) shouldBe expectedModel
+        json.as[AgentReferenceMapping](using databaseFormat) shouldBe expectedModel
       }
     }
 
@@ -88,7 +87,7 @@ with Matchers {
           "arn" -> "XARN1234567",
           "identifier" -> "ABC123"
         )
-        Json.toJson(model)(AgentReferenceMapping.apiWrites()) shouldBe expectedJson
+        Json.toJson(model)(using AgentReferenceMapping.apiWrites()) shouldBe expectedJson
       }
 
       "the api writes is used (timestamped)" in {
@@ -102,7 +101,7 @@ with Matchers {
           "identifier" -> "ABC123",
           "created" -> "2025-10-30"
         )
-        Json.toJson(model)(AgentReferenceMapping.apiWrites()) shouldBe expectedJson
+        Json.toJson(model)(using AgentReferenceMapping.apiWrites()) shouldBe expectedJson
       }
 
       "the api writes is used with identifier key override (timestamped)" in {
@@ -116,7 +115,7 @@ with Matchers {
           "agentCode" -> "ABC123",
           "created" -> "2025-10-30"
         )
-        Json.toJson(model)(AgentReferenceMapping.apiWrites("agentCode")) shouldBe expectedJson
+        Json.toJson(model)(using AgentReferenceMapping.apiWrites("agentCode")) shouldBe expectedJson
       }
 
       "the database writes is used (encrypted)" in {
@@ -130,7 +129,7 @@ with Matchers {
           "identifier" -> "xBz9KLLVGclaDNLxWSY/YA==",
           "automapped" -> false
         )
-        Json.toJson(model)(databaseFormat) shouldBe expectedJson
+        Json.toJson(model)(using databaseFormat) shouldBe expectedJson
       }
     }
   }

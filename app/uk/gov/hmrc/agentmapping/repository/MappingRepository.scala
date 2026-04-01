@@ -45,8 +45,7 @@ abstract class MappingRepository(
 )(
   implicit
   ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter
-    with Decrypter
+  @Named("aes") crypto: Encrypter & Decrypter
 )
 extends PlayMongoRepository[AgentReferenceMapping](
   mongoComponent = mongo,

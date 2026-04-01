@@ -18,7 +18,7 @@ package uk.gov.hmrc.agentmapping.model
 
 import org.bson.types.ObjectId
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
-import play.api.libs.json._
+import play.api.libs.json.*
 import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
@@ -27,6 +27,7 @@ import uk.gov.hmrc.mongo.play.json.formats.MongoFormats
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import scala.language.implicitConversions
 
 case class AgentReferenceMappings(mappings: Seq[AgentReferenceMapping])
 
@@ -60,13 +61,12 @@ object AgentReferenceMapping {
     )
 
   def databaseFormat(implicit
-    crypto: Encrypter
-      with Decrypter
+    crypto: Encrypter & Decrypter
   ): Format[AgentReferenceMapping] = {
     val databaseWrites: Writes[AgentReferenceMapping] =
       ( // Not writing _id as MongoDB creates this automatically
         (__ \ "arn").write[Arn] and
-          (__ \ "identifier").write[String](stringEncrypterDecrypter) and
+          (__ \ "identifier").write[String](using stringEncrypterDecrypter) and
           (__ \ "automapped").write[Boolean]
       )(mapping =>
         (mapping.arn, mapping.identifier, mapping.automapped)
@@ -74,11 +74,11 @@ object AgentReferenceMapping {
 
     val databaseReads: Reads[AgentReferenceMapping] =
       ( // defaulting _id to None if it is missing or invalid because database is old (unknown if this can happen in practice)
-        (__ \ "_id").readNullable[ObjectId](MongoFormats.objectIdFormat).orElse(Reads.pure(None)) and
+        (__ \ "_id").readNullable[ObjectId](using MongoFormats.objectIdFormat).orElse(Reads.pure(None)) and
           (__ \ "arn").read[Arn] and
-          (__ \ "identifier").read[String](stringEncrypterDecrypter) and
+          (__ \ "identifier").read[String](using stringEncrypterDecrypter) and
           (__ \ "automapped").readNullable[Boolean].map(_.getOrElse(false))
-      )(AgentReferenceMapping.apply _)
+      )(AgentReferenceMapping.apply)
 
     Format(databaseReads, databaseWrites)
   }

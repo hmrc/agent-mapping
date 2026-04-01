@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2026 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,28 +14,9 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentmapping.binders
+package uk.gov.hmrc.agentmapping.audit
 
-import play.api.mvc.PathBindable
-
-class SimpleObjectBinder[T](
-  bind: String => T,
-  unbind: T => String
-)(implicit m: Manifest[T])
-extends PathBindable[T] {
-
-  override def bind(
-    key: String,
-    value: String
-  ): Either[String, T] =
-    try Right(bind(value))
-    catch {
-      case _: Throwable => Left(s"Cannot parse parameter '$key' with value '$value' as '${m.runtimeClass.getSimpleName}'")
-    }
-
-  def unbind(
-    key: String,
-    value: T
-  ): String = unbind(value)
-
-}
+enum AgentMappingEvent:
+  case CreateMapping
+  extends AgentMappingEvent
+end AgentMappingEvent

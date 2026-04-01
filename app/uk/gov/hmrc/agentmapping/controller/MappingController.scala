@@ -47,7 +47,7 @@ with Logging {
   import auditService._
   import authActions._
 
-  def hasEligibleEnrolments: Action[AnyContent] = authorisedWithEnrolments { request => hasEligibleEnrolments =>
+  def hasEligibleEnrolments: Action[AnyContent] = authorisedWithEnrolments { implicit request => hasEligibleEnrolments =>
     Future.successful(Ok(Json.obj("hasEligibleEnrolments" -> hasEligibleEnrolments)))
   }
 
@@ -68,6 +68,7 @@ with Logging {
             Future.successful(NoContent)
           else
             createAutoMappings(arn, identifiers)(
+              using
               ec,
               request,
               providerId
@@ -102,7 +103,7 @@ with Logging {
       false
     }
     .recover {
-      case e: MongoWriteException if e.getMessage().contains("E11000") =>
+      case e: MongoWriteException if e.getMessage.contains("E11000") =>
         sendCreateMappingAuditEvent(
           arn,
           identifier,
@@ -117,7 +118,7 @@ with Logging {
     authActions.authorised() {
       repositories.get(IRAgentReference).findBy(arn) map { matches =>
         if (matches.nonEmpty)
-          Ok(toJson(AgentReferenceMappings(matches))(AgentReferenceMappings.apiWrites("saAgentReference")))
+          Ok(toJson(AgentReferenceMappings(matches))(using AgentReferenceMappings.apiWrites("saAgentReference")))
         else
           NotFound
       }
@@ -128,7 +129,7 @@ with Logging {
     authActions.authorised() {
       repositories.get(AgentCode).findBy(arn) map { matches =>
         if (matches.nonEmpty)
-          Ok(toJson(AgentReferenceMappings(matches))(AgentReferenceMappings.apiWrites("agentCode")))
+          Ok(toJson(AgentReferenceMappings(matches))(using AgentReferenceMappings.apiWrites("agentCode")))
         else
           NotFound
       }
@@ -144,7 +145,7 @@ with Logging {
         case Some(service) =>
           repositories.get(service).findBy(arn) map { matches =>
             if (matches.nonEmpty)
-              Ok(toJson(AgentReferenceMappings(matches))(AgentReferenceMappings.apiWrites()))
+              Ok(toJson(AgentReferenceMappings(matches))(using AgentReferenceMappings.apiWrites()))
             else
               NotFound
           }

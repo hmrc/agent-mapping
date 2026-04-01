@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentmapping
 
 import scala.concurrent.Future
+import scala.language.implicitConversions
 
 package object util {
 

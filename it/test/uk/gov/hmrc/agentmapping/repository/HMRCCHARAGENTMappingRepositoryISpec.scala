@@ -18,7 +18,6 @@ package uk.gov.hmrc.agentmapping.repository
 
 import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.result.DeleteResult
-import org.scalatest.BeforeAndAfterAll
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.IntegrationPatience
 import org.scalatest.concurrent.ScalaFutures
@@ -27,7 +26,7 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import uk.gov.hmrc.agentmapping.model._
+import uk.gov.hmrc.agentmapping.model.*
 import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
@@ -37,92 +36,20 @@ import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.reflect.ClassTag
 
-class IRSAAGENTMappingRepositoryISpec
-extends BaseRepositoryISpec[AgentReferenceMapping, IRSAAGENTMappingRepository]
-with DefaultPlayMongoRepositorySupport[AgentReferenceMapping]
-with BeforeAndAfterAll {
-
-  override def beforeAll(): Unit = {
-    super.beforeAll()
-    ()
-  }
-  override lazy val repository = new IRSAAGENTMappingRepository(mongoComponent)
-
-}
-
-class NewAgentCodeMappingRepositoryISpec
-extends BaseRepositoryISpec[AgentReferenceMapping, NewAgentCodeMappingRepository]
-with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
-  override lazy val repository = new NewAgentCodeMappingRepository(mongoComponent)
-
-}
-
-class HMCEVATAGNTMappingRepositoryISpec
-extends BaseRepositoryISpec[AgentReferenceMapping, HMCEVATAGNTMappingRepository]
-with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
-  override lazy val repository = new HMCEVATAGNTMappingRepository(mongoComponent)
-
-}
-
 class HMRCCHARAGENTMappingRepositoryISpec
-extends BaseRepositoryISpec[AgentReferenceMapping, HMRCCHARAGENTMappingRepository]
-with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
-  override lazy val repository = new HMRCCHARAGENTMappingRepository(mongoComponent)
-
-}
-class HMRCGTSAGNTMappingRepositoryISpec
-extends BaseRepositoryISpec[AgentReferenceMapping, HMRCGTSAGNTMappingRepository]
-with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
-  override lazy val repository = new HMRCGTSAGNTMappingRepository(mongoComponent)
-
-}
-
-class HMRCMGDAGNTMappingRepositoryISpec
-extends BaseRepositoryISpec[AgentReferenceMapping, HMRCMGDAGNTMappingRepository]
-with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
-  override lazy val repository = new HMRCMGDAGNTMappingRepository(mongoComponent)
-
-}
-class HMRCNOVRNAGNTMappingRepositoryISpec
-extends BaseRepositoryISpec[AgentReferenceMapping, HMRCNOVRNAGNTMappingRepository]
-with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
-  override lazy val repository = new HMRCNOVRNAGNTMappingRepository(mongoComponent)
-
-}
-class IRCTAGENTMappingRepositoryISpec
-extends BaseRepositoryISpec[AgentReferenceMapping, IRCTAGENTMappingRepository]
-with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
-  override lazy val repository = new IRCTAGENTMappingRepository(mongoComponent)
-
-}
-class IRPAYEAGENTMappingRepositoryISpec
-extends BaseRepositoryISpec[AgentReferenceMapping, IRPAYEAGENTMappingRepository]
-with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
-  override lazy val repository = new IRPAYEAGENTMappingRepository(mongoComponent)
-
-}
-class IRSDLTAGENTMappingRepositoryISpec
-extends BaseRepositoryISpec[AgentReferenceMapping, IRSDLTAGENTMappingRepository]
-with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
-  override lazy val repository = new IRSDLTAGENTMappingRepository(mongoComponent)
-}
-
-abstract class BaseRepositoryISpec[
-  T <: AgentReferenceMapping,
-  R <: MappingRepository: ClassTag
-]
 extends AnyWordSpecLike
 with Matchers
 with OptionValues
 with ScalaFutures
 with IntegrationPatience
-with GuiceOneAppPerSuite {
+with GuiceOneAppPerSuite
+with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
 
-  implicit val crypto: Encrypter
-    with Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "GTfz3GZy0+gN0p/5wSqRBpWlbWVDMezXWtX+G9ENwCc=")
-  def repository: MappingRepository
+  val crypto: Encrypter & Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "GTfz3GZy0+gN0p/5wSqRBpWlbWVDMezXWtX+G9ENwCc=")
+  override val repository: MappingRepository = new HMRCCHARAGENTMappingRepository(mongoComponent)(using global, crypto)
 
   override implicit lazy val app: Application = appBuilder.build()
+
   protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
     .disable[DuplicateArnScanModule]
     .configure(

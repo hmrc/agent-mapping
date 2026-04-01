@@ -1,26 +1,19 @@
 import uk.gov.hmrc.DefaultBuildSettings
 import CodeCoverageSettings.scoverageSettings
+import uk.gov.hmrc.DefaultBuildSettings.targetJvm
 
 val appName = "agent-mapping"
 
 ThisBuild / majorVersion := 1
-ThisBuild / scalaVersion := "3.8.2"
+ThisBuild / scalaVersion := "3.8.3"
 
 val scalaCOptions = Seq(
-  "-Werror",
-//  "-Xlint:-missing-interpolator,_",
-//  "-Ywarn-value-discard",
-//  "-Ywarn-dead-code",
-//  "-encoding", "UTF8",
-  "-java-output-version", "21",
+//  "-Werror",
   "-deprecation",
+  "-Wunused:all",
   "-feature",
-  "-language:postfixOps",
-//  "-unchecked",
   "-Wconf:src=target/.*:s", // silence warnings from compiled files
   "-Wconf:src=routes/.*:s", // silence warnings from routes files
-//  "-Wconf:src=*html:w", // silence html warnings as they are wrong
-//  "-language:implicitConversions"
 )
 
 lazy val root = project
@@ -38,7 +31,8 @@ lazy val root = project
     Compile / unmanagedResourceDirectories += baseDirectory.value / "resources",
     Test / parallelExecution := false,
     Test / logBuffered := false,
-    scoverageSettings
+    scoverageSettings,
+    targetJvm := "jvm-21"
   )
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin)
@@ -52,6 +46,7 @@ lazy val it = project
   .settings(
     Compile / scalafmtOnCompile := true,
     Test / scalafmtOnCompile := true,
-    Test / logBuffered := false
+    Test / logBuffered := false,
+    targetJvm := "jvm-21"
   )
 

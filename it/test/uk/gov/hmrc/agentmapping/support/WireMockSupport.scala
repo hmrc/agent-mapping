@@ -16,8 +16,6 @@
 
 package test.uk.gov.hmrc.agentmapping.support
 
-import java.net.ServerSocket
-import java.net.URL
 import com.github.tomakehurst.wiremock.WireMockServer
 import com.github.tomakehurst.wiremock.client.WireMock.configureFor
 import com.github.tomakehurst.wiremock.client.WireMock.reset
@@ -28,6 +26,9 @@ import org.scalatest.BeforeAndAfterEach
 import org.scalatest.Suite
 import play.Logger
 
+import java.net.ServerSocket
+import java.net.URL
+import java.nio.file.Paths
 import scala.annotation.tailrec
 
 case class WireMockBaseUrl(value: URL)
@@ -49,7 +50,8 @@ with BeforeAndAfterEach {
   val wireMockPort: Int = WireMockSupport.wireMockPort
   val wireMockHost = "localhost"
   val wireMockBaseUrlAsString = s"http://$wireMockHost:$wireMockPort"
-  val wireMockBaseUrl = new URL(wireMockBaseUrlAsString)
+//  val wireMockBaseUrl = new URL(wireMockBaseUrlAsString)
+  val wireMockBaseUrl: URL = Paths.get(wireMockBaseUrlAsString).toUri.toURL
   protected implicit val implicitWireMockBaseUrl: WireMockBaseUrl = WireMockBaseUrl(wireMockBaseUrl)
 
   protected def basicWireMockConfig(): WireMockConfiguration = wireMockConfig()
@@ -72,9 +74,9 @@ with BeforeAndAfterEach {
     reset()
   }
 
-  protected def stopWireMockServer() = wireMockServer.stop()
+  protected def stopWireMockServer(): Unit = wireMockServer.stop()
 
-  protected def startWireMockServer() = wireMockServer.start()
+  protected def startWireMockServer(): Unit = wireMockServer.start()
 
 }
 
@@ -82,7 +84,7 @@ with BeforeAndAfterEach {
 object Port {
 
   val rnd = new scala.util.Random
-  val range = 8000 to 39999
+  val range: Seq[Int] = 8000 to 39999
   val usedPorts = List[Int]()
 
   @tailrec
@@ -91,14 +93,14 @@ object Port {
       case 8080 => randomAvailable
       case 8090 => randomAvailable
       case p: Int =>
-        available(p) match {
-          case false =>
-            Logger.of("WireMockSupport").debug(s"Port $p is in use, trying another")
-            randomAvailable
-          case true =>
-            Logger.of("WireMockSupport").debug("Taking port : " + p)
-            usedPorts :+ p
-            p
+        if (available(p)) {
+          Logger.of("WireMockSupport").debug("Taking port : " + p)
+          usedPorts.appended(p)
+          p
+        }
+        else {
+          Logger.of("WireMockSupport").debug(s"Port $p is in use, trying another")
+          randomAvailable
         }
     }
 
@@ -114,7 +116,7 @@ object Port {
         false
       }
     catch {
-      case t: Throwable => false
+      case _: Throwable => false
     }
     finally
       if (socket != null)

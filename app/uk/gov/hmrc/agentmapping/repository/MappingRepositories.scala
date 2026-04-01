@@ -66,79 +66,69 @@ class MappingRepositories @Inject() (
 @Singleton
 class IRSAAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter
-    with Decrypter
+  @Named("aes") crypto: Encrypter & Decrypter
 )
 extends MappingRepository(collectionName = "IR-SA-AGENT", mongo = mongoComponent)
 
 @Singleton
 class NewAgentCodeMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter
-    with Decrypter
+  @Named("aes") crypto: Encrypter & Decrypter
 )
 extends MappingRepository(collectionName = "AgentCode", mongo = mongoComponent)
 
 @Singleton
 class HMCEVATAGNTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter
-    with Decrypter
+  @Named("aes") crypto: Encrypter & Decrypter
 )
 extends MappingRepository("HMCE-VAT-AGNT", mongo = mongoComponent)
 
 @Singleton
 class HMRCCHARAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter
-    with Decrypter
+  @Named("aes") crypto: Encrypter & Decrypter
 )
 extends MappingRepository("HMRC-CHAR-AGENT", mongo = mongoComponent)
 
 @Singleton
 class HMRCGTSAGNTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter
-    with Decrypter
+  @Named("aes") crypto: Encrypter & Decrypter
 )
 extends MappingRepository("HMRC-GTS-AGNT", mongo = mongoComponent)
 
 @Singleton
 class HMRCMGDAGNTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter
-    with Decrypter
+  @Named("aes") crypto: Encrypter & Decrypter
 )
 extends MappingRepository("HMRC-MGD-AGNT", mongo = mongoComponent)
 
 @Singleton
 class HMRCNOVRNAGNTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter
-    with Decrypter
+  @Named("aes") crypto: Encrypter & Decrypter
 )
 extends MappingRepository("HMRC-NOVRN-AGNT", mongo = mongoComponent)
 
 @Singleton
 class IRCTAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter
-    with Decrypter
+  @Named("aes") crypto: Encrypter & Decrypter
 )
 extends MappingRepository("IR-CT-AGENT", mongo = mongoComponent)
 
 @Singleton
 class IRPAYEAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter
-    with Decrypter
+  @Named("aes") crypto: Encrypter & Decrypter
 )
 extends MappingRepository("IR-PAYE-AGENT", mongo = mongoComponent)
 
 @Singleton
 class IRSDLTAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
   ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter
-    with Decrypter
+  @Named("aes") crypto: Encrypter & Decrypter
 )
 extends MappingRepository("IR-SDLT-AGENT", mongo = mongoComponent)

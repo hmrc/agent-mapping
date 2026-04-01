@@ -60,8 +60,8 @@ with Logging {
     body: Request[AnyContent] => HasEligibleEnrolments => Future[Result]
   )(implicit ec: ExecutionContext): Action[AnyContent] = Action.async { implicit request =>
     authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
-      .retrieve(allEnrolments) { case allEnrolments => body(request)(captureIdentifiersFrom(allEnrolments).nonEmpty) }
-      .recover { case e: AuthorisationException => Unauthorized }
+      .retrieve(allEnrolments)(allEnrolments => body(request)(captureIdentifiersFrom(allEnrolments).nonEmpty))
+      .recover { case _: AuthorisationException => Unauthorized }
   }
 
   def authorisedWithAgentCode(
@@ -80,7 +80,7 @@ with Logging {
           Future.successful(Forbidden)
       }
       .recover {
-        case e: NoActiveSession => Unauthorized
+        case _: NoActiveSession => Unauthorized
         case _: AuthorisationException => Forbidden
       }
   }
@@ -148,8 +148,8 @@ with Logging {
           }
       }
       .recover {
-        case e: NoActiveSession => Unauthorized
-        case e: AuthorisationException => Forbidden
+        case _: NoActiveSession => Unauthorized
+        case _: AuthorisationException => Forbidden
       }
   }
 
@@ -159,8 +159,8 @@ with Logging {
     } recover { case _: NoActiveSession => Unauthorized }
   }
 
-  val basicAuthHeader: Regex = "Basic (.+)".r
-  val decodedAuth: Regex = "(.+):(.+)".r
+  private val basicAuthHeader: Regex = "Basic (.+)".r
+  private val decodedAuth: Regex = "(.+):(.+)".r
 
   private def decodeFromBase64(encodedString: String): String =
     try new String(Base64.getDecoder.decode(encodedString), UTF_8)
@@ -168,7 +168,7 @@ with Logging {
 
   def withBasicAuth(
     expectedAuth: BasicAuthentication
-  )(body: => Future[Result])(implicit request: Request[_]): Future[Result] =
+  )(body: => Future[Result])(implicit request: Request[?]): Future[Result] =
     request.headers.get(HeaderNames.authorisation) match {
       case Some(basicAuthHeader(encodedAuthHeader)) =>
         decodeFromBase64(encodedAuthHeader) match {
@@ -210,7 +210,7 @@ with Logging {
     enrolment: Set[Enrolment],
     enrolmentKey: String,
     identifier: String
-  ): Option[String] = enrolment.find(_.key equals enrolmentKey).flatMap(_.identifiers.find(_.key equals identifier).map(_.value))
+  ): Option[String] = enrolment.find(_.key.equals(enrolmentKey)).flatMap(_.identifiers.find(_.key.equals(identifier)).map(_.value))
 
   private def captureIdentifiersAndAgentCodeFrom(
     enrolments: Enrolments,

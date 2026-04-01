@@ -252,9 +252,6 @@ trait AuthStubs {
   )
 
   def givenUserIsAuthorisedWithNoEnrolments(
-    enrolmentKey: String,
-    identifierName: String,
-    identifierValue: String,
     ggCredId: String,
     affinityGroup: AffinityGroup = AffinityGroup.Agent,
     agentCodeOpt: Option[String]
@@ -289,7 +286,7 @@ trait AuthStubs {
       )
   )
 
-  def isLoggedIn = {
+  def isLoggedIn: AuthStubs = {
     stubFor(post(urlPathEqualTo(s"/auth/authorise")).willReturn(aResponse().withStatus(200).withBody("{}")))
     this
   }
@@ -297,7 +294,7 @@ trait AuthStubs {
   def givenOnlyStrideStub(
     strideRole: String,
     strideUserId: String
-  ) = {
+  ): AuthStubs = {
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .withRequestBody(
