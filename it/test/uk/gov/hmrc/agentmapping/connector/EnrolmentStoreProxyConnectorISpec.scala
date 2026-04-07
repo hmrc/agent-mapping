@@ -48,7 +48,7 @@ with EnrolmentStoreStubs {
 
   override implicit lazy val app: Application = appBuilder.build()
 
-  val appConfig = app.injector.instanceOf[AppConfig]
+  val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
   private lazy val connector: EnrolmentStoreProxyConnector =
     new EnrolmentStoreProxyConnector(

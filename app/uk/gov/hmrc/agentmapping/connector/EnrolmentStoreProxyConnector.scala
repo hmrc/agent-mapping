@@ -33,6 +33,7 @@ import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
+import uk.gov.hmrc.http.HttpReads.Implicits._
 
 import java.net.URL
 import javax.inject.Inject
@@ -52,9 +53,9 @@ class EnrolmentStoreProxyConnector @Inject() (
   appConfig: AppConfig,
   http: HttpClientV2,
   val metrics: Metrics
-)(implicit
-  val ec: ExecutionContext
-) {
+)(
+  implicit val ec: ExecutionContext
+):
 
   private val batchSize = appConfig.clientCountBatchSize
   private val maxClientRelationships = appConfig.clientCountMaxResults
@@ -67,93 +68,87 @@ class EnrolmentStoreProxyConnector @Inject() (
     userId: String,
     cumulativeCount: Int = 0,
     startRecord: Int = 1
-  )(implicit
-    rh: RequestHeader
+  )(
+    implicit rh: RequestHeader
   ): Future[Int] =
-    cumulativeCount match {
+    cumulativeCount match
       case cCount if cCount >= maxClientRelationships => maxClientRelationships
       case _ =>
         getDelegatedEnrolmentsCountFor(
           userId,
           startRecord,
           IR_SA
-        ).flatMap { case (prefilteredCount, filteredCount) =>
-          if (prefilteredCount < batchSize) {
-            filteredCount + cumulativeCount
-          }
-          else {
-            getClientCount(
-              userId,
-              filteredCount + cumulativeCount,
-              startRecord + batchSize
-            )
-          }
+        ).flatMap {
+          case (prefilteredCount, filteredCount) =>
+            if prefilteredCount < batchSize then
+              filteredCount + cumulativeCount
+            else
+              getClientCount(
+                userId,
+                filteredCount + cumulativeCount,
+                startRecord + batchSize
+              )
+            end if
         }
-    }
+    end match
+  end getClientCount
 
   def getPrincipalEnrolments(
     groupId: String
-  )(implicit
-    rh: RequestHeader
-  ): Future[EnrolmentResponse] = {
+  )(
+    implicit rh: RequestHeader
+  ): Future[EnrolmentResponse] =
 
     val url = url"$espBaseUrl/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=principal"
-    import uk.gov.hmrc.http.HttpReads.Implicits._
-
     http
       .get(url)
       .execute[HttpResponse]
       .map { response =>
-        response.status match {
 
-          case Status.OK =>
-            EnrolmentResponse(
-              (response.json \ "enrolments").as[Seq[ModelEnrolment]]
-            )
-
+        response.status match
+          case Status.OK => EnrolmentResponse((response.json \ "enrolments").as[Seq[ModelEnrolment]])
           case Status.NO_CONTENT => EnrolmentResponse(Seq.empty)
-
           case other =>
             throw UpstreamErrorResponse(
               response.body,
               other,
               other
             )
-        }
+        end match
+
       }
-  }
+  end getPrincipalEnrolments
 
   // ES2 - delegated
+  private def es2Url(
+    userId: String,
+    startRecord: Int,
+    service: String
+  ): URL =
+    url"$espBaseUrl/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated&service=$service&start-record=$startRecord&max-records=$batchSize"
+
   private def getDelegatedEnrolmentsCountFor(
     userId: String,
     startRecord: Int,
     service: String
-  )(implicit
-    rh: RequestHeader
-  ): Future[(Int, Int)] = {
-    def es2Url(
-      userId: String,
-      startRecord: Int,
-      service: String
-    ): URL =
-      url"$espBaseUrl/enrolment-store-proxy/enrolment-store/users/$userId/enrolments?type=delegated&service=$service&start-record=$startRecord&max-records=$batchSize"
+  )(
+    implicit rh: RequestHeader
+  ): Future[(Int, Int)] = http.get(es2Url(
+    userId,
+    startRecord,
+    service
+  )).execute[EnrolmentResponse].map { enrolmentResponse =>
+    val filteredCount = enrolmentResponse.enrolments
+      .count(e => e.state.toLowerCase == "activated" || e.state.toLowerCase == "unknown")
 
-    http.get(es2Url(
-      userId,
-      startRecord,
-      service
-    )).execute[EnrolmentResponse].map { enrolmentResponse =>
-      val filteredCount = enrolmentResponse.enrolments
-        .count(e => e.state.toLowerCase == "activated" || e.state.toLowerCase == "unknown")
-
-      (enrolmentResponse.enrolments.length, filteredCount)
-    }
-
+    (enrolmentResponse.enrolments.length, filteredCount)
   }
 
-}
+  end getDelegatedEnrolmentsCountFor
 
-object EnrolmentStoreProxyConnector {
+end EnrolmentStoreProxyConnector
+
+object EnrolmentStoreProxyConnector:
 
   implicit val responseHandler: HttpReads[EnrolmentResponse] =
     new HttpReads[EnrolmentResponse] {
@@ -161,10 +156,12 @@ object EnrolmentStoreProxyConnector {
         method: String,
         url: String,
         response: HttpResponse
-      ): EnrolmentResponse = Try(response.status match {
-        case 200 => EnrolmentResponse((response.json \ "enrolments").as[Seq[ModelEnrolment]])
-        case 204 => EnrolmentResponse(Seq.empty)
-      }).getOrElse(
+      ): EnrolmentResponse = Try(
+        response.status match {
+          case 200 => EnrolmentResponse((response.json \ "enrolments").as[Seq[ModelEnrolment]])
+          case 204 => EnrolmentResponse(Seq.empty)
+        }
+      ).getOrElse(
         throw new RuntimeException(
           s"Error retrieving client list from $url: status: ${response.status}, body: ${response.body}"
         )
@@ -173,4 +170,4 @@ object EnrolmentStoreProxyConnector {
 
   implicit val writes: Writes[EnrolmentResponse] = Json.writes[EnrolmentResponse]
 
-}
+end EnrolmentStoreProxyConnector

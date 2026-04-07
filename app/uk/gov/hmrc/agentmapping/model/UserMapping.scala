@@ -28,15 +28,8 @@ final case class UserMapping(
   ggTag: String
 )
 
-object UserMapping {
+object UserMapping:
+
   implicit val format: OFormat[UserMapping] = Json.format
-}
 
-final case class AgentEnrolment(
-  enrolmentType: LegacyAgentEnrolmentType,
-  identifierValue: IdentifierValue
-)
-
-object AgentEnrolment {
-  implicit val format: OFormat[AgentEnrolment] = Json.format
-}
+end UserMapping

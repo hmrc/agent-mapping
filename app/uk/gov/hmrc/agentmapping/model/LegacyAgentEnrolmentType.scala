@@ -26,10 +26,11 @@ import play.api.libs.json.JsValue
 /** A comprehensive list of all the old (pre-MTD) agent enrolment types IR-SA-AGENT is the only legacy code we actually use in authentication others are
   * captured for future use. One Mongo DB per instance of this type
   */
-sealed abstract class LegacyAgentEnrolmentType {
+sealed abstract class LegacyAgentEnrolmentType:
 
   def key: String =
-    this match {
+
+    this match
       case IRAgentReference => "IR-SA-AGENT"
       case AgentRefNo => "HMCE-VAT-AGNT"
       case AgentCharId => "HMRC-CHAR-AGENT"
@@ -40,36 +41,47 @@ sealed abstract class LegacyAgentEnrolmentType {
       case IRAgentReferencePaye => "IR-PAYE-AGENT"
       case SdltStorn => "IR-SDLT-AGENT"
       case AgentCode => "AgentCode" // not an actual enrolment, but included here for completeness
-    }
+    end match
+
+  end key
 
   def dbKey: String =
-    this match {
+
+    this match
       case AgentCode => "agentcode"
       case _ => this.key.split("-")(1).toLowerCase
-    }
+    end match
 
-}
+  end dbKey
 
-object LegacyAgentEnrolmentType {
+end LegacyAgentEnrolmentType
+
+object LegacyAgentEnrolmentType:
 
   implicit val format: Format[LegacyAgentEnrolmentType] =
     new Format[LegacyAgentEnrolmentType] {
 
       def reads(json: JsValue): JsResult[LegacyAgentEnrolmentType] =
-        json match {
+
+        json match
           case JsString(s) =>
-            find(s) match {
+
+            find(s) match
               case Some(x) => JsSuccess(x)
               case None => JsError(s"Unexpected enrolment type: ${json.toString}")
-            }
+            end match
+
           case _ => JsError(s"Enrolment type is not a string: $json")
-        }
+        end match
+
+      end reads
 
       def writes(o: LegacyAgentEnrolmentType): JsValue = JsString(o.key)
     }
 
   def find(key: String): Option[LegacyAgentEnrolmentType] =
-    key match {
+
+    key match
       case "IR-SA-AGENT" => Some(IRAgentReference)
       case "HMCE-VAT-AGNT" => Some(AgentRefNo)
       case "HMRC-CHAR-AGENT" => Some(AgentCharId)
@@ -81,10 +93,13 @@ object LegacyAgentEnrolmentType {
       case "IR-SDLT-AGENT" => Some(SdltStorn)
       case "AgentCode" => Some(AgentCode)
       case _ => None
-    }
+    end match
+
+  end find
 
   def findByDbKey(dbKey: String): Option[LegacyAgentEnrolmentType] =
-    dbKey match {
+
+    dbKey match
       case "sa" => Some(IRAgentReference)
       case "vat" => Some(AgentRefNo)
       case "char" => Some(AgentCharId)
@@ -96,9 +111,11 @@ object LegacyAgentEnrolmentType {
       case "sdlt" => Some(SdltStorn)
       case "agentcode" => Some(AgentCode)
       case _ => None
-    }
+    end match
 
-}
+  end findByDbKey
+
+end LegacyAgentEnrolmentType
 
 case object IRAgentReference
 extends LegacyAgentEnrolmentType

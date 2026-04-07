@@ -42,19 +42,19 @@ class MappingRepositories @Inject() (
   iRSDLTAGENTMappingRepository: IRSDLTAGENTMappingRepository
 ) {
 
-  private val repositories: Map[LegacyAgentEnrolmentType, MappingRepository] = Map(
-    AgentCode -> agentCodeMappingRepository,
-    IRAgentReference -> iRSAAGENTMappingRepository,
-    AgentRefNo -> hMCEVATAGNTMappingRepository,
-    AgentCharId -> hMRCCHARAGENTMappingRepository,
-    HmrcGtsAgentRef -> hMRCGTSAGNTMappingRepository,
-    HmrcMgdAgentRef -> hMRCMGDAGNTMappingRepository,
-    VATAgentRefNo -> hMRCNOVRNAGNTMappingRepository,
-    IRAgentReferenceCt -> iRCTAGENTMappingRepository,
-    IRAgentReferencePaye -> iRPAYEAGENTMappingRepository,
-    SdltStorn -> iRSDLTAGENTMappingRepository
+  private val repositories: Map[LegacyAgentEnrolment, MappingRepository] = Map(
+    LegacyAgentEnrolment.AgentCode -> agentCodeMappingRepository,
+    LegacyAgentEnrolment.IRAgentReference -> iRSAAGENTMappingRepository,
+    LegacyAgentEnrolment.AgentRefNo -> hMCEVATAGNTMappingRepository,
+    LegacyAgentEnrolment.AgentCharId -> hMRCCHARAGENTMappingRepository,
+    LegacyAgentEnrolment.HmrcGtsAgentRef -> hMRCGTSAGNTMappingRepository,
+    LegacyAgentEnrolment.HmrcMgdAgentRef -> hMRCMGDAGNTMappingRepository,
+    LegacyAgentEnrolment.VATAgentRefNo -> hMRCNOVRNAGNTMappingRepository,
+    LegacyAgentEnrolment.IRAgentReferenceCt -> iRCTAGENTMappingRepository,
+    LegacyAgentEnrolment.IRAgentReferencePaye -> iRPAYEAGENTMappingRepository,
+    LegacyAgentEnrolment.SdltStorn -> iRSDLTAGENTMappingRepository
   )
-  def get(legacyAgentEnrolmentType: LegacyAgentEnrolmentType): MappingRepository = repositories(legacyAgentEnrolmentType)
+  def get(legacyAgentEnrolmentType: LegacyAgentEnrolment): MappingRepository = repositories(legacyAgentEnrolmentType)
 
   def map[T](f: MappingRepository => T): Seq[T] = repositories.values.map(f).toSeq
 

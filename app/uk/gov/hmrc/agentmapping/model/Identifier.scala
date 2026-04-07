@@ -20,19 +20,19 @@ import play.api.libs.json.Json.format
 import play.api.libs.json._
 
 case class Identifier(
-  enrolmentType: LegacyAgentEnrolmentType,
+  enrolmentType: LegacyAgentEnrolment,
   value: String
 )
 
-object Identifier {
+object Identifier:
 
-  implicit val enrolmentTypeFormat: Format[LegacyAgentEnrolmentType] = Format(
+  implicit val enrolmentTypeFormat: Format[LegacyAgentEnrolment] = Format(
     Reads {
-      case JsString(s) => LegacyAgentEnrolmentType.find(s).map(JsSuccess(_)).getOrElse(JsError("Unknown service name"))
+      case JsString(s) => LegacyAgentEnrolment.find(s).map(JsSuccess(_)).getOrElse(JsError("Unknown service name"))
       case _ => JsError("String value expected")
     },
     Writes(legacyAgentEnrolmentType => JsString(legacyAgentEnrolmentType.toString))
   )
   implicit val formats: Format[Identifier] = format[Identifier]
 
-}
+end Identifier

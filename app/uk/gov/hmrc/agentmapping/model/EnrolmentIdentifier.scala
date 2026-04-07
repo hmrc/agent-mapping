@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2026 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +17,20 @@
 package uk.gov.hmrc.agentmapping.model
 
 import play.api.libs.json.Format
-import play.api.libs.functional.syntax._
+import play.api.libs.json.Json
 
-/** A value associated with an enrolment key
-  */
-final case class IdentifierValue(value: String)
+case class EnrolmentIdentifier(
+  key: String,
+  value: String
+):
 
-object IdentifierValue:
+  override def toString: String = s"${key.toUpperCase}~${value.replace(" ", "")}"
 
-  implicit val format: Format[IdentifierValue] = implicitly[Format[String]].inmap(IdentifierValue(_), _.value)
+end EnrolmentIdentifier
 
-end IdentifierValue
+object EnrolmentIdentifier:
+
+  implicit val format: Format[EnrolmentIdentifier] = Json.format[EnrolmentIdentifier]
+  implicit val ordering: Ordering[EnrolmentIdentifier] = Ordering.by(_.key)
+
+end EnrolmentIdentifier

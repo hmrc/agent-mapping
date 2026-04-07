@@ -31,13 +31,16 @@ import scala.concurrent.ExecutionContext
 class TestOnlyController @Inject() (
   repositories: MappingRepositories,
   cc: ControllerComponents
-)(implicit ec: ExecutionContext)
-extends BackendController(cc) {
+)(
+  implicit ec: ExecutionContext
+)
+extends BackendController(cc):
 
   def delete(arn: Arn): Action[AnyContent] = Action.async {
     repositories.deleteDataForArn(arn).map { _ =>
       NoContent
     }
   }
+  end delete
 
-}
+end TestOnlyController

@@ -22,7 +22,7 @@ import uk.gov.hmrc.agentmapping.model.BasicAuthentication
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
 
 @Singleton
-class AppConfig @Inject() (servicesConfig: ServicesConfig) {
+class AppConfig @Inject() (servicesConfig: ServicesConfig):
 
   val appName = "agent-mapping"
 
@@ -31,11 +31,11 @@ class AppConfig @Inject() (servicesConfig: ServicesConfig) {
 
   val enrolmentStoreProxyBaseUrl: String = servicesConfig.baseUrl("enrolment-store-proxy")
 
-  def expectedAuth: BasicAuthentication = {
+  def expectedAuth: BasicAuthentication =
     val username = servicesConfig.getString("agent-termination.username")
     val password = servicesConfig.getString("agent-termination.password")
 
     BasicAuthentication(username, password)
-  }
+  end expectedAuth
 
-}
+end AppConfig
