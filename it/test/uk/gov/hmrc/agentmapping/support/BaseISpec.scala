@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package test.uk.gov.hmrc.agentmapping.support
+package uk.gov.hmrc.agentmapping.support
 
 import org.apache.pekko.stream.Materializer
 import org.scalatest.OptionValues
@@ -27,7 +27,7 @@ import play.api.i18n.Messages
 import play.api.i18n.MessagesApi
 import play.api.inject.guice.GuiceApplicationBuilder
 import play.twirl.api.HtmlFormat
-import test.uk.gov.hmrc.agentmapping.stubs.DataStreamStub
+import uk.gov.hmrc.agentmapping.stubs.DataStreamStub
 import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
 
 abstract class BaseISpec

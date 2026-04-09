@@ -21,7 +21,7 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import test.uk.gov.hmrc.agentmapping.support.BaseISpec
+import uk.gov.hmrc.agentmapping.support.BaseISpec
 import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
 
 abstract class ServerBaseISpec

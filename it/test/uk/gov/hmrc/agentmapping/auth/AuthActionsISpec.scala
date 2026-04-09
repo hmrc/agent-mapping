@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package test.uk.gov.hmrc.agentmapping.auth
+package uk.gov.hmrc.agentmapping.auth
 
 import org.mockito.ArgumentMatchers.any
 import org.mockito.Mockito.reset
@@ -31,7 +31,7 @@ import play.api.test.Helpers.defaultAwaitTimeout
 import play.api.test.Helpers.status
 import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.agentmapping.model.Identifier
-import test.uk.gov.hmrc.agentmapping.support.BaseISpec
+import uk.gov.hmrc.agentmapping.support.BaseISpec
 import uk.gov.hmrc.agentmapping.auth.AuthActions
 import uk.gov.hmrc.auth.core._
 import uk.gov.hmrc.auth.core.authorise.Predicate

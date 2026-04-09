@@ -26,10 +26,10 @@ import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
-import test.uk.gov.hmrc.agentmapping.stubs.AuthStubs
-import test.uk.gov.hmrc.agentmapping.stubs.DataStreamStub
-import test.uk.gov.hmrc.agentmapping.stubs.EnrolmentStoreStubs
-import test.uk.gov.hmrc.agentmapping.support.WireMockSupport
+import uk.gov.hmrc.agentmapping.stubs.AuthStubs
+import uk.gov.hmrc.agentmapping.stubs.DataStreamStub
+import uk.gov.hmrc.agentmapping.stubs.EnrolmentStoreStubs
+import uk.gov.hmrc.agentmapping.support.WireMockSupport
 import uk.gov.hmrc.agentmapping.controller.MappingController
 import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolment
 import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule

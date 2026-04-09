@@ -14,16 +14,16 @@
  * limitations under the License.
  */
 
-package test.uk.gov.hmrc.agentmapping.connector
+package uk.gov.hmrc.agentmapping.connector
 
 import org.scalatest.RecoverMethods.recoverToExceptionIf
 import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
-import test.uk.gov.hmrc.agentmapping.stubs.EnrolmentStoreStubs
-import test.uk.gov.hmrc.agentmapping.support.BaseISpec
-import test.uk.gov.hmrc.agentmapping.support.WireMockSupport
+import uk.gov.hmrc.agentmapping.stubs.EnrolmentStoreStubs
+import uk.gov.hmrc.agentmapping.support.BaseISpec
+import uk.gov.hmrc.agentmapping.support.WireMockSupport
 import uk.gov.hmrc.agentmapping.config.AppConfig
 import uk.gov.hmrc.agentmapping.connector.EnrolmentResponse
 import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector
