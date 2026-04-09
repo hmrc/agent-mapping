@@ -28,7 +28,7 @@ object Identifier:
 
   implicit val enrolmentTypeFormat: Format[LegacyAgentEnrolment] = Format(
     Reads {
-      case JsString(s) => LegacyAgentEnrolment.find(s).map(JsSuccess(_)).getOrElse(JsError("Unknown service name"))
+      case JsString(s) => LegacyAgentEnrolment.findByName(s).map(JsSuccess(_)).getOrElse(JsError("Unknown service name"))
       case _ => JsError("String value expected")
     },
     Writes(legacyAgentEnrolmentType => JsString(legacyAgentEnrolmentType.toString))

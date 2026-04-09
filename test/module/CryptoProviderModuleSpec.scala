@@ -31,41 +31,37 @@ import java.util.Base64
 
 class CryptoProviderModuleSpec
 extends AnyWordSpecLike
-with Matchers {
+with Matchers:
 
-  private def configuration(fieldLevelEncryptionEnabled: Boolean): Configuration = Configuration(
-    ConfigFactory.parseString(s"""fieldLevelEncryption {
-                                 |  enable = $fieldLevelEncryptionEnabled
-                                 |  key = "oaJdbtyXIUyd+hHefKbMUqtehotAG99pH0bqpkSuQ/Q="
-                                 |}
-                                 |""".stripMargin)
-  )
+  private def configuration(fieldLevelEncryptionEnabled: Boolean): Configuration =
+    Configuration(
+      ConfigFactory.parseString(s"""fieldLevelEncryption {
+                                   |  enable = $fieldLevelEncryptionEnabled
+                                   |  key = "oaJdbtyXIUyd+hHefKbMUqtehotAG99pH0bqpkSuQ/Q="
+                                   |}
+                                   |""".stripMargin)
+    )
+  end configuration
 
-  "CryptoProviderModule" should {
-    "provide a real crypto instance if field-level encryption is enabled in config" in {
+  "CryptoProviderModule" should:
+    "provide a real crypto instance if field-level encryption is enabled in config" in:
       val x = new CryptoProviderModule().aesCryptoInstance(configuration(fieldLevelEncryptionEnabled = true))
-      x should not be a[NoCrypto]
-    }
-    "provide a no-op crypto instance if field-level encryption is disabled in config" in {
+      x should not be a[NoCrypto.type]
+    "provide a no-op crypto instance if field-level encryption is disabled in config" in:
       val x = new CryptoProviderModule().aesCryptoInstance(configuration(fieldLevelEncryptionEnabled = false))
-      x shouldBe a[NoCrypto]
-    }
-  }
+      x shouldBe a[NoCrypto.type]
 
-  "NoCrypto" should {
+  "NoCrypto" should:
     val text = "Not a secret"
     val bytes: Array[Byte] = Array(0x13, 0x37)
     val base64Bytes = new String(Base64.getEncoder.encode(bytes), StandardCharsets.UTF_8)
 
-    "pass through data on encryption" in {
+    "pass through data on encryption" in:
       NoCrypto.encrypt(PlainText(text)).value shouldBe text
       NoCrypto.encrypt(PlainBytes(bytes)).value shouldBe base64Bytes
-    }
 
-    "pass through data on decryption" in {
+    "pass through data on decryption" in:
       NoCrypto.decrypt(Crypted(text)).value shouldBe text
       NoCrypto.decryptAsBytes(Crypted(base64Bytes)).value shouldBe bytes
-    }
-  }
 
-}
+end CryptoProviderModuleSpec

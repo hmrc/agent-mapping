@@ -36,29 +36,31 @@ with Matchers
 with OptionValues
 with WireMockSupport
 with DataStreamStub
-with ScalaFutures {
+with ScalaFutures:
 
   def app: Application
 
-  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
-    .disable[DuplicateArnScanModule]
-    .configure(
-      "microservice.services.auth.port" -> wireMockPort,
-      "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
-      "metrics.enabled" -> false,
-      "auditing.enabled" -> false,
-      "clientCount.maxRecords" -> 40,
-      "clientCount.batchSize" -> 7,
-      "mongodb.uri" -> "mongodb://localhost:27017/test-agent-mapping",
-      "auditing.consumer.baseUri.port" -> wireMockPort,
-      "migrate-repositories" -> "false",
-      "termination.stride.enrolment" -> "caat"
-    )
+  protected def appBuilder: GuiceApplicationBuilder =
+    new GuiceApplicationBuilder()
+      .disable[DuplicateArnScanModule]
+      .configure(
+        "microservice.services.auth.port" -> wireMockPort,
+        "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
+        "metrics.enabled" -> false,
+        "auditing.enabled" -> false,
+        "clientCount.maxRecords" -> 40,
+        "clientCount.batchSize" -> 7,
+        "mongodb.uri" -> "mongodb://localhost:27017/test-agent-mapping",
+        "auditing.consumer.baseUri.port" -> wireMockPort,
+        "migrate-repositories" -> "false",
+        "termination.stride.enrolment" -> "caat"
+      )
+  end appBuilder
 
-  override def commonStubs(): Unit = {
+  override def commonStubs(): Unit =
     givenAuditConnector
     ()
-  }
+  end commonStubs
 
   protected implicit val materializer: Materializer = app.materializer
 
@@ -67,4 +69,4 @@ with ScalaFutures {
 
   protected def htmlEscapedMessage(key: String): String = HtmlFormat.escape(Messages(key)).toString
 
-}
+end BaseISpec

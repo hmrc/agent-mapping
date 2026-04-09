@@ -11,7 +11,6 @@ object AppDependencies {
     ws,
     "uk.gov.hmrc"       %% s"bootstrap-backend-$playFrameworkVersion" % bootstrapVer,
     "uk.gov.hmrc.mongo" %% s"hmrc-mongo-$playFrameworkVersion"        % mongoVer,
-//    "org.playframework" %% "play-json"                                % "3.0.6",
     "uk.gov.hmrc"       %% s"crypto-json-$playFrameworkVersion"       % "8.4.0",
     "uk.gov.hmrc"       %% s"domain-$playFrameworkVersion"            % "11.0.0"
   )
@@ -19,7 +18,6 @@ object AppDependencies {
   val test: Seq[ModuleID] = Seq(
     "uk.gov.hmrc"            %% s"bootstrap-test-$playFrameworkVersion"  % bootstrapVer % Test,
     "uk.gov.hmrc.mongo"      %% s"hmrc-mongo-test-$playFrameworkVersion" % mongoVer     % Test,
-//    "org.mockito"            %% "mockito-scala-scalatest"                % "2.1.0"      % Test
   )
 
 }

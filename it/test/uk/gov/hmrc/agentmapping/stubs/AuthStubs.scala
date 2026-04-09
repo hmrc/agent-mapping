@@ -21,16 +21,18 @@ import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.auth.core.Enrolment
 
-trait AuthStubs {
+trait AuthStubs:
 
-  def givenUserNotAuthorisedWithError(mdtpDetail: String): StubMapping = stubFor(
-    post(urlEqualTo("/auth/authorise"))
-      .willReturn(
-        aResponse()
-          .withStatus(401)
-          .withHeader("WWW-Authenticate", s"""MDTP detail="$mdtpDetail"""")
-      )
-  )
+  def givenUserNotAuthorisedWithError(mdtpDetail: String): StubMapping =
+    stubFor(
+      post(urlEqualTo("/auth/authorise"))
+        .willReturn(
+          aResponse()
+            .withStatus(401)
+            .withHeader("WWW-Authenticate", s"""MDTP detail="$mdtpDetail"""")
+        )
+    )
+  end givenUserNotAuthorisedWithError
 
   def givenUserIsAuthorisedFor(
     enrolmentKey: String,
@@ -44,7 +46,7 @@ trait AuthStubs {
       "agentCode",
       "allEnrolments"
     )
-  ): StubMapping = {
+  ): StubMapping =
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .atPriority(1)
@@ -93,7 +95,7 @@ trait AuthStubs {
             .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")
         )
     )
-  }
+  end givenUserIsAuthorisedFor
 
   def givenUserIsAuthorisedForCreds(
     serviceName: String,
@@ -103,7 +105,7 @@ trait AuthStubs {
     affinityGroup: AffinityGroup = AffinityGroup.Agent,
     agentCodeOpt: Option[String],
     expectedRetrievals: Seq[String] = Seq("optionalCredentials")
-  ): StubMapping = {
+  ): StubMapping =
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .atPriority(1)
@@ -152,14 +154,14 @@ trait AuthStubs {
             .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")
         )
     )
-  }
+  end givenUserIsAuthorisedForCreds
 
   def givenUserIsAuthorisedForMultiple(
     enrolments: Set[Enrolment],
     ggCredId: String,
     affinityGroup: AffinityGroup = AffinityGroup.Agent,
     agentCodeOpt: Option[String]
-  ): StubMapping = {
+  ): StubMapping =
     val responseBody =
       s"""
          |{ "optionalCredentials": {
@@ -183,6 +185,7 @@ trait AuthStubs {
           .mkString(",")}
          |                   ]
          |}""".stripMargin
+
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .atPriority(1)
@@ -217,84 +220,88 @@ trait AuthStubs {
             .withHeader("WWW-Authenticate", "MDTP detail=\"InsufficientEnrolments\"")
         )
     )
-  }
+  end givenUserIsAuthorisedForMultiple
 
-  def givenUserIsAuthorisedAsAgent(arn: String): StubMapping = stubFor(
-    post(urlEqualTo("/auth/authorise"))
-      .withRequestBody(
-        equalToJson(
-          s"""
-             |{
-             |  "authorise": [
-             |    { "identifiers":[], "state":"Activated", "enrolment": "HMRC-AS-AGENT" },
-             |    { "authProviders": ["GovernmentGateway"] }
-             |  ],
-             |  "retrieve":["authorisedEnrolments"]
-             |}
+  def givenUserIsAuthorisedAsAgent(arn: String): StubMapping =
+    stubFor(
+      post(urlEqualTo("/auth/authorise"))
+        .withRequestBody(
+          equalToJson(
+            s"""
+               |{
+               |  "authorise": [
+               |    { "identifiers":[], "state":"Activated", "enrolment": "HMRC-AS-AGENT" },
+               |    { "authProviders": ["GovernmentGateway"] }
+               |  ],
+               |  "retrieve":["authorisedEnrolments"]
+               |}
            """.stripMargin,
-          true,
-          true
+            true,
+            true
+          )
         )
-      )
-      .willReturn(
-        aResponse()
-          .withStatus(200)
-          .withHeader("Content-Type", "application/json")
-          .withBody(s"""
-                       |{
-                       |"authorisedEnrolments": [
-                       |  { "key":"HMRC-AS-AGENT", "identifiers": [
-                       |    {"key":"AgentReferenceNumber", "value": "$arn"}
-                       |  ]}
-                       |]}
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withHeader("Content-Type", "application/json")
+            .withBody(s"""
+                         |{
+                         |"authorisedEnrolments": [
+                         |  { "key":"HMRC-AS-AGENT", "identifiers": [
+                         |    {"key":"AgentReferenceNumber", "value": "$arn"}
+                         |  ]}
+                         |]}
           """.stripMargin)
-      )
-  )
+        )
+    )
+  end givenUserIsAuthorisedAsAgent
 
   def givenUserIsAuthorisedWithNoEnrolments(
     ggCredId: String,
     affinityGroup: AffinityGroup = AffinityGroup.Agent,
     agentCodeOpt: Option[String]
-  ): StubMapping = stubFor(
-    post(urlEqualTo("/auth/authorise"))
-      .atPriority(1)
-      .withRequestBody(
-        equalToJson(
-          s"""{"authorise":[
-             |  {"authProviders":["GovernmentGateway"]},
-             |  {"affinityGroup":"$affinityGroup"}
-             |],
-             |"retrieve":["allEnrolments"]
+  ): StubMapping =
+    stubFor(
+      post(urlEqualTo("/auth/authorise"))
+        .atPriority(1)
+        .withRequestBody(
+          equalToJson(
+            s"""{"authorise":[
+               |  {"authProviders":["GovernmentGateway"]},
+               |  {"affinityGroup":"$affinityGroup"}
+               |],
+               |"retrieve":["allEnrolments"]
           }""".stripMargin,
-          true,
-          false
+            true,
+            false
+          )
         )
-      )
-      .willReturn(
-        aResponse()
-          .withStatus(200)
-          .withHeader("Content-Type", "application/json")
-          .withBody(s"""
-                       |{ "optionalCredentials": {
-                       |    "providerId": "$ggCredId",
-                       |    "providerType": "GovernmmentGateway"
-                       |  }
-                       |  ${agentCodeOpt.map(ac => s""", "agentCode": "$ac" """).getOrElse("")},
-                       |  "allEnrolments": []
-                       |}
-                       |""".stripMargin)
-      )
-  )
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withHeader("Content-Type", "application/json")
+            .withBody(s"""
+                         |{ "optionalCredentials": {
+                         |    "providerId": "$ggCredId",
+                         |    "providerType": "GovernmmentGateway"
+                         |  }
+                         |  ${agentCodeOpt.map(ac => s""", "agentCode": "$ac" """).getOrElse("")},
+                         |  "allEnrolments": []
+                         |}
+                         |""".stripMargin)
+        )
+    )
+  end givenUserIsAuthorisedWithNoEnrolments
 
-  def isLoggedIn: AuthStubs = {
+  def isLoggedIn: AuthStubs =
     stubFor(post(urlPathEqualTo(s"/auth/authorise")).willReturn(aResponse().withStatus(200).withBody("{}")))
     this
-  }
+  end isLoggedIn
 
   def givenOnlyStrideStub(
     strideRole: String,
     strideUserId: String
-  ): AuthStubs = {
+  ): AuthStubs =
     stubFor(
       post(urlEqualTo("/auth/authorise"))
         .withRequestBody(
@@ -326,42 +333,44 @@ trait AuthStubs {
         )
     )
     this
-  }
+  end givenOnlyStrideStub
 
   def givenAuthorisedAsAgentWithGroup(
     arn: String,
     groupId: String,
     providerId: String
-  ): StubMapping = stubFor(
-    post(urlEqualTo("/auth/authorise"))
-      .willReturn(
-        aResponse()
-          .withStatus(200)
-          .withHeader("Content-Type", "application/json")
-          .withBody(
-            s"""
-               |{
-               |  "optionalCredentials": {
-               |    "providerId": "$providerId",
-               |    "providerType": "GovernmentGateway"
-               |  },
-               |  "groupIdentifier": "$groupId",
-               |  "authorisedEnrolments": [
-               |    {
-               |      "key": "HMRC-AS-AGENT",
-               |      "identifiers": [
-               |        {
-               |          "key": "AgentReferenceNumber",
-               |          "value": "$arn"
-               |        }
-               |      ],
-               |      "state": "Activated"
-               |    }
-               |  ]
-               |}
+  ): StubMapping =
+    stubFor(
+      post(urlEqualTo("/auth/authorise"))
+        .willReturn(
+          aResponse()
+            .withStatus(200)
+            .withHeader("Content-Type", "application/json")
+            .withBody(
+              s"""
+                 |{
+                 |  "optionalCredentials": {
+                 |    "providerId": "$providerId",
+                 |    "providerType": "GovernmentGateway"
+                 |  },
+                 |  "groupIdentifier": "$groupId",
+                 |  "authorisedEnrolments": [
+                 |    {
+                 |      "key": "HMRC-AS-AGENT",
+                 |      "identifiers": [
+                 |        {
+                 |          "key": "AgentReferenceNumber",
+                 |          "value": "$arn"
+                 |        }
+                 |      ],
+                 |      "state": "Activated"
+                 |    }
+                 |  ]
+                 |}
            """.stripMargin
-          )
-      )
-  )
+            )
+        )
+    )
+  end givenAuthorisedAsAgentWithGroup
 
-}
+end AuthStubs

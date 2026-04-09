@@ -45,7 +45,7 @@ import scala.concurrent.ExecutionContext.Implicits.global
 class AuthActionsISpec
 extends BaseISpec
 with MockitoSugar
-with ScalaFutures {
+with ScalaFutures:
 
   lazy val app: Application = appBuilder.build()
 
@@ -320,4 +320,4 @@ with ScalaFutures {
   )(using any[HeaderCarrier], any[ExecutionContext]))
     .thenReturn(returnValue)
 
-}
+end AuthActionsISpec

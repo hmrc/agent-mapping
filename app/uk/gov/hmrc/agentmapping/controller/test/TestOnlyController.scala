@@ -36,11 +36,10 @@ class TestOnlyController @Inject() (
 )
 extends BackendController(cc):
 
-  def delete(arn: Arn): Action[AnyContent] = Action.async {
+  def delete(arn: Arn): Action[AnyContent] = Action.async:
     repositories.deleteDataForArn(arn).map { _ =>
       NoContent
     }
-  }
   end delete
 
 end TestOnlyController

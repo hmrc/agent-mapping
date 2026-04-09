@@ -56,27 +56,29 @@ with Logging:
   }
   end createMapping
 
-  def autoMapEnrolments(arn: Arn): Action[AnyContent] = authActions.authorisedAsSubscribedAgentWithGroup {
-    implicit request => authArn => groupId => providerId =>
-      if authArn != arn then
-        Future.successful(Forbidden)
-      else
-        for {
-          es3Response <- espConnector.getPrincipalEnrolments(groupId)
-          identifiers = extractActiveIdentifiers(es3Response.enrolments)
-
-          result <-
-            if identifiers.isEmpty then
-              Future.successful(NoContent)
+  def autoMapEnrolments(arn: Arn): Action[AnyContent] = authActions.authorisedAsSubscribedAgentWithGroup:
+    implicit request =>
+      authArn =>
+        groupId =>
+          providerId =>
+            if authArn != arn then
+              Future.successful(Forbidden)
             else
-              createAutoMappings(arn, identifiers)(
-                using
-                ec,
-                request,
-                providerId
-              )
-        } yield result
-  }
+              for
+                es3Response <- espConnector.getPrincipalEnrolments(groupId)
+                identifiers = extractActiveIdentifiers(es3Response.enrolments)
+
+                result <-
+                  if identifiers.isEmpty then
+                    Future.successful(NoContent)
+                  else
+                    createAutoMappings(arn, identifiers)(
+                      using
+                      ec,
+                      request,
+                      providerId
+                    )
+              yield result
   end autoMapEnrolments
 
   def getClientCount: Action[AnyContent] = authActions.authorisedWithProviderId { implicit request => providerId =>
@@ -105,7 +107,7 @@ with Logging:
         ggCredId
       )
       false
-    }.recover {
+    }.recover:
       case e: MongoWriteException if e.getMessage.contains("E11000") =>
         auditService.sendCreateMappingAuditEvent(
           arn,
@@ -115,13 +117,11 @@ with Logging:
         )
         logger.warn(s"Duplicated mapping attempt for ${identifier.enrolmentType}")
         true
-    }
   end createMappingInRepository
 
   def findSaMappings(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    authActions.authorised() {
+    authActions.authorised():
       repositories.get(LegacyAgentEnrolment.IRAgentReference).findBy(arn) map { matches =>
-
         if matches.nonEmpty then
           Ok(toJson(AgentReferenceMappings(matches))(using AgentReferenceMappings.apiWrites("saAgentReference")))
         else
@@ -129,14 +129,12 @@ with Logging:
         end if
 
       }
-    }
   }
   end findSaMappings
 
   def findAgentCodeMappings(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
-    authActions.authorised() {
+    authActions.authorised():
       repositories.get(LegacyAgentEnrolment.AgentCode).findBy(arn) map { matches =>
-
         if matches.nonEmpty then
           Ok(toJson(AgentReferenceMappings(matches))(using AgentReferenceMappings.apiWrites("agentCode")))
         else
@@ -144,8 +142,6 @@ with Logging:
         end if
 
       }
-
-    }
 
   }
 
@@ -155,12 +151,11 @@ with Logging:
     key: String,
     arn: Arn
   ): Action[AnyContent] = Action.async { implicit request =>
-    authActions.authorised() {
+    authActions.authorised():
 
-      LegacyAgentEnrolment.findByDbKey(key) match
+      LegacyAgentEnrolment.findByDataBaseKey(key) match
         case Some(service) =>
           repositories.get(service).findBy(arn) map { matches =>
-
             if matches.nonEmpty then
               Ok(toJson(AgentReferenceMappings(matches))(using AgentReferenceMappings.apiWrites()))
             else
@@ -170,8 +165,6 @@ with Logging:
           }
         case None => Future.successful(BadRequest(s"No service found for the key $key"))
       end match
-
-    }
 
   }
   end findMappings
@@ -211,7 +204,7 @@ with Logging:
       .filter(_.state.equalsIgnoreCase("Activated"))
       .flatMap { enrolment =>
         LegacyAgentEnrolment
-          .find(enrolment.service)
+          .findByName(enrolment.service)
           .fold(Seq.empty[Identifier]) { service =>
             enrolment.identifiers.map(id =>
               Identifier(service, id.value)
@@ -241,7 +234,6 @@ with Logging:
     Future
       .sequence(mappingResults)
       .map { resultSet =>
-
         if resultSet.contains(false) then
           Created
         else
@@ -275,9 +267,8 @@ with Logging:
         )
         false
       }
-      .recover {
+      .recover:
         case e: MongoWriteException if e.getMessage.contains("E11000") => true // duplicate — silently ignore
-      }
   end createAutoMappingInRepository
 
 end MappingController

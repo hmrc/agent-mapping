@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2026 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,13 +14,20 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentmapping
+package uk.gov.hmrc.agentmapping.model
 
-import scala.concurrent.Future
+import play.api.libs.json.Json
+import play.api.libs.json.Writes
+
 import scala.language.implicitConversions
 
-package object util:
+case class AgentReferenceMappings(mappings: Seq[AgentReferenceMapping])
 
-  implicit def toFuture[A](a: A): Future[A] = Future.successful(a)
+object AgentReferenceMappings:
 
-end util
+  implicit def apiWrites(identifierKey: String = "identifier"): Writes[AgentReferenceMappings] =
+    implicit val mappingWrites: Writes[AgentReferenceMapping] = AgentReferenceMapping.apiWrites(identifierKey)
+    Json.writes[AgentReferenceMappings]
+  end apiWrites
+
+end AgentReferenceMappings

@@ -9,6 +9,8 @@ ThisBuild / scalaVersion := "3.8.3"
 
 val scalaCOptions = Seq(
 //  "-Werror",
+  "-indent",
+  "-rewrite",
   "-deprecation",
   "-Wunused:all",
   "-feature",

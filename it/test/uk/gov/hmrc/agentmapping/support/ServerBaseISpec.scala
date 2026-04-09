@@ -14,41 +14,46 @@
  * limitations under the License.
  */
 
-package test.uk.gov.hmrc.agentmapping.support
+package uk.gov.hmrc.agentmapping.support
 
 import com.google.inject.AbstractModule
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import test.uk.gov.hmrc.agentmapping.support.BaseISpec
 import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
 
 abstract class ServerBaseISpec
 extends BaseISpec
 with GuiceOneServerPerSuite
-with ScalaFutures {
+with ScalaFutures:
 
   override implicit lazy val app: Application = appBuilder.build()
 
-  override protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
-    .disable[DuplicateArnScanModule]
-    .configure(
-      Map(
-        "microservice.services.auth.port" -> wireMockPort.toString,
-        "microservice.services.agent-subscription.port" -> wireMockPort.toString,
-        "microservice.services.agent-subscription.host" -> wireMockHost,
-        "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort.toString,
-        "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
-        "migrate-repositories" -> "false",
-        "termination.stride.enrolment" -> "caat"
+  override protected def appBuilder: GuiceApplicationBuilder =
+    new GuiceApplicationBuilder()
+      .disable[DuplicateArnScanModule]
+      .configure(
+        Map(
+          "microservice.services.auth.port" -> wireMockPort.toString,
+          "microservice.services.agent-subscription.port" -> wireMockPort.toString,
+          "microservice.services.agent-subscription.host" -> wireMockHost,
+          "auditing.consumer.baseUri.host" -> wireMockHost,
+          "auditing.consumer.baseUri.port" -> wireMockPort.toString,
+          "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
+          "migrate-repositories" -> "false",
+          "termination.stride.enrolment" -> "caat"
+        )
       )
-    )
-    .overrides(new TestGuiceModule)
+      .overrides(new TestGuiceModule)
+  end appBuilder
 
   protected class TestGuiceModule
-  extends AbstractModule {
-    override def configure(): Unit = {}
-  }
+  extends AbstractModule:
 
-}
+    override def configure(): Unit = {}
+
+  end TestGuiceModule
+
+end ServerBaseISpec

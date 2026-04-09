@@ -89,11 +89,11 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
     )
   end createEvent
 
-  private def send(events: DataEvent*): Future[Unit] = Future {
+  private def send(events: DataEvent*): Future[Unit] = Future:
     events.foreach { event =>
       Try(auditConnector.sendEvent(event))
     }
-  }
+
   end send
 
 end AuditService

@@ -43,22 +43,24 @@ with OptionValues
 with ScalaFutures
 with IntegrationPatience
 with GuiceOneAppPerSuite
-with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
+with DefaultPlayMongoRepositorySupport[AgentReferenceMapping]:
 
   val crypto: Encrypter & Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "GTfz3GZy0+gN0p/5wSqRBpWlbWVDMezXWtX+G9ENwCc=")
   override val repository: MappingRepository = new IRSAAGENTMappingRepository(mongoComponent)(using global, crypto)
 
   override implicit lazy val app: Application = appBuilder.build()
 
-  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
-    .disable[DuplicateArnScanModule]
-    .configure(
-      Map(
-        "metrics.enabled" -> "false",
-        "migrate-repositories" -> "false",
-        "termination.stride.enrolment" -> "caat"
+  protected def appBuilder: GuiceApplicationBuilder =
+    new GuiceApplicationBuilder()
+      .disable[DuplicateArnScanModule]
+      .configure(
+        Map(
+          "metrics.enabled" -> "false",
+          "migrate-repositories" -> "false",
+          "termination.stride.enrolment" -> "caat"
+        )
       )
-    )
+  end appBuilder
 
   val arn1: Arn = Arn("ARN00001")
   val arn2: Arn = Arn("ARN00002")
@@ -150,4 +152,4 @@ with DefaultPlayMongoRepositorySupport[AgentReferenceMapping] {
     }
   }
 
-}
+end IRSAAGENTMappingRepositoryISpec

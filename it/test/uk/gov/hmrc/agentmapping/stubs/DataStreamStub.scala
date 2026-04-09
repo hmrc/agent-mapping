@@ -16,7 +16,8 @@
 
 package test.uk.gov.hmrc.agentmapping.stubs
 
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.*
+import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.scalatest.concurrent.Eventually
 import org.scalatest.time.Millis
 import org.scalatest.time.Seconds
@@ -25,7 +26,7 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent
 
 trait DataStreamStub
-extends Eventually {
+extends Eventually:
 
   implicit val patience: PatienceConfig = PatienceConfig(scaled(Span(25, Seconds)), scaled(Span(500, Millis)))
 
@@ -34,31 +35,35 @@ extends Eventually {
     event: AgentMappingEvent,
     tags: Map[String, String] = Map.empty,
     detail: Map[String, String] = Map.empty
-  ): Unit = eventually {
-    verify(
-      count,
-      postRequestedFor(urlPathEqualTo(auditUrl))
-        .withRequestBody(similarToJson(s"""{
+  ): Unit =
+    eventually {
+      verify(
+        count,
+        postRequestedFor(urlPathEqualTo(auditUrl))
+          .withRequestBody(similarToJson(s"""{
           |  "auditSource": "agent-mapping",
           |  "auditType": "$event",
           |  "tags": ${Json.toJson(tags)},
           |  "detail": ${Json.toJson(detail)}
 
           |}"""))
-    )
-  }
+      )
+    }
+  end verifyAuditRequestSent
 
-  def givenAuditConnector = {
+  def givenAuditConnector: StubMapping =
     stubFor(post(urlPathEqualTo("/write/audit/merged")).willReturn(aResponse().withStatus(204)))
     stubFor(post(urlPathEqualTo(auditUrl)).willReturn(aResponse().withStatus(204)))
-  }
+  end givenAuditConnector
 
   private def auditUrl = "/write/audit"
 
-  private def similarToJson(value: String) = equalToJson(
-    value.stripMargin,
-    true,
-    true
-  )
+  private def similarToJson(value: String) =
+    equalToJson(
+      value.stripMargin,
+      true,
+      true
+    )
+  end similarToJson
 
-}
+end DataStreamStub

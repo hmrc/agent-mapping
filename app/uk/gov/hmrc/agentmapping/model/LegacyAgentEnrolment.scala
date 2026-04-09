@@ -46,22 +46,22 @@ enum LegacyAgentEnrolment(val key: String):
   case AgentCode
   extends LegacyAgentEnrolment("AgentCode")
 
-  def dbKey: String =
+  def getDataBaseKey: String =
 
     this match
       case AgentCode => "agentcode"
       case _ => this.key.split("-")(1).toLowerCase
     end match
 
-  end dbKey
+  end getDataBaseKey
 
 end LegacyAgentEnrolment
 
 object LegacyAgentEnrolment:
 
-  def find(key: String): Option[LegacyAgentEnrolment] =
+  def findByName(name: String): Option[LegacyAgentEnrolment] =
 
-    key match
+    name match
       case "IR-SA-AGENT" => Some(IRAgentReference)
       case "HMCE-VAT-AGNT" => Some(AgentRefNo)
       case "HMRC-CHAR-AGENT" => Some(AgentCharId)
@@ -75,9 +75,9 @@ object LegacyAgentEnrolment:
       case _ => None
     end match
 
-  end find
+  end findByName
 
-  def findByDbKey(dbKey: String): Option[LegacyAgentEnrolment] =
+  def findByDataBaseKey(dbKey: String): Option[LegacyAgentEnrolment] =
 
     dbKey match
       case "sa" => Some(IRAgentReference)
@@ -93,17 +93,17 @@ object LegacyAgentEnrolment:
       case _ => None
     end match
 
-  end findByDbKey
+  end findByDataBaseKey
 
   implicit val format: Format[LegacyAgentEnrolment] =
-    new Format[LegacyAgentEnrolment] {
+    new Format[LegacyAgentEnrolment]:
 
       def reads(json: JsValue): JsResult[LegacyAgentEnrolment] =
 
         json match
           case JsString(s) =>
 
-            find(s) match
+            findByName(s) match
               case Some(x) => JsSuccess(x)
               case None => JsError(s"Unexpected enrolment type: ${json.toString}")
             end match
@@ -114,6 +114,5 @@ object LegacyAgentEnrolment:
       end reads
 
       def writes(o: LegacyAgentEnrolment): JsValue = JsString(o.key)
-    }
 
 end LegacyAgentEnrolment

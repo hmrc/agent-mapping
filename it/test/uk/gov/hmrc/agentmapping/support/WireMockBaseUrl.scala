@@ -1,5 +1,5 @@
 /*
- * Copyright 2025 HM Revenue & Customs
+ * Copyright 2026 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,14 +14,8 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentmapping.module
+package uk.gov.hmrc.agentmapping.support
 
-import com.google.inject.AbstractModule
-import uk.gov.hmrc.agentmapping.service.DuplicateArnScanService
+import java.net.URL
 
-class DuplicateArnScanModule
-extends AbstractModule:
-
-  override def configure(): Unit = bind(classOf[DuplicateArnScanService]).asEagerSingleton()
-
-end DuplicateArnScanModule
+case class WireMockBaseUrl(value: URL)

@@ -42,9 +42,8 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Try
 
-object Enrolment {
+object Enrolment:
   implicit val formats: OFormat[ModelEnrolment] = format
-}
 
 case class EnrolmentResponse(enrolments: Seq[ModelEnrolment])
 
@@ -78,7 +77,7 @@ class EnrolmentStoreProxyConnector @Inject() (
           userId,
           startRecord,
           IR_SA
-        ).flatMap {
+        ).flatMap:
           case (prefilteredCount, filteredCount) =>
             if prefilteredCount < batchSize then
               filteredCount + cumulativeCount
@@ -89,7 +88,6 @@ class EnrolmentStoreProxyConnector @Inject() (
                 startRecord + batchSize
               )
             end if
-        }
     end match
   end getClientCount
 
@@ -104,7 +102,6 @@ class EnrolmentStoreProxyConnector @Inject() (
       .get(url)
       .execute[HttpResponse]
       .map { response =>
-
         response.status match
           case Status.OK => EnrolmentResponse((response.json \ "enrolments").as[Seq[ModelEnrolment]])
           case Status.NO_CONTENT => EnrolmentResponse(Seq.empty)
@@ -151,7 +148,7 @@ end EnrolmentStoreProxyConnector
 object EnrolmentStoreProxyConnector:
 
   implicit val responseHandler: HttpReads[EnrolmentResponse] =
-    new HttpReads[EnrolmentResponse] {
+    new HttpReads[EnrolmentResponse]:
       override def read(
         method: String,
         url: String,
@@ -166,7 +163,6 @@ object EnrolmentStoreProxyConnector:
           s"Error retrieving client list from $url: status: ${response.status}, body: ${response.body}"
         )
       )
-    }
 
   implicit val writes: Writes[EnrolmentResponse] = Json.writes[EnrolmentResponse]
 

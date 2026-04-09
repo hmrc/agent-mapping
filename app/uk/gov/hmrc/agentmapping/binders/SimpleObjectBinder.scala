@@ -31,8 +31,7 @@ extends PathBindable[T]:
     value: String
   ): Either[String, T] =
 
-    try
-      Right(bind(value))
+    try Right(bind(value))
     catch
       case _: Throwable => Left(s"Cannot parse parameter '$key' with value '$value' as '${m.runtimeClass.getSimpleName}'")
     end try

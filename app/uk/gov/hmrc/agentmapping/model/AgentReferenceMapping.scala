@@ -29,15 +29,6 @@ import java.time.LocalDate
 import java.time.ZoneId
 import scala.language.implicitConversions
 
-case class AgentReferenceMappings(mappings: Seq[AgentReferenceMapping])
-
-object AgentReferenceMappings {
-  implicit def apiWrites(identifierKey: String = "identifier"): Writes[AgentReferenceMappings] = {
-    implicit val mappingWrites: Writes[AgentReferenceMapping] = AgentReferenceMapping.apiWrites(identifierKey)
-    Json.writes[AgentReferenceMappings]
-  }
-}
-
 case class AgentReferenceMapping(
   id: Option[ObjectId],
   arn: Arn,
@@ -45,7 +36,7 @@ case class AgentReferenceMapping(
   automapped: Boolean = false
 )
 
-object AgentReferenceMapping {
+object AgentReferenceMapping:
 
   implicit def apiWrites(identifierKey: String = "identifier"): Writes[AgentReferenceMapping] =
     (
@@ -59,10 +50,11 @@ object AgentReferenceMapping {
         mapping.id.map(mongoId => Instant.ofEpochSecond(mongoId.getTimestamp).atZone(ZoneId.of("Europe/London")).toLocalDate)
       )
     )
+  end apiWrites
 
   def databaseFormat(implicit
     crypto: Encrypter & Decrypter
-  ): Format[AgentReferenceMapping] = {
+  ): Format[AgentReferenceMapping] =
     val databaseWrites: Writes[AgentReferenceMapping] =
       ( // Not writing _id as MongoDB creates this automatically
         (__ \ "arn").write[Arn] and
@@ -81,6 +73,7 @@ object AgentReferenceMapping {
       )(AgentReferenceMapping.apply)
 
     Format(databaseReads, databaseWrites)
-  }
 
-}
+  end databaseFormat
+
+end AgentReferenceMapping

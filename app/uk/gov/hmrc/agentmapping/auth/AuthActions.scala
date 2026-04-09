@@ -79,10 +79,9 @@ with Logging:
         case _ =>
           logger.warn(s"error - missing credentials")
           Future.successful(Forbidden)
-      }.recover {
+      }.recover:
         case _: NoActiveSession => Unauthorized
         case _: AuthorisationException => Forbidden
-      }
   }
   end authorisedWithAgentCode
 
@@ -95,10 +94,9 @@ with Logging:
       .retrieve(credentials) {
         case Some(Credentials(providerId, _)) => body(request)(providerId)
         case _ => Future.successful(Forbidden)
-      }.recover {
+      }.recover:
         case _: NoActiveSession => Unauthorized
         case _: AuthorisationException => Forbidden
-      }
   }
   end authorisedWithProviderId
 
@@ -122,10 +120,9 @@ with Logging:
         case None => Future.successful(Forbidden)
       end match
 
-    }.recover {
+    }.recover:
       case _: NoActiveSession => Unauthorized
       case _: AuthorisationException => Forbidden
-    }
   }
   end authorisedAsSubscribedAgent
 
@@ -150,10 +147,9 @@ with Logging:
           case _ => Future.successful(Forbidden)
         end match
 
-    }.recover {
+    }.recover:
       case _: NoActiveSession => Unauthorized
       case _: AuthorisationException => Forbidden
-    }
   }
   end authorisedAsSubscribedAgentWithGroup
 
@@ -173,8 +169,7 @@ with Logging:
 
   private def decodeFromBase64(encodedString: String): String =
 
-    try
-      new String(Base64.getDecoder.decode(encodedString), UTF_8)
+    try new String(Base64.getDecoder.decode(encodedString), UTF_8)
     catch
       case _: Throwable => ""
     end try
@@ -220,14 +215,13 @@ with Logging:
     implicit ec: ExecutionContext
   ): Action[AnyContent] = Action.async { implicit request =>
     authorised(AuthProviders(PrivilegedApplication))
-      .retrieve(allEnrolments) {
+      .retrieve(allEnrolments):
         case allEnrols if allEnrols.enrolments.map(_.key).contains(strideRole) => body(request)
         case e =>
           logger.warn(
             s"Unauthorized Discovered during Stride Authentication: ${e.enrolments.map(enrol => enrol.key).mkString(",")}"
           )
           Future successful Unauthorized
-      }
       .recover { case e =>
         logger.warn(s"Error Discovered during Stride Authentication: ${e.getMessage}")
         Forbidden
@@ -257,9 +251,10 @@ with Logging:
       None
     else
       Some(
-        agentCodeOpt match
+        agentCodeOpt match {
           case None => identifiers
           case Some(ac) => identifiers + Identifier(LegacyAgentEnrolment.AgentCode, ac)
+        }
       )
     end if
   end captureIdentifiersAndAgentCodeFrom
@@ -274,13 +269,13 @@ with Logging:
     enrolments.enrolments
       .map(enrolment =>
         LegacyAgentEnrolment
-          .find(enrolment.key)
+          .findByName(enrolment.key)
           .map(eType => AgentEnrolment(eType, enrolment.identifiers.map(_.value)))
       )
-      .collect {
+      .collect:
         // We only use the FIRST value; since all the enrolments we care about are single valued
         case Some(AgentEnrolment(enrolmentType, Seq(enrolmentIdentifierValue))) => Identifier(enrolmentType, enrolmentIdentifierValue)
-      }
+
   end captureIdentifiersFrom
 
 end AuthActions

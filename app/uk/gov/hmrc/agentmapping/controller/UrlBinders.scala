@@ -22,7 +22,7 @@ import uk.gov.hmrc.agentmapping.model.Arn
 object UrlBinders:
 
   implicit val arnBinder: PathBindable[Arn] =
-    new PathBindable[Arn] {
+    new PathBindable[Arn]:
 
       override def bind(
         key: String,
@@ -41,7 +41,5 @@ object UrlBinders:
         key: String,
         arn: Arn
       ): String = arn.value
-
-    }
 
 end UrlBinders

@@ -36,6 +36,7 @@ class AppConfig @Inject() (servicesConfig: ServicesConfig):
     val password = servicesConfig.getString("agent-termination.password")
 
     BasicAuthentication(username, password)
+
   end expectedAuth
 
 end AppConfig

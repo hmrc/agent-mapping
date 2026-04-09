@@ -17,12 +17,8 @@
 package uk.gov.hmrc.agentmapping.repository
 
 import uk.gov.hmrc.agentmapping.model._
-import uk.gov.hmrc.crypto.Decrypter
-import uk.gov.hmrc.crypto.Encrypter
-import uk.gov.hmrc.mongo.MongoComponent
 
 import javax.inject.Inject
-import javax.inject.Named
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
@@ -40,7 +36,7 @@ class MappingRepositories @Inject() (
   iRCTAGENTMappingRepository: IRCTAGENTMappingRepository,
   iRPAYEAGENTMappingRepository: IRPAYEAGENTMappingRepository,
   iRSDLTAGENTMappingRepository: IRSDLTAGENTMappingRepository
-) {
+):
 
   private val repositories: Map[LegacyAgentEnrolment, MappingRepository] = Map(
     LegacyAgentEnrolment.AgentCode -> agentCodeMappingRepository,
@@ -54,81 +50,14 @@ class MappingRepositories @Inject() (
     LegacyAgentEnrolment.IRAgentReferencePaye -> iRPAYEAGENTMappingRepository,
     LegacyAgentEnrolment.SdltStorn -> iRSDLTAGENTMappingRepository
   )
-  def get(legacyAgentEnrolmentType: LegacyAgentEnrolment): MappingRepository = repositories(legacyAgentEnrolmentType)
 
-  def map[T](f: MappingRepository => T): Seq[T] = repositories.values.map(f).toSeq
+  def get(legacyAgentEnrolmentType: LegacyAgentEnrolment): MappingRepository =
+    repositories(legacyAgentEnrolmentType)
 
-  def deleteDataForArn(arn: Arn)(implicit ec: ExecutionContext): Future[Seq[Int]] = Future
-    .sequence(repositories.map { case (_, repository) => repository.deleteByArn(arn).map(dr => dr.getDeletedCount.toInt) }.toSeq)
+  def map[T](f: MappingRepository => T): Seq[T] =
+    repositories.values.map(f).toSeq
 
-}
+  def deleteDataForArn(arn: Arn)(implicit ec: ExecutionContext): Future[Seq[Int]] =
+    Future.sequence(repositories.map { case (_, repository) => repository.deleteByArn(arn).map(dr => dr.getDeletedCount.toInt) }.toSeq)
 
-@Singleton
-class IRSAAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
-  ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter & Decrypter
-)
-extends MappingRepository(collectionName = "IR-SA-AGENT", mongo = mongoComponent)
-
-@Singleton
-class NewAgentCodeMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
-  ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter & Decrypter
-)
-extends MappingRepository(collectionName = "AgentCode", mongo = mongoComponent)
-
-@Singleton
-class HMCEVATAGNTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
-  ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter & Decrypter
-)
-extends MappingRepository("HMCE-VAT-AGNT", mongo = mongoComponent)
-
-@Singleton
-class HMRCCHARAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
-  ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter & Decrypter
-)
-extends MappingRepository("HMRC-CHAR-AGENT", mongo = mongoComponent)
-
-@Singleton
-class HMRCGTSAGNTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
-  ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter & Decrypter
-)
-extends MappingRepository("HMRC-GTS-AGNT", mongo = mongoComponent)
-
-@Singleton
-class HMRCMGDAGNTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
-  ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter & Decrypter
-)
-extends MappingRepository("HMRC-MGD-AGNT", mongo = mongoComponent)
-
-@Singleton
-class HMRCNOVRNAGNTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
-  ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter & Decrypter
-)
-extends MappingRepository("HMRC-NOVRN-AGNT", mongo = mongoComponent)
-
-@Singleton
-class IRCTAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
-  ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter & Decrypter
-)
-extends MappingRepository("IR-CT-AGENT", mongo = mongoComponent)
-
-@Singleton
-class IRPAYEAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
-  ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter & Decrypter
-)
-extends MappingRepository("IR-PAYE-AGENT", mongo = mongoComponent)
-
-@Singleton
-class IRSDLTAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
-  ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter & Decrypter
-)
-extends MappingRepository("IR-SDLT-AGENT", mongo = mongoComponent)
+end MappingRepositories
