@@ -23,28 +23,28 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
 
-enum LegacyAgentEnrolment(val key: String):
+enum LegacyAgentEnrolmentType(val key: String):
 
   case IRAgentReference
-  extends LegacyAgentEnrolment("IR-SA-AGENT")
+  extends LegacyAgentEnrolmentType("IR-SA-AGENT")
   case AgentRefNo
-  extends LegacyAgentEnrolment("HMCE-VAT-AGNT")
+  extends LegacyAgentEnrolmentType("HMCE-VAT-AGNT")
   case AgentCharId
-  extends LegacyAgentEnrolment("HMRC-CHAR-AGENT")
+  extends LegacyAgentEnrolmentType("HMRC-CHAR-AGENT")
   case HmrcGtsAgentRef
-  extends LegacyAgentEnrolment("HMRC-GTS-AGNT")
+  extends LegacyAgentEnrolmentType("HMRC-GTS-AGNT")
   case HmrcMgdAgentRef
-  extends LegacyAgentEnrolment("HMRC-MGD-AGNT")
+  extends LegacyAgentEnrolmentType("HMRC-MGD-AGNT")
   case VATAgentRefNo
-  extends LegacyAgentEnrolment("HMRC-NOVRN-AGNT")
+  extends LegacyAgentEnrolmentType("HMRC-NOVRN-AGNT")
   case IRAgentReferenceCt
-  extends LegacyAgentEnrolment("IR-CT-AGENT")
+  extends LegacyAgentEnrolmentType("IR-CT-AGENT")
   case IRAgentReferencePaye
-  extends LegacyAgentEnrolment("IR-PAYE-AGENT")
+  extends LegacyAgentEnrolmentType("IR-PAYE-AGENT")
   case SdltStorn
-  extends LegacyAgentEnrolment("IR-SDLT-AGENT")
+  extends LegacyAgentEnrolmentType("IR-SDLT-AGENT")
   case AgentCode
-  extends LegacyAgentEnrolment("AgentCode")
+  extends LegacyAgentEnrolmentType("AgentCode")
 
   def getDataBaseKey: String =
 
@@ -55,11 +55,11 @@ enum LegacyAgentEnrolment(val key: String):
 
   end getDataBaseKey
 
-end LegacyAgentEnrolment
+end LegacyAgentEnrolmentType
 
-object LegacyAgentEnrolment:
+object LegacyAgentEnrolmentType:
 
-  def findByName(name: String): Option[LegacyAgentEnrolment] =
+  def findByName(name: String): Option[LegacyAgentEnrolmentType] =
 
     name match
       case "IR-SA-AGENT" => Some(IRAgentReference)
@@ -77,7 +77,7 @@ object LegacyAgentEnrolment:
 
   end findByName
 
-  def findByDataBaseKey(dbKey: String): Option[LegacyAgentEnrolment] =
+  def findByDataBaseKey(dbKey: String): Option[LegacyAgentEnrolmentType] =
 
     dbKey match
       case "sa" => Some(IRAgentReference)
@@ -95,10 +95,10 @@ object LegacyAgentEnrolment:
 
   end findByDataBaseKey
 
-  implicit val format: Format[LegacyAgentEnrolment] =
-    new Format[LegacyAgentEnrolment]:
+  implicit val format: Format[LegacyAgentEnrolmentType] =
+    new Format[LegacyAgentEnrolmentType]:
 
-      def reads(json: JsValue): JsResult[LegacyAgentEnrolment] =
+      def reads(json: JsValue): JsResult[LegacyAgentEnrolmentType] =
 
         json match
           case JsString(s) =>
@@ -113,6 +113,6 @@ object LegacyAgentEnrolment:
 
       end reads
 
-      def writes(o: LegacyAgentEnrolment): JsValue = JsString(o.key)
+      def writes(o: LegacyAgentEnrolmentType): JsValue = JsString(o.key)
 
-end LegacyAgentEnrolment
+end LegacyAgentEnrolmentType

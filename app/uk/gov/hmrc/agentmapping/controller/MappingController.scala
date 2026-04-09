@@ -121,7 +121,7 @@ with Logging:
 
   def findSaMappings(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     authActions.authorised():
-      repositories.get(LegacyAgentEnrolment.IRAgentReference).findBy(arn) map { matches =>
+      repositories.get(LegacyAgentEnrolmentType.IRAgentReference).findBy(arn) map { matches =>
         if matches.nonEmpty then
           Ok(toJson(AgentReferenceMappings(matches))(using AgentReferenceMappings.apiWrites("saAgentReference")))
         else
@@ -134,7 +134,7 @@ with Logging:
 
   def findAgentCodeMappings(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     authActions.authorised():
-      repositories.get(LegacyAgentEnrolment.AgentCode).findBy(arn) map { matches =>
+      repositories.get(LegacyAgentEnrolmentType.AgentCode).findBy(arn) map { matches =>
         if matches.nonEmpty then
           Ok(toJson(AgentReferenceMappings(matches))(using AgentReferenceMappings.apiWrites("agentCode")))
         else
@@ -153,7 +153,7 @@ with Logging:
   ): Action[AnyContent] = Action.async { implicit request =>
     authActions.authorised():
 
-      LegacyAgentEnrolment.findByDataBaseKey(key) match
+      LegacyAgentEnrolmentType.findByDataBaseKey(key) match
         case Some(service) =>
           repositories.get(service).findBy(arn) map { matches =>
             if matches.nonEmpty then
@@ -203,7 +203,7 @@ with Logging:
     enrolments
       .filter(_.state.equalsIgnoreCase("Activated"))
       .flatMap { enrolment =>
-        LegacyAgentEnrolment
+        LegacyAgentEnrolmentType
           .findByName(enrolment.service)
           .fold(Seq.empty[Identifier]) { service =>
             enrolment.identifiers.map(id =>

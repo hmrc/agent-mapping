@@ -38,20 +38,20 @@ class MappingRepositories @Inject() (
   iRSDLTAGENTMappingRepository: IRSDLTAGENTMappingRepository
 ):
 
-  private val repositories: Map[LegacyAgentEnrolment, MappingRepository] = Map(
-    LegacyAgentEnrolment.AgentCode -> agentCodeMappingRepository,
-    LegacyAgentEnrolment.IRAgentReference -> iRSAAGENTMappingRepository,
-    LegacyAgentEnrolment.AgentRefNo -> hMCEVATAGNTMappingRepository,
-    LegacyAgentEnrolment.AgentCharId -> hMRCCHARAGENTMappingRepository,
-    LegacyAgentEnrolment.HmrcGtsAgentRef -> hMRCGTSAGNTMappingRepository,
-    LegacyAgentEnrolment.HmrcMgdAgentRef -> hMRCMGDAGNTMappingRepository,
-    LegacyAgentEnrolment.VATAgentRefNo -> hMRCNOVRNAGNTMappingRepository,
-    LegacyAgentEnrolment.IRAgentReferenceCt -> iRCTAGENTMappingRepository,
-    LegacyAgentEnrolment.IRAgentReferencePaye -> iRPAYEAGENTMappingRepository,
-    LegacyAgentEnrolment.SdltStorn -> iRSDLTAGENTMappingRepository
+  private val repositories: Map[LegacyAgentEnrolmentType, MappingRepository] = Map(
+    LegacyAgentEnrolmentType.AgentCode -> agentCodeMappingRepository,
+    LegacyAgentEnrolmentType.IRAgentReference -> iRSAAGENTMappingRepository,
+    LegacyAgentEnrolmentType.AgentRefNo -> hMCEVATAGNTMappingRepository,
+    LegacyAgentEnrolmentType.AgentCharId -> hMRCCHARAGENTMappingRepository,
+    LegacyAgentEnrolmentType.HmrcGtsAgentRef -> hMRCGTSAGNTMappingRepository,
+    LegacyAgentEnrolmentType.HmrcMgdAgentRef -> hMRCMGDAGNTMappingRepository,
+    LegacyAgentEnrolmentType.VATAgentRefNo -> hMRCNOVRNAGNTMappingRepository,
+    LegacyAgentEnrolmentType.IRAgentReferenceCt -> iRCTAGENTMappingRepository,
+    LegacyAgentEnrolmentType.IRAgentReferencePaye -> iRPAYEAGENTMappingRepository,
+    LegacyAgentEnrolmentType.SdltStorn -> iRSDLTAGENTMappingRepository
   )
 
-  def get(legacyAgentEnrolmentType: LegacyAgentEnrolment): MappingRepository =
+  def get(legacyAgentEnrolmentType: LegacyAgentEnrolmentType): MappingRepository =
     repositories(legacyAgentEnrolmentType)
 
   def map[T](f: MappingRepository => T): Seq[T] =

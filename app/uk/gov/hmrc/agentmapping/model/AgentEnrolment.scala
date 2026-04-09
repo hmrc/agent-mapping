@@ -20,7 +20,7 @@ import play.api.libs.json.Json
 import play.api.libs.json.OFormat
 
 final case class AgentEnrolment(
-  enrolmentType: LegacyAgentEnrolment,
+  enrolmentType: LegacyAgentEnrolmentType,
   identifierValue: IdentifierValue
 )
 

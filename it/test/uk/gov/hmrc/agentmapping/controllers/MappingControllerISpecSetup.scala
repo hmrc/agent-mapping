@@ -31,7 +31,7 @@ import uk.gov.hmrc.agentmapping.stubs.DataStreamStub
 import uk.gov.hmrc.agentmapping.stubs.EnrolmentStoreStubs
 import uk.gov.hmrc.agentmapping.support.WireMockSupport
 import uk.gov.hmrc.agentmapping.controller.MappingController
-import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolment
+import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
 import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
 import uk.gov.hmrc.agentmapping.repository.*
 import uk.gov.hmrc.mongo.MongoComponent
@@ -80,9 +80,9 @@ with MongoSupport:
 
   lazy val controller: MappingController = app.injector.instanceOf[MappingController]
 
-  lazy val saRepo: MappingRepository = repositories.get(LegacyAgentEnrolment.IRAgentReference)
-  lazy val vatRepo: MappingRepository = repositories.get(LegacyAgentEnrolment.AgentRefNo)
-  lazy val agentCodeRepo: MappingRepository = repositories.get(LegacyAgentEnrolment.AgentCode)
+  lazy val saRepo: MappingRepository = repositories.get(LegacyAgentEnrolmentType.IRAgentReference)
+  lazy val vatRepo: MappingRepository = repositories.get(LegacyAgentEnrolmentType.AgentRefNo)
+  lazy val agentCodeRepo: MappingRepository = repositories.get(LegacyAgentEnrolmentType.AgentCode)
 
   private class TestGuiceModule
   extends AbstractModule:

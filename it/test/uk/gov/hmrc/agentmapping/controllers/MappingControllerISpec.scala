@@ -26,7 +26,7 @@ import play.api.libs.ws.WSClient
 import play.api.libs.ws.WSResponse
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.CreateMapping
 import uk.gov.hmrc.agentmapping.config.AppConfig
-import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolment
+import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
 import uk.gov.hmrc.agentmapping.model.{Enrolment as ModelEnrolment, EnrolmentIdentifier as ModelEnrolmentIdentifier, *}
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.auth.core.Enrolment
@@ -117,7 +117,7 @@ with ScalaFutures:
   def terminateAgentsMapping(arn: Arn): String = s"/agent-mapping/agent/${arn.value}/terminate"
 
   case class TestFixture(
-    legacyAgentEnrolmentType: LegacyAgentEnrolment,
+    legacyAgentEnrolmentType: LegacyAgentEnrolmentType,
     identifierKey: String,
     identifierValue: String
   ) {
@@ -125,52 +125,52 @@ with ScalaFutures:
   }
 
   val AgentCodeTestFixture = TestFixture(
-    LegacyAgentEnrolment.AgentCode,
+    LegacyAgentEnrolmentType.AgentCode,
     "AgentCode",
     agentCode
   )
   val IRSAAGENTTestFixture = TestFixture(
-    LegacyAgentEnrolment.IRAgentReference,
+    LegacyAgentEnrolmentType.IRAgentReference,
     IRSAAgentReference,
     "A1111A"
   )
   val HMCEVATAGNTTestFixture = TestFixture(
-    LegacyAgentEnrolment.AgentRefNo,
+    LegacyAgentEnrolmentType.AgentRefNo,
     AgentReferenceNo,
     "101747696"
   )
   val IRCTAGENTTestFixture = TestFixture(
-    LegacyAgentEnrolment.IRAgentReferenceCt,
+    LegacyAgentEnrolmentType.IRAgentReferenceCt,
     IRSAAgentReference,
     "B2121C"
   )
   val HMRCGTSAGNTTestFixture = TestFixture(
-    LegacyAgentEnrolment.HmrcGtsAgentRef,
+    LegacyAgentEnrolmentType.HmrcGtsAgentRef,
     "HMRCGTSAGENTREF",
     "AB8964622K"
   )
   val HMRCNOVRNAGNTTestFixture = TestFixture(
-    LegacyAgentEnrolment.VATAgentRefNo,
+    LegacyAgentEnrolmentType.VATAgentRefNo,
     "VATAgentRefNo",
     "FGH79/96KUJ"
   )
   val HMRCCHARAGENTTestFixture = TestFixture(
-    LegacyAgentEnrolment.AgentCharId,
+    LegacyAgentEnrolmentType.AgentCharId,
     "AGENTCHARID",
     "FGH79/96KUJ"
   )
   val HMRCMGDAGNTTestFixture = TestFixture(
-    LegacyAgentEnrolment.HmrcMgdAgentRef,
+    LegacyAgentEnrolmentType.HmrcMgdAgentRef,
     "HMRCMGDAGENTREF",
     "737B.89"
   )
   val IRPAYEAGENTTestFixture = TestFixture(
-    LegacyAgentEnrolment.IRAgentReferencePaye,
+    LegacyAgentEnrolmentType.IRAgentReferencePaye,
     IRSAAgentReference,
     "F9876J"
   )
   val IRSDLTAGENTTestFixture = TestFixture(
-    LegacyAgentEnrolment.SdltStorn,
+    LegacyAgentEnrolmentType.SdltStorn,
     "STORN",
     "AAA0008"
   )
@@ -185,63 +185,63 @@ with ScalaFutures:
   val IRSAAGENTUserMapping = UserMapping(
     authProviderId,
     None,
-    Seq(AgentEnrolment(LegacyAgentEnrolment.IRAgentReference, IdentifierValue("A1111A"))),
+    Seq(AgentEnrolment(LegacyAgentEnrolmentType.IRAgentReference, IdentifierValue("A1111A"))),
     0,
     ""
   )
   val HMCEVATAGNTUserMapping = UserMapping(
     authProviderId,
     None,
-    Seq(AgentEnrolment(LegacyAgentEnrolment.AgentRefNo, IdentifierValue("101747696"))),
+    Seq(AgentEnrolment(LegacyAgentEnrolmentType.AgentRefNo, IdentifierValue("101747696"))),
     0,
     ""
   )
   val IRCTAGENTUserMapping = UserMapping(
     authProviderId,
     None,
-    Seq(AgentEnrolment(LegacyAgentEnrolment.IRAgentReferenceCt, IdentifierValue("B2121C"))),
+    Seq(AgentEnrolment(LegacyAgentEnrolmentType.IRAgentReferenceCt, IdentifierValue("B2121C"))),
     0,
     ""
   )
   val HMRCGTSAGNTUserMapping = UserMapping(
     authProviderId,
     None,
-    Seq(AgentEnrolment(LegacyAgentEnrolment.HmrcGtsAgentRef, IdentifierValue("AB8964622K"))),
+    Seq(AgentEnrolment(LegacyAgentEnrolmentType.HmrcGtsAgentRef, IdentifierValue("AB8964622K"))),
     0,
     ""
   )
   val HMRCNOVRNAGNTUserMapping = UserMapping(
     authProviderId,
     None,
-    Seq(AgentEnrolment(LegacyAgentEnrolment.VATAgentRefNo, IdentifierValue("FGH79/96KUJ"))),
+    Seq(AgentEnrolment(LegacyAgentEnrolmentType.VATAgentRefNo, IdentifierValue("FGH79/96KUJ"))),
     0,
     ""
   )
   val HMRCCHARAGENTUserMapping = UserMapping(
     authProviderId,
     None,
-    Seq(AgentEnrolment(LegacyAgentEnrolment.AgentCharId, IdentifierValue("FGH79/96KUJ"))),
+    Seq(AgentEnrolment(LegacyAgentEnrolmentType.AgentCharId, IdentifierValue("FGH79/96KUJ"))),
     0,
     ""
   )
   val HMRCMGDAGNTUserMapping = UserMapping(
     authProviderId,
     None,
-    Seq(AgentEnrolment(LegacyAgentEnrolment.HmrcMgdAgentRef, IdentifierValue("737B.89"))),
+    Seq(AgentEnrolment(LegacyAgentEnrolmentType.HmrcMgdAgentRef, IdentifierValue("737B.89"))),
     0,
     ""
   )
   val IRPAYEAGENTUserMapping = UserMapping(
     authProviderId,
     None,
-    Seq(AgentEnrolment(LegacyAgentEnrolment.IRAgentReferencePaye, IdentifierValue("F9876J"))),
+    Seq(AgentEnrolment(LegacyAgentEnrolmentType.IRAgentReferencePaye, IdentifierValue("F9876J"))),
     0,
     ""
   )
   val IRSDLTAGENTUserMapping = UserMapping(
     authProviderId,
     None,
-    Seq(AgentEnrolment(LegacyAgentEnrolment.SdltStorn, IdentifierValue("AAA0008"))),
+    Seq(AgentEnrolment(LegacyAgentEnrolmentType.SdltStorn, IdentifierValue("AAA0008"))),
     0,
     ""
   )
@@ -336,7 +336,7 @@ with ScalaFutures:
           groupId = groupId,
           enrolments = List(
             ModelEnrolment(
-              LegacyAgentEnrolment.AgentCode.key,
+              LegacyAgentEnrolmentType.AgentCode.key,
               "Activated",
               Seq(ModelEnrolmentIdentifier("UTR", identifierValue))
             )
@@ -380,7 +380,7 @@ with ScalaFutures:
           groupId = groupId,
           enrolments = List(
             ModelEnrolment(
-              LegacyAgentEnrolment.AgentCode.key,
+              LegacyAgentEnrolmentType.AgentCode.key,
               "Pending",
               Seq(ModelEnrolmentIdentifier("UTR", "1234567890"))
             )
@@ -405,7 +405,7 @@ with ScalaFutures:
           groupId = groupId,
           enrolments = List(
             ModelEnrolment(
-              LegacyAgentEnrolment.AgentCode.key,
+              LegacyAgentEnrolmentType.AgentCode.key,
               "Activated",
               Seq(ModelEnrolmentIdentifier("UTR", "1234567890"))
             )
@@ -433,7 +433,7 @@ with ScalaFutures:
           groupId = groupId,
           enrolments = List(
             ModelEnrolment(
-              LegacyAgentEnrolment.AgentCode.key,
+              LegacyAgentEnrolmentType.AgentCode.key,
               "Activated",
               Seq(ModelEnrolmentIdentifier("UTR", identifierValue))
             )
@@ -454,7 +454,7 @@ with ScalaFutures:
           groupId = groupId,
           enrolments = List(
             ModelEnrolment(
-              LegacyAgentEnrolment.AgentCode.key,
+              LegacyAgentEnrolmentType.AgentCode.key,
               "Activated",
               Seq(ModelEnrolmentIdentifier("UTR", "1234567890"))
             )
@@ -540,7 +540,7 @@ with ScalaFutures:
       "authenticated user with IR-SA-AGENT enrolment but without Agent Affinity group attempts to create mapping" in {
 
         givenUserIsAuthorisedFor(
-          LegacyAgentEnrolment.IRAgentReference.key,
+          LegacyAgentEnrolmentType.IRAgentReference.key,
           IRSAAgentReference,
           "2000000000",
           "testCredId",

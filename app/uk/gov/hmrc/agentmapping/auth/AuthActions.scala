@@ -21,7 +21,7 @@ import play.api.mvc.*
 import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.agentmapping.model.BasicAuthentication
 import uk.gov.hmrc.agentmapping.model.Identifier
-import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolment
+import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
 import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
@@ -253,7 +253,7 @@ with Logging:
       Some(
         agentCodeOpt match {
           case None => identifiers
-          case Some(ac) => identifiers + Identifier(LegacyAgentEnrolment.AgentCode, ac)
+          case Some(ac) => identifiers + Identifier(LegacyAgentEnrolmentType.AgentCode, ac)
         }
       )
     end if
@@ -262,13 +262,13 @@ with Logging:
   private def captureIdentifiersFrom(enrolments: Enrolments): Set[Identifier] =
 
     case class AgentEnrolment(
-      legacyAgentEnrolmentType: LegacyAgentEnrolment,
+      legacyAgentEnrolmentType: LegacyAgentEnrolmentType,
       values: Seq[String]
     )
 
     enrolments.enrolments
       .map(enrolment =>
-        LegacyAgentEnrolment
+        LegacyAgentEnrolmentType
           .findByName(enrolment.key)
           .map(eType => AgentEnrolment(eType, enrolment.identifiers.map(_.value)))
       )

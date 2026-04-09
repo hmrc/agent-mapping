@@ -28,7 +28,7 @@ import uk.gov.hmrc.agentmapping.config.AppConfig
 import uk.gov.hmrc.agentmapping.connector.EnrolmentResponse
 import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentmapping.model.EnrolmentIdentifier
-import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolment
+import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
 import uk.gov.hmrc.agentmapping.model.Enrolment as ModelEnrolment
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.play.bootstrap.metrics.Metrics
@@ -81,7 +81,7 @@ with EnrolmentStoreStubs:
         "Pending",
         Seq(EnrolmentIdentifier("UTR", "1234567890"))
       ) :: List.fill(recordsToReturn - 1)(ModelEnrolment(
-        LegacyAgentEnrolment.AgentCode.key,
+        LegacyAgentEnrolmentType.AgentCode.key,
         "Activated",
         Seq(EnrolmentIdentifier("UTR", "1234567890"))
       )))
