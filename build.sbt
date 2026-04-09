@@ -1,18 +1,14 @@
 import uk.gov.hmrc.DefaultBuildSettings
 import CodeCoverageSettings.scoverageSettings
-import uk.gov.hmrc.DefaultBuildSettings.targetJvm
 
 val appName = "agent-mapping"
 
 ThisBuild / majorVersion := 1
-ThisBuild / scalaVersion := "3.8.3"
+ThisBuild / scalaVersion := "3.3.7"
 
 val scalaCOptions = Seq(
-//  "-Werror",
-  "-indent",
-  "-rewrite",
-  "-deprecation",
-  "-Wunused:all",
+  "-Werror",
+  "-Wconf:msg=Flag.*repeatedly:s",
   "-feature",
   "-Wconf:src=target/.*:s", // silence warnings from compiled files
   "-Wconf:src=routes/.*:s", // silence warnings from routes files
@@ -34,7 +30,6 @@ lazy val root = project
     Test / parallelExecution := false,
     Test / logBuffered := false,
     scoverageSettings,
-    targetJvm := "jvm-21"
   )
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin)
@@ -49,6 +44,5 @@ lazy val it = project
     Compile / scalafmtOnCompile := true,
     Test / scalafmtOnCompile := true,
     Test / logBuffered := false,
-    targetJvm := "jvm-21"
   )
 
