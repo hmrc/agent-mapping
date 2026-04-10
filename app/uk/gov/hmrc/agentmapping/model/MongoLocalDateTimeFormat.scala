@@ -25,24 +25,24 @@ import java.time.Instant
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
-object MongoLocalDateTimeFormat {
+object MongoLocalDateTimeFormat:
 // LocalDateTime must be written to DB as ISODate to allow the expiry TTL on createdOn date to work
 
-  final val localDateTimeReads: Reads[LocalDateTime] = Reads
+  private final val localDateTimeReads: Reads[LocalDateTime] = Reads
     .at[String](__ \ "$date" \ "$numberLong")
     .map { dateTime =>
       Instant.ofEpochMilli(dateTime.toLong).atZone(ZoneOffset.UTC).toLocalDateTime
     }
 
   // for data that exists prior to the hmrc-mongo migration -
-  final val legacyDateTimeReads: Reads[LocalDateTime] = Reads
+  private final val legacyDateTimeReads: Reads[LocalDateTime] = Reads
     .at[String](__)
     .map(dateTime => LocalDateTime.parse(dateTime))
 
-  final val localDateTimeWrites: Writes[LocalDateTime] = Writes
+  private final val localDateTimeWrites: Writes[LocalDateTime] = Writes
     .at[String](__ \ "$date" \ "$numberLong")
     .contramap(_.toInstant(ZoneOffset.UTC).toEpochMilli.toString)
 
   implicit final val localDateTimeFormat: Format[LocalDateTime] = Format(localDateTimeReads.orElse(legacyDateTimeReads), localDateTimeWrites)
 
-}
+end MongoLocalDateTimeFormat

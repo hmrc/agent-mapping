@@ -23,6 +23,8 @@ import play.api.libs.functional.syntax._
   */
 final case class IdentifierValue(value: String)
 
-object IdentifierValue {
+object IdentifierValue:
+
   implicit val format: Format[IdentifierValue] = implicitly[Format[String]].inmap(IdentifierValue(_), _.value)
-}
+
+end IdentifierValue

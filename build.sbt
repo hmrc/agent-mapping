@@ -4,24 +4,18 @@ import CodeCoverageSettings.scoverageSettings
 val appName = "agent-mapping"
 
 ThisBuild / majorVersion := 1
-ThisBuild / scalaVersion := "2.13.18"
+ThisBuild / scalaVersion := "3.3.7"
 
 val scalaCOptions = Seq(
-  "-Xfatal-warnings",
-  "-Xlint:-missing-interpolator,_",
-  "-Ywarn-value-discard",
-  "-Ywarn-dead-code",
-  "-deprecation",
+  "-Werror",
+  "-Wconf:msg=Flag.*repeatedly:s",
   "-feature",
-  "-unchecked",
   "-Wconf:src=target/.*:s", // silence warnings from compiled files
   "-Wconf:src=routes/.*:s", // silence warnings from routes files
-  "-Wconf:src=*html:w", // silence html warnings as they are wrong
-  "-language:implicitConversions"
 )
 
-lazy val root = (project in file("."))
-  .disablePlugins(JUnitXmlReportPlugin)
+lazy val root = project
+  .in(file("."))
   .settings(
     name := appName,
     organization := "uk.gov.hmrc",
@@ -35,7 +29,7 @@ lazy val root = (project in file("."))
     Compile / unmanagedResourceDirectories += baseDirectory.value / "resources",
     Test / parallelExecution := false,
     Test / logBuffered := false,
-    scoverageSettings
+    scoverageSettings,
   )
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin)
@@ -49,6 +43,6 @@ lazy val it = project
   .settings(
     Compile / scalafmtOnCompile := true,
     Test / scalafmtOnCompile := true,
-    Test / logBuffered := false
+    Test / logBuffered := false,
   )
 

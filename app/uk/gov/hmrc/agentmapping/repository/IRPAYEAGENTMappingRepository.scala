@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2026 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,16 +14,20 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.play.encoding
+package uk.gov.hmrc.agentmapping.repository
 
-import java.nio.charset.StandardCharsets.UTF_8
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.mongo.MongoComponent
 
-import play.utils.UriEncoding
+import javax.inject.Inject
+import javax.inject.Named
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
 
-object UriPathEncoding {
-
-  def encodePathSegments(pathSegments: String*): String = pathSegments.map(encodePathSegment).mkString("/", "/", "")
-
-  def encodePathSegment(pathSegment: String): String = UriEncoding.encodePathSegment(pathSegment, UTF_8.name)
-
-}
+@Singleton
+class IRPAYEAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
+  ec: ExecutionContext,
+  @Named("aes") crypto: Encrypter & Decrypter
+)
+extends MappingRepository("IR-PAYE-AGENT", mongo = mongoComponent)

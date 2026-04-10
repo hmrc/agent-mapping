@@ -31,16 +31,16 @@ extends AnyWordSpec
 with Matchers
 with ScalaFutures
 with BeforeAndAfterEach
-with GuiceOneAppPerSuite {
+with GuiceOneAppPerSuite:
 
   lazy val repository: NewAgentCodeMappingRepository = app.injector.instanceOf[NewAgentCodeMappingRepository]
 
   lazy val service: DuplicateArnScanService = app.injector.instanceOf[DuplicateArnScanService]
 
-  override def beforeEach(): Unit = {
+  override def beforeEach(): Unit =
     super.beforeEach()
     repository.deleteAll().futureValue
-  }
+  end beforeEach
 
   "findIdentifierArnCounts" should {
     "return a row for each identifier that has more than one ARN" in {
@@ -57,4 +57,4 @@ with GuiceOneAppPerSuite {
     }
   }
 
-}
+end DuplicateArnScanServiceISpec

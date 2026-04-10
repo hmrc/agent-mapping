@@ -17,9 +17,10 @@
 package uk.gov.hmrc.agentmapping
 
 import scala.concurrent.Future
+import scala.language.implicitConversions
 
-package object util {
+package object util:
 
   implicit def toFuture[A](a: A): Future[A] = Future.successful(a)
 
-}
+end util

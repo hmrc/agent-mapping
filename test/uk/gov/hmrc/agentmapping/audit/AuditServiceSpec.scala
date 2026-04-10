@@ -26,6 +26,7 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.test.FakeRequest
+import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.CreateMapping
 import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.http.HeaderNames
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
@@ -40,9 +41,9 @@ with Matchers
 with OptionValues
 with ScalaFutures
 with MockitoSugar
-with Eventually {
-  "auditEvent" should {
-    "send an event with the correct fields" in {
+with Eventually:
+  "auditEvent" should:
+    "send an event with the correct fields" in:
       val mockConnector = mock[AuditConnector]
       val service = new AuditService(mockConnector)
 
@@ -56,6 +57,7 @@ with Eventually {
             "agentReferenceNumber" -> "GARN0000247"
           )
         )(
+          using
           FakeRequest("GET", "/path").withHeaders(
             HeaderNames.authorisation -> "dummy bearer token",
             HeaderNames.xSessionId -> "dummy session id",
@@ -64,11 +66,11 @@ with Eventually {
         )
         .futureValue
 
-      eventually {
+      eventually:
         val captor = ArgumentCaptor.forClass(classOf[DataEvent])
-        verify(mockConnector).sendEvent(captor.capture())(any[HeaderCarrier], any[ExecutionContext])
-        captor.getValue.asInstanceOf[DataEvent] shouldBe an[DataEvent]
-        val sentEvent = captor.getValue.asInstanceOf[DataEvent]
+        verify(mockConnector).sendEvent(captor.capture())(using any[HeaderCarrier], any[ExecutionContext])
+        captor.getValue shouldBe an[DataEvent]
+        val sentEvent = captor.getValue
 
         sentEvent.auditType shouldBe "CreateMapping"
         sentEvent.detail("agentReferenceNumber") shouldBe "GARN0000247"
@@ -81,8 +83,5 @@ with Eventually {
         sentEvent.tags("path") shouldBe "/path"
         sentEvent.tags("X-Session-ID") shouldBe "dummy session id"
         sentEvent.tags("X-Request-ID") shouldBe "dummy request id"
-      }
-    }
-  }
 
-}
+end AuditServiceSpec

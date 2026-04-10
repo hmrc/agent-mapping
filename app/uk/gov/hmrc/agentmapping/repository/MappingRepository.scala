@@ -45,8 +45,7 @@ abstract class MappingRepository(
 )(
   implicit
   ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter
-    with Decrypter
+  @Named("aes") crypto: Encrypter & Decrypter
 )
 extends PlayMongoRepository[AgentReferenceMapping](
   mongoComponent = mongo,
@@ -76,30 +75,35 @@ extends PlayMongoRepository[AgentReferenceMapping](
     Codecs.playFormatCodec(Format(Arn.arnReads, Arn.arnWrites))
   )
 )
-with Logging {
+with Logging:
 
   override lazy val requiresTtlIndex = false // keep data
 
-  def findBy(arn: Arn): Future[Seq[AgentReferenceMapping]] = collection.find(equal("arn", arn.value)).toFuture()
+  def findBy(arn: Arn): Future[Seq[AgentReferenceMapping]] =
+    collection.find(equal("arn", arn.value)).toFuture()
 
-  def findAll(): Future[Seq[AgentReferenceMapping]] = collection.find().toFuture()
+  def findAll(): Future[Seq[AgentReferenceMapping]] =
+    collection.find().toFuture()
 
   def store(
     arn: Arn,
     identifierValue: String,
     automapped: Boolean = false
-  ): Future[InsertOneResult] = collection
-    .insertOne(AgentReferenceMapping(
-      None,
-      arn,
-      identifierValue,
-      automapped
-    ))
-    .toFuture()
+  ): Future[InsertOneResult] =
+    collection
+      .insertOne(AgentReferenceMapping(
+        None,
+        arn,
+        identifierValue,
+        automapped
+      ))
+      .toFuture()
 
-  def deleteByArn(arn: Arn): Future[DeleteResult] = collection.deleteOne(equal("arn", arn.value)).toFuture()
+  def deleteByArn(arn: Arn): Future[DeleteResult] =
+    collection.deleteOne(equal("arn", arn.value)).toFuture()
 
   // This is for testing purposes only
-  def deleteAll(): Future[DeleteResult] = collection.deleteMany(BsonDocument()).toFuture()
+  def deleteAll(): Future[DeleteResult] =
+    collection.deleteMany(BsonDocument()).toFuture()
 
-}
+end MappingRepository

@@ -19,25 +19,27 @@ package uk.gov.hmrc.agentmapping.controller
 import play.api.mvc.PathBindable
 import uk.gov.hmrc.agentmapping.model.Arn
 
-object UrlBinders {
+object UrlBinders:
 
   implicit val arnBinder: PathBindable[Arn] =
-    new PathBindable[Arn] {
+    new PathBindable[Arn]:
+
       override def bind(
         key: String,
         arnValue: String
       ): Either[String, Arn] =
-        if (Arn.isValid(arnValue)) {
+
+        if Arn.isValid(arnValue) then
           Right(Arn(arnValue))
-        }
-        else {
+        else
           Left(raw""""$arnValue" is not a valid ARN""")
-        }
+        end if
+
+      end bind
 
       override def unbind(
         key: String,
         arn: Arn
       ): String = arn.value
-    }
 
-}
+end UrlBinders

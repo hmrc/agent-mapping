@@ -20,52 +20,30 @@ import play.api.Configuration
 import play.api.Environment
 import play.api.inject.Module
 import play.api.inject.Binding
-import uk.gov.hmrc.crypto.Crypted
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
-import uk.gov.hmrc.crypto.PlainBytes
-import uk.gov.hmrc.crypto.PlainContent
-import uk.gov.hmrc.crypto.PlainText
 import uk.gov.hmrc.crypto.SymmetricCryptoFactory
 
-import java.nio.charset.StandardCharsets
-import java.util.Base64
-
 class CryptoProviderModule
-extends Module {
+extends Module:
 
-  def aesCryptoInstance(configuration: Configuration): Encrypter
-    with Decrypter =
-    if (configuration.underlying.getBoolean("fieldLevelEncryption.enable"))
+  def aesCryptoInstance(configuration: Configuration): Encrypter & Decrypter =
+
+    if configuration.underlying.getBoolean("fieldLevelEncryption.enable") then
       SymmetricCryptoFactory.aesCryptoFromConfig("fieldLevelEncryption", configuration.underlying)
     else
       NoCrypto
+    end if
+
+  end aesCryptoInstance
 
   override def bindings(
     environment: Environment,
     configuration: Configuration
-  ): Seq[Binding[_]] = Seq(
-    bind[Encrypter
-      with Decrypter].qualifiedWith("aes").toInstance(aesCryptoInstance(configuration))
-  )
+  ): Seq[Binding[?]] =
+    Seq(
+      bind[Encrypter & Decrypter].qualifiedWith("aes").toInstance(aesCryptoInstance(configuration))
+    )
+  end bindings
 
-}
-
-/** Encrypter/decrypter that does nothing (i.e. leaves content in plaintext). Only to be used for debugging.
-  */
-trait NoCrypto
-extends Encrypter
-with Decrypter {
-
-  def encrypt(plain: PlainContent): Crypted =
-    plain match {
-      case PlainText(text) => Crypted(text)
-      case PlainBytes(bytes) => Crypted(new String(Base64.getEncoder.encode(bytes), StandardCharsets.UTF_8))
-    }
-  def decrypt(notEncrypted: Crypted): PlainText = PlainText(notEncrypted.value)
-  def decryptAsBytes(nullEncrypted: Crypted): PlainBytes = PlainBytes(Base64.getDecoder.decode(nullEncrypted.value))
-
-}
-
-object NoCrypto
-extends NoCrypto
+end CryptoProviderModule

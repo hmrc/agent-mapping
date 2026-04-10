@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-package test.uk.gov.hmrc.agentmapping.stubs
+package uk.gov.hmrc.agentmapping.stubs
 
-import com.github.tomakehurst.wiremock.client.WireMock._
+import com.github.tomakehurst.wiremock.client.WireMock.*
+import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import play.api.libs.json.Json
 import uk.gov.hmrc.agentmapping.config.AppConfig
 import uk.gov.hmrc.agentmapping.connector.EnrolmentResponse
+import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector.writes
 
-trait EnrolmentStoreStubs {
+trait EnrolmentStoreStubs:
 
   val appConfig: AppConfig
 
@@ -31,9 +33,7 @@ trait EnrolmentStoreStubs {
     startRecord: Int,
     enrolments: EnrolmentResponse,
     status: Int
-  ) = {
-
-    import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector.writes
+  ): StubMapping =
     stubFor(
       get(
         urlEqualTo(
@@ -48,13 +48,13 @@ trait EnrolmentStoreStubs {
             )
         )
     )
-  }
+  end givenEs2ClientsFoundFor
 
   def givenPrincipalEnrolmentsExist(
     groupId: String,
     enrolments: Seq[uk.gov.hmrc.agentmapping.model.Enrolment],
     status: Int = 200
-  ) = {
+  ): StubMapping =
 
     stubFor(
       get(urlPathEqualTo(s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments"))
@@ -73,6 +73,6 @@ trait EnrolmentStoreStubs {
             )
         )
     )
-  }
+  end givenPrincipalEnrolmentsExist
 
-}
+end EnrolmentStoreStubs

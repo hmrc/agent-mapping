@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentmapping.audit
 
 import com.google.inject.Singleton
 import play.api.mvc.Request
+import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.CreateMapping
 import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.agentmapping.model.Identifier
 import uk.gov.hmrc.agentmapping.util.RequestSupport
@@ -30,12 +31,8 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.util.Try
 
-sealed abstract class AgentMappingEvent
-case object CreateMapping
-extends AgentMappingEvent
-
 @Singleton
-class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: ExecutionContext) {
+class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: ExecutionContext):
 
   def sendCreateMappingAuditEvent(
     arn: Arn,
@@ -45,7 +42,7 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
     automapped: Boolean = false
   )(implicit
     request: Request[Any]
-  ): Unit = {
+  ): Unit =
     auditEvent(
       CreateMapping,
       "create-mapping",
@@ -59,7 +56,7 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
       )
     )
     ()
-  }
+  end sendCreateMappingAuditEvent
 
   private[audit] def auditEvent(
     event: AgentMappingEvent,
@@ -67,11 +64,14 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
     details: Seq[(String, String)] = Seq.empty
   )(implicit
     request: Request[Any]
-  ): Future[Unit] = send(createEvent(
-    event,
-    transactionName,
-    details: _*
-  ))
+  ): Future[Unit] = send(
+    createEvent(
+      event,
+      transactionName,
+      details*
+    )
+  )
+  end auditEvent
 
   private def createEvent(
     event: AgentMappingEvent,
@@ -79,20 +79,21 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
     details: (String, String)*
   )(implicit
     request: Request[Any]
-  ): DataEvent = {
-    val hc = RequestSupport.hc
+  ): DataEvent =
+    val hc = RequestSupport.headerCarrier
     DataEvent(
       auditSource = "agent-mapping",
       auditType = event.toString,
       tags = hc.toAuditTags(transactionName, request.path),
-      detail = hc.toAuditDetails(details.map(pair => pair._1 -> pair._2): _*)
+      detail = hc.toAuditDetails(details.map(pair => pair._1 -> pair._2)*)
     )
-  }
+  end createEvent
 
-  private def send(events: DataEvent*): Future[Unit] = Future {
+  private def send(events: DataEvent*): Future[Unit] = Future:
     events.foreach { event =>
       Try(auditConnector.sendEvent(event))
     }
-  }
 
-}
+  end send
+
+end AuditService

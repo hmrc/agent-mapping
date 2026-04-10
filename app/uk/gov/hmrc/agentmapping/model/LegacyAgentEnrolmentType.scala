@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2026 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,53 +23,45 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
 
-/** A comprehensive list of all the old (pre-MTD) agent enrolment types IR-SA-AGENT is the only legacy code we actually use in authentication others are
-  * captured for future use. One Mongo DB per instance of this type
-  */
-sealed abstract class LegacyAgentEnrolmentType {
+enum LegacyAgentEnrolmentType(val key: String):
 
-  def key: String =
-    this match {
-      case IRAgentReference => "IR-SA-AGENT"
-      case AgentRefNo => "HMCE-VAT-AGNT"
-      case AgentCharId => "HMRC-CHAR-AGENT"
-      case HmrcGtsAgentRef => "HMRC-GTS-AGNT"
-      case HmrcMgdAgentRef => "HMRC-MGD-AGNT"
-      case VATAgentRefNo => "HMRC-NOVRN-AGNT"
-      case IRAgentReferenceCt => "IR-CT-AGENT"
-      case IRAgentReferencePaye => "IR-PAYE-AGENT"
-      case SdltStorn => "IR-SDLT-AGENT"
-      case AgentCode => "AgentCode" // not an actual enrolment, but included here for completeness
-    }
+  case IRAgentReference
+  extends LegacyAgentEnrolmentType("IR-SA-AGENT")
+  case AgentRefNo
+  extends LegacyAgentEnrolmentType("HMCE-VAT-AGNT")
+  case AgentCharId
+  extends LegacyAgentEnrolmentType("HMRC-CHAR-AGENT")
+  case HmrcGtsAgentRef
+  extends LegacyAgentEnrolmentType("HMRC-GTS-AGNT")
+  case HmrcMgdAgentRef
+  extends LegacyAgentEnrolmentType("HMRC-MGD-AGNT")
+  case VATAgentRefNo
+  extends LegacyAgentEnrolmentType("HMRC-NOVRN-AGNT")
+  case IRAgentReferenceCt
+  extends LegacyAgentEnrolmentType("IR-CT-AGENT")
+  case IRAgentReferencePaye
+  extends LegacyAgentEnrolmentType("IR-PAYE-AGENT")
+  case SdltStorn
+  extends LegacyAgentEnrolmentType("IR-SDLT-AGENT")
+  case AgentCode
+  extends LegacyAgentEnrolmentType("AgentCode")
 
-  def dbKey: String =
-    this match {
+  def getDataBaseKey: String =
+
+    this match
       case AgentCode => "agentcode"
       case _ => this.key.split("-")(1).toLowerCase
-    }
+    end match
 
-}
+  end getDataBaseKey
 
-object LegacyAgentEnrolmentType {
+end LegacyAgentEnrolmentType
 
-  implicit val format: Format[LegacyAgentEnrolmentType] =
-    new Format[LegacyAgentEnrolmentType] {
+object LegacyAgentEnrolmentType:
 
-      def reads(json: JsValue): JsResult[LegacyAgentEnrolmentType] =
-        json match {
-          case JsString(s) =>
-            find(s) match {
-              case Some(x) => JsSuccess(x)
-              case None => JsError(s"Unexpected enrolment type: ${json.toString}")
-            }
-          case _ => JsError(s"Enrolment type is not a string: $json")
-        }
+  def findByName(name: String): Option[LegacyAgentEnrolmentType] =
 
-      def writes(o: LegacyAgentEnrolmentType): JsValue = JsString(o.key)
-    }
-
-  def find(key: String): Option[LegacyAgentEnrolmentType] =
-    key match {
+    name match
       case "IR-SA-AGENT" => Some(IRAgentReference)
       case "HMCE-VAT-AGNT" => Some(AgentRefNo)
       case "HMRC-CHAR-AGENT" => Some(AgentCharId)
@@ -81,10 +73,13 @@ object LegacyAgentEnrolmentType {
       case "IR-SDLT-AGENT" => Some(SdltStorn)
       case "AgentCode" => Some(AgentCode)
       case _ => None
-    }
+    end match
 
-  def findByDbKey(dbKey: String): Option[LegacyAgentEnrolmentType] =
-    dbKey match {
+  end findByName
+
+  def findByDataBaseKey(dbKey: String): Option[LegacyAgentEnrolmentType] =
+
+    dbKey match
       case "sa" => Some(IRAgentReference)
       case "vat" => Some(AgentRefNo)
       case "char" => Some(AgentCharId)
@@ -96,27 +91,28 @@ object LegacyAgentEnrolmentType {
       case "sdlt" => Some(SdltStorn)
       case "agentcode" => Some(AgentCode)
       case _ => None
-    }
+    end match
 
-}
+  end findByDataBaseKey
 
-case object IRAgentReference
-extends LegacyAgentEnrolmentType
-case object AgentRefNo
-extends LegacyAgentEnrolmentType
-case object AgentCharId
-extends LegacyAgentEnrolmentType
-case object HmrcGtsAgentRef
-extends LegacyAgentEnrolmentType
-case object HmrcMgdAgentRef
-extends LegacyAgentEnrolmentType
-case object VATAgentRefNo
-extends LegacyAgentEnrolmentType
-case object IRAgentReferenceCt
-extends LegacyAgentEnrolmentType
-case object IRAgentReferencePaye
-extends LegacyAgentEnrolmentType
-case object SdltStorn
-extends LegacyAgentEnrolmentType
-case object AgentCode
-extends LegacyAgentEnrolmentType
+  implicit val format: Format[LegacyAgentEnrolmentType] =
+    new Format[LegacyAgentEnrolmentType]:
+
+      def reads(json: JsValue): JsResult[LegacyAgentEnrolmentType] =
+
+        json match
+          case JsString(s) =>
+
+            findByName(s) match
+              case Some(x) => JsSuccess(x)
+              case None => JsError(s"Unexpected enrolment type: ${json.toString}")
+            end match
+
+          case _ => JsError(s"Enrolment type is not a string: $json")
+        end match
+
+      end reads
+
+      def writes(o: LegacyAgentEnrolmentType): JsValue = JsString(o.key)
+
+end LegacyAgentEnrolmentType

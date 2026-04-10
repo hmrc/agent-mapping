@@ -30,14 +30,13 @@ import uk.gov.hmrc.crypto.SymmetricCryptoFactory
 
 class AgentReferenceMappingSpec
 extends AnyWordSpecLike
-with Matchers {
+with Matchers:
 
-  implicit val crypto: Encrypter
-    with Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "GTfz3GZy0+gN0p/5wSqRBpWlbWVDMezXWtX+G9ENwCc=")
+  implicit val crypto: Encrypter & Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "GTfz3GZy0+gN0p/5wSqRBpWlbWVDMezXWtX+G9ENwCc=")
 
-  "AgentReferenceMapping model" should {
-    "read from JSON" when {
-      "the database reads is used (encrypted)" in {
+  "AgentReferenceMapping model" should:
+    "read from JSON" when:
+      "the database reads is used (encrypted)" in:
         val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
           Some(new ObjectId("69038f00be7a033d7d28132f")),
           Arn("XARN1234567"),
@@ -48,9 +47,8 @@ with Matchers {
           "arn" -> "XARN1234567",
           "identifier" -> "xBz9KLLVGclaDNLxWSY/YA=="
         )
-        json.as[AgentReferenceMapping](databaseFormat) shouldBe expectedModel
-      }
-      "the database reads is used (encrypted) but ObjectId is invalid" in {
+        json.as[AgentReferenceMapping](using databaseFormat) shouldBe expectedModel
+      "the database reads is used (encrypted) but ObjectId is invalid" in:
         val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
           None,
           Arn("XARN1234567"),
@@ -61,9 +59,8 @@ with Matchers {
           "arn" -> "XARN1234567",
           "identifier" -> "xBz9KLLVGclaDNLxWSY/YA=="
         )
-        json.as[AgentReferenceMapping](databaseFormat) shouldBe expectedModel
-      }
-      "the database reads is used (encrypted) but ObjectId is missing" in {
+        json.as[AgentReferenceMapping](using databaseFormat) shouldBe expectedModel
+      "the database reads is used (encrypted) but ObjectId is missing" in:
         val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
           None,
           Arn("XARN1234567"),
@@ -73,12 +70,10 @@ with Matchers {
           "arn" -> "XARN1234567",
           "identifier" -> "xBz9KLLVGclaDNLxWSY/YA=="
         )
-        json.as[AgentReferenceMapping](databaseFormat) shouldBe expectedModel
-      }
-    }
+        json.as[AgentReferenceMapping](using databaseFormat) shouldBe expectedModel
 
-    "write to JSON" when {
-      "the api writes is used (not timestamped)" in {
+    "write to JSON" when:
+      "the api writes is used (not timestamped)" in:
         val model: AgentReferenceMapping = AgentReferenceMapping(
           None,
           Arn("XARN1234567"),
@@ -88,10 +83,9 @@ with Matchers {
           "arn" -> "XARN1234567",
           "identifier" -> "ABC123"
         )
-        Json.toJson(model)(AgentReferenceMapping.apiWrites()) shouldBe expectedJson
-      }
+        Json.toJson(model)(using AgentReferenceMapping.apiWrites()) shouldBe expectedJson
 
-      "the api writes is used (timestamped)" in {
+      "the api writes is used (timestamped)" in:
         val model: AgentReferenceMapping = AgentReferenceMapping(
           Some(new ObjectId("69038f00be7a033d7d28132f")),
           Arn("XARN1234567"),
@@ -102,10 +96,9 @@ with Matchers {
           "identifier" -> "ABC123",
           "created" -> "2025-10-30"
         )
-        Json.toJson(model)(AgentReferenceMapping.apiWrites()) shouldBe expectedJson
-      }
+        Json.toJson(model)(using AgentReferenceMapping.apiWrites()) shouldBe expectedJson
 
-      "the api writes is used with identifier key override (timestamped)" in {
+      "the api writes is used with identifier key override (timestamped)" in:
         val model: AgentReferenceMapping = AgentReferenceMapping(
           Some(new ObjectId("69038f00be7a033d7d28132f")),
           Arn("XARN1234567"),
@@ -116,10 +109,9 @@ with Matchers {
           "agentCode" -> "ABC123",
           "created" -> "2025-10-30"
         )
-        Json.toJson(model)(AgentReferenceMapping.apiWrites("agentCode")) shouldBe expectedJson
-      }
+        Json.toJson(model)(using AgentReferenceMapping.apiWrites("agentCode")) shouldBe expectedJson
 
-      "the database writes is used (encrypted)" in {
+      "the database writes is used (encrypted)" in:
         val model: AgentReferenceMapping = AgentReferenceMapping(
           None,
           Arn("XARN1234567"),
@@ -130,9 +122,6 @@ with Matchers {
           "identifier" -> "xBz9KLLVGclaDNLxWSY/YA==",
           "automapped" -> false
         )
-        Json.toJson(model)(databaseFormat) shouldBe expectedJson
-      }
-    }
-  }
+        Json.toJson(model)(using databaseFormat) shouldBe expectedJson
 
-}
+end AgentReferenceMappingSpec

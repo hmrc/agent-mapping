@@ -22,6 +22,8 @@ import org.mongodb.scala.model.Accumulators
 import org.mongodb.scala.model.Aggregates
 import org.mongodb.scala.model.Filters
 import org.mongodb.scala.model.Projections
+import org.mongodb.scala.ObservableFuture
+import org.mongodb.scala.documentToUntypedDocument
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -40,7 +42,7 @@ class DuplicateArnScanService @Inject() (
   mappingRepositories: MappingRepositories,
   mongoLockRepository: MongoLockRepository
 )(implicit ec: ExecutionContext)
-extends Logging {
+extends Logging:
 
   private val lockService = LockService(
     mongoLockRepository,
@@ -48,15 +50,16 @@ extends Logging {
     ttl = 10.minutes
   )
 
-  def runDuplicateArnScanLocked(): Future[Unit] = lockService.withLock {
-    logger.warn("Acquired lock for mapping-duplicate-arn-scan; starting duplicate ARN analysis")
-    runDuplicateArnScan()
-  }.map {
-    case Some(_) => logger.warn("Duplicate ARN scan completed; lock released")
-    case None => logger.warn("Duplicate ARN scan skipped (another instance already running)")
-  }
+  private def runDuplicateArnScanLocked(): Future[Unit] =
+    lockService.withLock {
+      logger.warn("Acquired lock for mapping-duplicate-arn-scan; starting duplicate ARN analysis")
+      runDuplicateArnScan()
+    }.map:
+      case Some(_) => logger.warn("Duplicate ARN scan completed; lock released")
+      case None => logger.warn("Duplicate ARN scan skipped (another instance already running)")
+  end runDuplicateArnScanLocked
 
-  private[service] def findIdentifierArnCounts(collection: MongoCollection[AgentReferenceMapping])(implicit ec: ExecutionContext): Future[Seq[ArnCount]] = {
+  private[service] def findIdentifierArnCounts(collection: MongoCollection[AgentReferenceMapping])(implicit ec: ExecutionContext): Future[Seq[ArnCount]] =
 
     val pipeline = Seq(
       Aggregates.group(
@@ -81,9 +84,9 @@ extends Logging {
           arnCount = doc.getInteger("arnCount")
         )
       })
-  }
+  end findIdentifierArnCounts
 
-  private def runDuplicateArnScan(): Future[Unit] = {
+  private def runDuplicateArnScan(): Future[Unit] =
     val tasks = mappingRepositories.map { repo =>
       findIdentifierArnCounts(repo.collection).map { results =>
         val distribution: Map[Int, Int] =
@@ -95,7 +98,7 @@ extends Logging {
 
         logger.warn(
           s"Duplicate ARN distribution in '${repo.collectionName}': " +
-            (if (distribution.isEmpty)
+            (if distribution.isEmpty then
                "no duplicates found"
              else
                distribution.map { case (arnCount, count) => s"$count identifiers have $arnCount ARNs" }.mkString(", "))
@@ -104,8 +107,8 @@ extends Logging {
     }
 
     Future.sequence(tasks).map(_ => ())
-  }
+  end runDuplicateArnScan
 
   runDuplicateArnScanLocked()
 
-}
+end DuplicateArnScanService

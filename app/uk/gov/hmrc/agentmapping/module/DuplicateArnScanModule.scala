@@ -20,9 +20,8 @@ import com.google.inject.AbstractModule
 import uk.gov.hmrc.agentmapping.service.DuplicateArnScanService
 
 class DuplicateArnScanModule
-extends AbstractModule {
+extends AbstractModule:
 
-  override def configure(): Unit = {
-    bind(classOf[DuplicateArnScanService]).asEagerSingleton()
-  }
-}
+  override def configure(): Unit = bind(classOf[DuplicateArnScanService]).asEagerSingleton()
+
+end DuplicateArnScanModule

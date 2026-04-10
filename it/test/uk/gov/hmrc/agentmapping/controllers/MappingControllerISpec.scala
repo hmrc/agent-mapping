@@ -17,47 +17,28 @@
 package uk.gov.hmrc.agentmapping.controllers
 
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
-import com.google.inject.AbstractModule
-import org.apache.pekko.actor.ActorSystem
-import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
-import org.scalatest.matchers.should.Matchers
-import org.scalatest.wordspec.AnyWordSpecLike
-import org.scalatestplus.play.guice.GuiceOneServerPerSuite
-import play.api.Application
-import play.api.inject.guice.GuiceApplicationBuilder
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
+import play.api.libs.ws.DefaultBodyWritables.writeableOf_String
+import play.api.libs.ws.JsonBodyWritables.writeableOf_JsValue
 import play.api.libs.ws.WSClient
 import play.api.libs.ws.WSResponse
-import test.uk.gov.hmrc.agentmapping.stubs.AuthStubs
-import test.uk.gov.hmrc.agentmapping.stubs.DataStreamStub
-import test.uk.gov.hmrc.agentmapping.stubs.EnrolmentStoreStubs
-import test.uk.gov.hmrc.agentmapping.support.WireMockSupport
-import uk.gov.hmrc.agentmapping.audit.CreateMapping
+import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.CreateMapping
 import uk.gov.hmrc.agentmapping.config.AppConfig
-import uk.gov.hmrc.agentmapping.controller.MappingController
-import uk.gov.hmrc.agentmapping.model.{Enrolment => ModelEnrolment, EnrolmentIdentifier => ModelEnrolmentIdentifier, _}
-import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
-import uk.gov.hmrc.agentmapping.repository._
+import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
+import uk.gov.hmrc.agentmapping.model.{Enrolment as ModelEnrolment, EnrolmentIdentifier as ModelEnrolmentIdentifier, *}
 import uk.gov.hmrc.auth.core.AffinityGroup
 import uk.gov.hmrc.auth.core.Enrolment
 import uk.gov.hmrc.auth.core.EnrolmentIdentifier
-import uk.gov.hmrc.mongo.MongoComponent
-import uk.gov.hmrc.mongo.test.MongoSupport
 
 import java.nio.charset.StandardCharsets.UTF_8
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import java.util.Base64
-import scala.concurrent.ExecutionContext.Implicits.global
-import scala.concurrent.Await
-import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
 
 class MappingControllerISpec
 extends MappingControllerISpecSetup
-with ScalaFutures {
+with ScalaFutures:
 
   val registeredArn: Arn = Arn("AARN0000002")
 
@@ -67,10 +48,8 @@ with ScalaFutures {
   val AgentReferenceNo = "AgentRefNo"
   val authProviderId = AuthProviderId("testCredId")
 
-  private val dateTimeFormatter: DateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
-
   val url = s"http://localhost:$port"
-  val wsClient = app.injector.instanceOf[WSClient]
+  val wsClient: WSClient = app.injector.instanceOf[WSClient]
 
   def callPost(
     path: String,
@@ -100,20 +79,22 @@ with ScalaFutures {
     path: String,
     body: Option[String]
   ): WSResponse =
-    if (body.isDefined) {
+
+    if body.isDefined then
       wsClient
         .url(s"$url$path")
         .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
         .put(body.get)
         .futureValue
-    }
-    else {
+    else
       wsClient
         .url(s"$url$path")
         .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
         .execute("PUT")
         .futureValue
-    }
+    end if
+
+  end callPut
 
   def basicAuth(string: String): String = Base64.getEncoder.encodeToString(string.getBytes(UTF_8))
 
@@ -140,56 +121,56 @@ with ScalaFutures {
     identifierKey: String,
     identifierValue: String
   ) {
-    val dbKey: String = legacyAgentEnrolmentType.dbKey
+    val dbKey: String = legacyAgentEnrolmentType.getDataBaseKey
   }
 
   val AgentCodeTestFixture = TestFixture(
-    AgentCode,
+    LegacyAgentEnrolmentType.AgentCode,
     "AgentCode",
     agentCode
   )
   val IRSAAGENTTestFixture = TestFixture(
-    IRAgentReference,
+    LegacyAgentEnrolmentType.IRAgentReference,
     IRSAAgentReference,
     "A1111A"
   )
   val HMCEVATAGNTTestFixture = TestFixture(
-    AgentRefNo,
+    LegacyAgentEnrolmentType.AgentRefNo,
     AgentReferenceNo,
     "101747696"
   )
   val IRCTAGENTTestFixture = TestFixture(
-    IRAgentReferenceCt,
+    LegacyAgentEnrolmentType.IRAgentReferenceCt,
     IRSAAgentReference,
     "B2121C"
   )
   val HMRCGTSAGNTTestFixture = TestFixture(
-    HmrcGtsAgentRef,
+    LegacyAgentEnrolmentType.HmrcGtsAgentRef,
     "HMRCGTSAGENTREF",
     "AB8964622K"
   )
   val HMRCNOVRNAGNTTestFixture = TestFixture(
-    VATAgentRefNo,
+    LegacyAgentEnrolmentType.VATAgentRefNo,
     "VATAgentRefNo",
     "FGH79/96KUJ"
   )
   val HMRCCHARAGENTTestFixture = TestFixture(
-    AgentCharId,
+    LegacyAgentEnrolmentType.AgentCharId,
     "AGENTCHARID",
     "FGH79/96KUJ"
   )
   val HMRCMGDAGNTTestFixture = TestFixture(
-    HmrcMgdAgentRef,
+    LegacyAgentEnrolmentType.HmrcMgdAgentRef,
     "HMRCMGDAGENTREF",
     "737B.89"
   )
   val IRPAYEAGENTTestFixture = TestFixture(
-    IRAgentReferencePaye,
+    LegacyAgentEnrolmentType.IRAgentReferencePaye,
     IRSAAgentReference,
     "F9876J"
   )
   val IRSDLTAGENTTestFixture = TestFixture(
-    SdltStorn,
+    LegacyAgentEnrolmentType.SdltStorn,
     "STORN",
     "AAA0008"
   )
@@ -204,63 +185,63 @@ with ScalaFutures {
   val IRSAAGENTUserMapping = UserMapping(
     authProviderId,
     None,
-    Seq(AgentEnrolment(IRAgentReference, IdentifierValue("A1111A"))),
+    Seq(AgentEnrolment(LegacyAgentEnrolmentType.IRAgentReference, IdentifierValue("A1111A"))),
     0,
     ""
   )
   val HMCEVATAGNTUserMapping = UserMapping(
     authProviderId,
     None,
-    Seq(AgentEnrolment(AgentRefNo, IdentifierValue("101747696"))),
+    Seq(AgentEnrolment(LegacyAgentEnrolmentType.AgentRefNo, IdentifierValue("101747696"))),
     0,
     ""
   )
   val IRCTAGENTUserMapping = UserMapping(
     authProviderId,
     None,
-    Seq(AgentEnrolment(IRAgentReferenceCt, IdentifierValue("B2121C"))),
+    Seq(AgentEnrolment(LegacyAgentEnrolmentType.IRAgentReferenceCt, IdentifierValue("B2121C"))),
     0,
     ""
   )
   val HMRCGTSAGNTUserMapping = UserMapping(
     authProviderId,
     None,
-    Seq(AgentEnrolment(HmrcGtsAgentRef, IdentifierValue("AB8964622K"))),
+    Seq(AgentEnrolment(LegacyAgentEnrolmentType.HmrcGtsAgentRef, IdentifierValue("AB8964622K"))),
     0,
     ""
   )
   val HMRCNOVRNAGNTUserMapping = UserMapping(
     authProviderId,
     None,
-    Seq(AgentEnrolment(VATAgentRefNo, IdentifierValue("FGH79/96KUJ"))),
+    Seq(AgentEnrolment(LegacyAgentEnrolmentType.VATAgentRefNo, IdentifierValue("FGH79/96KUJ"))),
     0,
     ""
   )
   val HMRCCHARAGENTUserMapping = UserMapping(
     authProviderId,
     None,
-    Seq(AgentEnrolment(AgentCharId, IdentifierValue("FGH79/96KUJ"))),
+    Seq(AgentEnrolment(LegacyAgentEnrolmentType.AgentCharId, IdentifierValue("FGH79/96KUJ"))),
     0,
     ""
   )
   val HMRCMGDAGNTUserMapping = UserMapping(
     authProviderId,
     None,
-    Seq(AgentEnrolment(HmrcMgdAgentRef, IdentifierValue("737B.89"))),
+    Seq(AgentEnrolment(LegacyAgentEnrolmentType.HmrcMgdAgentRef, IdentifierValue("737B.89"))),
     0,
     ""
   )
   val IRPAYEAGENTUserMapping = UserMapping(
     authProviderId,
     None,
-    Seq(AgentEnrolment(IRAgentReferencePaye, IdentifierValue("F9876J"))),
+    Seq(AgentEnrolment(LegacyAgentEnrolmentType.IRAgentReferencePaye, IdentifierValue("F9876J"))),
     0,
     ""
   )
   val IRSDLTAGENTUserMapping = UserMapping(
     authProviderId,
     None,
-    Seq(AgentEnrolment(SdltStorn, IdentifierValue("AAA0008"))),
+    Seq(AgentEnrolment(LegacyAgentEnrolmentType.SdltStorn, IdentifierValue("AAA0008"))),
     0,
     ""
   )
@@ -355,7 +336,7 @@ with ScalaFutures {
           groupId = groupId,
           enrolments = List(
             ModelEnrolment(
-              AgentCode.key,
+              LegacyAgentEnrolmentType.AgentCode.key,
               "Activated",
               Seq(ModelEnrolmentIdentifier("UTR", identifierValue))
             )
@@ -399,7 +380,7 @@ with ScalaFutures {
           groupId = groupId,
           enrolments = List(
             ModelEnrolment(
-              AgentCode.key,
+              LegacyAgentEnrolmentType.AgentCode.key,
               "Pending",
               Seq(ModelEnrolmentIdentifier("UTR", "1234567890"))
             )
@@ -424,7 +405,7 @@ with ScalaFutures {
           groupId = groupId,
           enrolments = List(
             ModelEnrolment(
-              AgentCode.key,
+              LegacyAgentEnrolmentType.AgentCode.key,
               "Activated",
               Seq(ModelEnrolmentIdentifier("UTR", "1234567890"))
             )
@@ -452,7 +433,7 @@ with ScalaFutures {
           groupId = groupId,
           enrolments = List(
             ModelEnrolment(
-              AgentCode.key,
+              LegacyAgentEnrolmentType.AgentCode.key,
               "Activated",
               Seq(ModelEnrolmentIdentifier("UTR", identifierValue))
             )
@@ -473,7 +454,7 @@ with ScalaFutures {
           groupId = groupId,
           enrolments = List(
             ModelEnrolment(
-              AgentCode.key,
+              LegacyAgentEnrolmentType.AgentCode.key,
               "Activated",
               Seq(ModelEnrolmentIdentifier("UTR", "1234567890"))
             )
@@ -495,8 +476,8 @@ with ScalaFutures {
 
     if (fixtures.size > 1) {
       // Then test different split sets of fixtures
-      val splitFixtures: Seq[(Seq[TestFixture], Seq[TestFixture])] =
-        (1 until Math.max(5, fixtures.size)).map(fixtures.splitAt) ++ (1 until Math.max(4, fixtures.size))
+      val splitFixtures: Seq[(Seq[TestFixture], Seq[TestFixture])] = (1 until Math.max(5, fixtures.size)).map(fixtures.splitAt) ++
+        (1 until Math.max(4, fixtures.size))
           .map(fixtures.reverse.splitAt)
 
       splitFixtures.foreach { case (left, right) =>
@@ -559,7 +540,7 @@ with ScalaFutures {
       "authenticated user with IR-SA-AGENT enrolment but without Agent Affinity group attempts to create mapping" in {
 
         givenUserIsAuthorisedFor(
-          IRAgentReference.key,
+          LegacyAgentEnrolmentType.IRAgentReference.key,
           IRSAAgentReference,
           "2000000000",
           "testCredId",
@@ -716,9 +697,6 @@ with ScalaFutures {
 
       s"return 200 with hasEligibleEnrolments=false when user has only ineligible enrolment: ${testFixture.dbKey}" in {
         givenUserIsAuthorisedWithNoEnrolments(
-          testFixture.legacyAgentEnrolmentType.key,
-          testFixture.identifierKey,
-          testFixture.identifierValue,
           "testCredId",
           agentCodeOpt = Some(agentCode)
         )
@@ -748,32 +726,35 @@ with ScalaFutures {
     }
   }
 
-  private def givenUserIsAuthorisedFor(f: TestFixture): StubMapping = givenUserIsAuthorisedFor(
-    f.legacyAgentEnrolmentType.key,
-    f.identifierKey,
-    f.identifierValue,
-    "testCredId",
-    agentCodeOpt = Some(agentCode)
-  )
+  private def givenUserIsAuthorisedFor(f: TestFixture): StubMapping =
+    givenUserIsAuthorisedFor(
+      f.legacyAgentEnrolmentType.key,
+      f.identifierKey,
+      f.identifierValue,
+      "testCredId",
+      agentCodeOpt = Some(agentCode)
+    )
+  end givenUserIsAuthorisedFor
 
   private def givenUserIsSubscribedAgentWithGroup(
     authArn: Arn = registeredArn,
     groupId: String = "group-123",
     providerId: String = "testCredId"
-  ): StubMapping = {
-
+  ): StubMapping =
     givenAuthorisedAsAgentWithGroup(
       arn = authArn.value,
       groupId = groupId,
       providerId = providerId
     )
-  }
+  end givenUserIsSubscribedAgentWithGroup
 
-  private def givenUserIsAuthorisedForMultiple(fixtures: Seq[TestFixture]): StubMapping = givenUserIsAuthorisedForMultiple(
-    asEnrolments(fixtures),
-    "testCredId",
-    agentCodeOpt = Some(agentCode)
-  )
+  private def givenUserIsAuthorisedForMultiple(fixtures: Seq[TestFixture]): StubMapping =
+    givenUserIsAuthorisedForMultiple(
+      asEnrolments(fixtures),
+      "testCredId",
+      agentCodeOpt = Some(agentCode)
+    )
+  end givenUserIsAuthorisedForMultiple
 
   private def asEnrolments(fixtures: Seq[TestFixture]): Set[Enrolment] =
     fixtures
@@ -785,92 +766,26 @@ with ScalaFutures {
         )
       )
       .toSet
+  end asEnrolments
 
   private def verifyCreateMappingAuditEventSent(
     f: TestFixture,
     duplicate: Boolean = false
-  ): Unit = verifyAuditRequestSent(
-    1,
-    event = CreateMapping,
-    detail = Map(
-      "identifier" -> f.identifierValue,
-      "identifierType" -> f.legacyAgentEnrolmentType.key,
-      "agentReferenceNumber" -> "AARN0000002",
-      "authProviderId" -> "testCredId",
-      "duplicate" -> s"$duplicate"
-    ),
-    tags = Map("transactionName" -> "create-mapping")
-  )
+  ): Unit =
+    verifyAuditRequestSent(
+      1,
+      event = CreateMapping,
+      detail = Map(
+        "identifier" -> f.identifierValue,
+        "identifierType" -> f.legacyAgentEnrolmentType.key,
+        "agentReferenceNumber" -> "AARN0000002",
+        "authProviderId" -> "testCredId",
+        "duplicate" -> s"$duplicate"
+      ),
+      tags = Map("transactionName" -> "create-mapping")
+    )
+  end verifyCreateMappingAuditEventSent
 
   override val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
 
-}
-
-sealed trait MappingControllerISpecSetup
-extends AnyWordSpecLike
-with GuiceOneServerPerSuite
-with Matchers
-with OptionValues
-with WireMockSupport
-with AuthStubs
-with DataStreamStub
-with EnrolmentStoreStubs
-with ScalaFutures
-with MongoSupport {
-
-  implicit val actorSystem: ActorSystem = ActorSystem()
-
-  protected def appBuilder: GuiceApplicationBuilder = new GuiceApplicationBuilder()
-    .disable[DuplicateArnScanModule]
-    .configure(
-      Map(
-        "microservice.services.auth.port" -> wireMockPort.toString,
-        "microservice.services.enrolment-store-proxy.port" -> wireMockPort.toString,
-        "auditing.consumer.baseUri.host" -> wireMockHost,
-        "auditing.consumer.baseUri.port" -> wireMockPort.toString,
-        "application.router" -> "testOnlyDoNotUseInAppConf.Routes",
-        "migrate-repositories" -> "false",
-        "termination.stride.enrolment" -> "caat",
-        "mongodb.uri" -> mongoUri
-      )
-    )
-    .overrides(new TestGuiceModule)
-
-  override implicit lazy val app: Application = appBuilder.build()
-
-  protected lazy val repositories: MappingRepositories = app.injector.instanceOf[MappingRepositories]
-
-  lazy val controller = app.injector.instanceOf[MappingController]
-
-  lazy val saRepo = repositories.get(IRAgentReference)
-  lazy val vatRepo = repositories.get(AgentRefNo)
-  lazy val agentCodeRepo = repositories.get(AgentCode)
-
-  private class TestGuiceModule
-  extends AbstractModule {
-    override def configure = {
-      bind(classOf[MongoComponent]).toInstance(mongoComponent)
-    }
-  }
-
-  def deleteTestDataInAllCollections = Await.result(Future.sequence(repositories.map(coll => coll.deleteAll())), 20.seconds)
-
-  override def commonStubs(): Unit = {
-    givenAuditConnector
-    ()
-  }
-
-  override def beforeEach() = {
-    super.beforeEach()
-    commonStubs()
-    deleteTestDataInAllCollections
-    ()
-  }
-
-  override def afterAll() = {
-    deleteTestDataInAllCollections
-    super.afterAll()
-    ()
-  }
-
-}
+end MappingControllerISpec

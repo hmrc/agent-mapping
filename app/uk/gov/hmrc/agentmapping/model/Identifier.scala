@@ -24,15 +24,15 @@ case class Identifier(
   value: String
 )
 
-object Identifier {
+object Identifier:
 
   implicit val enrolmentTypeFormat: Format[LegacyAgentEnrolmentType] = Format(
     Reads {
-      case JsString(s) => LegacyAgentEnrolmentType.find(s).map(JsSuccess(_)).getOrElse(JsError("Unknown service name"))
+      case JsString(s) => LegacyAgentEnrolmentType.findByName(s).map(JsSuccess(_)).getOrElse(JsError("Unknown service name"))
       case _ => JsError("String value expected")
     },
     Writes(legacyAgentEnrolmentType => JsString(legacyAgentEnrolmentType.toString))
   )
   implicit val formats: Format[Identifier] = format[Identifier]
 
-}
+end Identifier

@@ -20,7 +20,7 @@ This service is tested by the following automated test repositories:
 
 ## API
 
-### check if current logged in user has any enrolments that are eligible for mapping
+### check if current logged-in user has any enrolments that are eligible for mapping
     GET  /agent-mapping/mappings/eligibility
 
 responses:

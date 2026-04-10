@@ -27,22 +27,15 @@ import javax.inject.Inject
   *
   * Use it to provide HeaderCarrier, Lang, or Messages
   */
-class RequestSupport @Inject() () {
-  implicit def hc(implicit request: Request[_]): HeaderCarrier = RequestSupport.hc
-}
+class RequestSupport @Inject():
 
-object RequestSupport {
+  implicit def hc(implicit request: Request[?]): HeaderCarrier = RequestSupport.headerCarrier
 
-  implicit def hc(implicit request: RequestHeader): HeaderCarrier = HcProvider.headerCarrier
+end RequestSupport
 
-  /** This is because we want to give responsibility of creation of HeaderCarrier to the platform code. If they refactor how hc is created our code will pick it
-    * up automatically.
-    */
-  private object HcProvider
-  extends BackendHeaderCarrierProvider {
-    def headerCarrier(implicit request: RequestHeader): HeaderCarrier = hc(request)
-  }
+object RequestSupport
+extends BackendHeaderCarrierProvider:
 
-  // val thereIsNoRequest: RequestHeader = NoRequest
+  implicit def headerCarrier(implicit request: RequestHeader): HeaderCarrier = hc(using request)
 
-}
+end RequestSupport
