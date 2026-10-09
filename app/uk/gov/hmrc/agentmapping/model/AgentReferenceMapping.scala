@@ -29,6 +29,17 @@ import java.time.LocalDate
 import java.time.ZoneId
 import scala.language.implicitConversions
 
+/** Correlates an ARN with an enrolment identifier (either a legacy or newly assigned agent code, depending on the originating repository).
+  *
+  * @param id
+  *   the unique identifier assigned by MongoDB to this mapping
+  * @param arn
+  *   the agent reference number
+  * @param identifier
+  *   an agent code
+  * @param automapped
+  *   whether the system automatically created this mapping (true) or it was manually created by a user (false)
+  */
 case class AgentReferenceMapping(
   id: Option[ObjectId],
   arn: Arn,

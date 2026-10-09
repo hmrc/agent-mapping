@@ -21,8 +21,15 @@ import org.scalatest.concurrent.ScalaFutures
 import org.scalatestplus.play.guice.GuiceOneServerPerSuite
 import play.api.Application
 import play.api.inject.guice.GuiceApplicationBuilder
+import play.api.libs.json.JsValue
+import play.api.libs.ws.WSClient
+import play.api.libs.ws.WSResponse
+import play.api.libs.ws.*
 import uk.gov.hmrc.agentmapping.support.BaseISpec
 import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
+
+import java.nio.charset.StandardCharsets.UTF_8
+import java.util.Base64
 
 abstract class ServerBaseISpec
 extends BaseISpec
@@ -32,7 +39,7 @@ with ScalaFutures:
   override implicit lazy val app: Application = appBuilder.build()
 
   override protected def appBuilder: GuiceApplicationBuilder =
-    new GuiceApplicationBuilder()
+    super.appBuilder
       .disable[DuplicateArnScanModule]
       .configure(
         Map(
@@ -55,5 +62,55 @@ with ScalaFutures:
     override def configure(): Unit = {}
 
   end TestGuiceModule
+
+  val url = s"http://localhost:$port/agent-mapping"
+  val wsClient: WSClient = app.injector.instanceOf[WSClient]
+
+  def callPost(
+    path: String,
+    body: JsValue
+  ): WSResponse =
+    wsClient
+      .url(s"$url$path")
+      .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
+      .post(body)
+      .futureValue
+
+  def callGet(path: String): WSResponse =
+    wsClient
+      .url(s"$url$path")
+      .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
+      .get()
+      .futureValue
+
+  def callDelete(path: String): WSResponse =
+    wsClient
+      .url(s"$url$path")
+      .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
+      .delete()
+      .futureValue
+
+  def callPut(
+    path: String,
+    body: Option[String]
+  ): WSResponse =
+
+    if body.isDefined then
+      wsClient
+        .url(s"$url$path")
+        .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
+        .put(body.get)
+        .futureValue
+    else
+      wsClient
+        .url(s"$url$path")
+        .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
+        .execute("PUT")
+        .futureValue
+    end if
+
+  end callPut
+
+  def basicAuth(string: String): String = Base64.getEncoder.encodeToString(string.getBytes(UTF_8))
 
 end ServerBaseISpec

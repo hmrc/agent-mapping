@@ -36,7 +36,7 @@ class MappingRepositories @Inject() (
   iRCTAGENTMappingRepository: IRCTAGENTMappingRepository,
   iRPAYEAGENTMappingRepository: IRPAYEAGENTMappingRepository,
   iRSDLTAGENTMappingRepository: IRSDLTAGENTMappingRepository
-):
+)(using ExecutionContext):
 
   private val repositories: Map[LegacyAgentEnrolmentType, MappingRepository] = Map(
     LegacyAgentEnrolmentType.AgentCode -> agentCodeMappingRepository,
@@ -54,10 +54,24 @@ class MappingRepositories @Inject() (
   def get(legacyAgentEnrolmentType: LegacyAgentEnrolmentType): MappingRepository =
     repositories(legacyAgentEnrolmentType)
 
+  def getAllIdentifiersBy(arn: Arn): Future[Map[LegacyAgentEnrolmentType, Seq[String]]] =
+    val results =
+      for (enrolmentType, repository) <- repositories.toSeq
+      yield repository.findIdentifierBy(arn).map(enrolmentType -> _)
+
+    Future.sequence(results).map(_.toMap)
+
+  def getAllArnsBy(identifier: String): Future[Map[LegacyAgentEnrolmentType, Seq[Arn]]] =
+    val results =
+      for (enrolmentType, repository) <- repositories.toSeq
+      yield repository.findArnBy(identifier).map(enrolmentType -> _)
+
+    Future.sequence(results).map(_.toMap)
+
   def map[T](f: MappingRepository => T): Seq[T] =
     repositories.values.map(f).toSeq
 
-  def deleteDataForArn(arn: Arn)(implicit ec: ExecutionContext): Future[Seq[Int]] =
+  def deleteDataForArn(arn: Arn): Future[Seq[Int]] =
     Future.sequence(repositories.map { case (_, repository) => repository.deleteByArn(arn).map(dr => dr.getDeletedCount.toInt) }.toSeq)
 
 end MappingRepositories

@@ -23,28 +23,31 @@ import play.api.libs.json.JsString
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
 
-enum LegacyAgentEnrolmentType(val key: String):
+enum LegacyAgentEnrolmentType(
+  val key: String,
+  val enrolmentKey: String
+):
 
   case IRAgentReference
-  extends LegacyAgentEnrolmentType("IR-SA-AGENT")
+  extends LegacyAgentEnrolmentType("IR-SA-AGENT", "sa")
   case AgentRefNo
-  extends LegacyAgentEnrolmentType("HMCE-VAT-AGNT")
+  extends LegacyAgentEnrolmentType("HMCE-VAT-AGNT", "vat")
   case AgentCharId
-  extends LegacyAgentEnrolmentType("HMRC-CHAR-AGENT")
+  extends LegacyAgentEnrolmentType("HMRC-CHAR-AGENT", "char")
   case HmrcGtsAgentRef
-  extends LegacyAgentEnrolmentType("HMRC-GTS-AGNT")
+  extends LegacyAgentEnrolmentType("HMRC-GTS-AGNT", "gts")
   case HmrcMgdAgentRef
-  extends LegacyAgentEnrolmentType("HMRC-MGD-AGNT")
+  extends LegacyAgentEnrolmentType("HMRC-MGD-AGNT", "mgd")
   case VATAgentRefNo
-  extends LegacyAgentEnrolmentType("HMRC-NOVRN-AGNT")
+  extends LegacyAgentEnrolmentType("HMRC-NOVRN-AGNT", "novrn")
   case IRAgentReferenceCt
-  extends LegacyAgentEnrolmentType("IR-CT-AGENT")
+  extends LegacyAgentEnrolmentType("IR-CT-AGENT", "ct")
   case IRAgentReferencePaye
-  extends LegacyAgentEnrolmentType("IR-PAYE-AGENT")
+  extends LegacyAgentEnrolmentType("IR-PAYE-AGENT", "paye")
   case SdltStorn
-  extends LegacyAgentEnrolmentType("IR-SDLT-AGENT")
+  extends LegacyAgentEnrolmentType("IR-SDLT-AGENT", "sdlt")
   case AgentCode
-  extends LegacyAgentEnrolmentType("AgentCode")
+  extends LegacyAgentEnrolmentType("AgentCode", "agentcode")
 
   def getDataBaseKey: String =
 
@@ -60,38 +63,10 @@ end LegacyAgentEnrolmentType
 object LegacyAgentEnrolmentType:
 
   def findByName(name: String): Option[LegacyAgentEnrolmentType] =
-
-    name match
-      case "IR-SA-AGENT" => Some(IRAgentReference)
-      case "HMCE-VAT-AGNT" => Some(AgentRefNo)
-      case "HMRC-CHAR-AGENT" => Some(AgentCharId)
-      case "HMRC-GTS-AGNT" => Some(HmrcGtsAgentRef)
-      case "HMRC-MGD-AGNT" => Some(HmrcMgdAgentRef)
-      case "HMRC-NOVRN-AGNT" => Some(VATAgentRefNo)
-      case "IR-CT-AGENT" => Some(IRAgentReferenceCt)
-      case "IR-PAYE-AGENT" => Some(IRAgentReferencePaye)
-      case "IR-SDLT-AGENT" => Some(SdltStorn)
-      case "AgentCode" => Some(AgentCode)
-      case _ => None
-    end match
-
-  end findByName
+    LegacyAgentEnrolmentType.values.find(_.key == name)
 
   def findByDataBaseKey(dbKey: String): Option[LegacyAgentEnrolmentType] =
-
-    dbKey match
-      case "sa" => Some(IRAgentReference)
-      case "vat" => Some(AgentRefNo)
-      case "char" => Some(AgentCharId)
-      case "gts" => Some(HmrcGtsAgentRef)
-      case "mgd" => Some(HmrcMgdAgentRef)
-      case "novrn" => Some(VATAgentRefNo)
-      case "ct" => Some(IRAgentReferenceCt)
-      case "paye" => Some(IRAgentReferencePaye)
-      case "sdlt" => Some(SdltStorn)
-      case "agentcode" => Some(AgentCode)
-      case _ => None
-    end match
+    LegacyAgentEnrolmentType.values.find(_.enrolmentKey == dbKey)
 
   end findByDataBaseKey
 
