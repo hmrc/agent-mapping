@@ -29,6 +29,7 @@ import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.PlainText
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.Codecs
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
@@ -64,6 +65,11 @@ extends PlayMongoRepository[AgentReferenceMapping](
         .name("AgentReferenceNumber")
     ),
     IndexModel(
+      ascending("identifier"),
+      IndexOptions()
+        .name("AgentCode")
+    ),
+    IndexModel(
       ascending("preCreatedDate"),
       IndexOptions()
         .name("preCreatedDate")
@@ -81,6 +87,16 @@ with RequestAwareLogging:
 
   def findBy(arn: Arn): Future[Seq[AgentReferenceMapping]] =
     collection.find(equal("arn", arn.value)).toFuture()
+
+  def findIdentifierBy(arn: Arn): Future[Seq[String]] =
+    collection.find(equal("arn", arn.value))
+      .map(_.identifier)
+      .toFuture()
+
+  def findArnBy(identifier: String): Future[Seq[Arn]] =
+    collection.find(equal("identifier", crypto.encrypt(PlainText(identifier)).value))
+      .map(_.arn)
+      .toFuture()
 
   def findAll(): Future[Seq[AgentReferenceMapping]] =
     collection.find().toFuture()

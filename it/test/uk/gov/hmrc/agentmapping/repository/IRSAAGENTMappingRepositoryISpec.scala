@@ -129,6 +129,26 @@ with DefaultPlayMongoRepositorySupport[AgentReferenceMapping]:
       result.size shouldBe 0
     }
 
+    "find all identifiers for Arn" in {
+      repository.store(arn1, reference1).futureValue
+      repository.store(arn1, reference2).futureValue
+      repository.store(arn2, reference2).futureValue
+
+      val result: Seq[String] = repository.findIdentifierBy(arn1).futureValue
+
+      result should contain theSameElementsAs Seq(reference1, reference2)
+    }
+
+    "find all Arns for identifier" in {
+      repository.store(arn1, reference1).futureValue
+      repository.store(arn1, reference2).futureValue
+      repository.store(arn2, reference2).futureValue
+
+      val result: Seq[Arn] = repository.findArnBy(reference2).futureValue
+
+      result should contain theSameElementsAs Seq(arn1, arn2)
+    }
+
     "delete a matching records by Arn" in {
       repository.store(arn1, reference1).futureValue
       repository.store(arn2, reference2).futureValue

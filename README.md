@@ -119,6 +119,70 @@ responses:
     404 NOT FOUND 
     
 
+### find all mappings for the given ARN
+
+    GET /agent-mapping/mappings/arn/:arn
+    
+responses:
+
+    200 OK
+    {
+        "sa": [ "A1111A", "A1111B" ],
+        "sdlt": [ "AAA0008" ],
+        "mgd": [ "737B.89" ],
+        "gts": [ "AB8964622K" ],
+        "ct": [ "B2121C" ],
+        "vat": [ "101747696", "101747641" ],
+        "novrn": [ "FGH7996KUJ" ],
+        "char": [ "FGH7996KUJ" ],
+        "paye": [ "F9876J" ]
+    }
+
+    200 OK
+    {}
+
+    401 UNAUTHORIZED    if user is not authenticated
+
+### find ARN mappings for the given enrolment key and agent code
+
+    GET /agent-mapping/mappings/key/:key/code/:code
+
+path parameters:
+
+    :key - legacy enrolment key
+    :code - agent code
+
+supported keys: `char`,`gts`,`mgd`,`novrn`,`ct`,`paye`,`sdlt`,`sa`,`vat`
+
+responses:
+
+    200 OK
+    [ "JARN1234567", "JARN7654321" ]
+
+    200 OK
+    []
+
+    401 UNAUTHORIZED    if user is not authenticated
+
+### find ARN mappings for the given agent code
+
+    GET /agent-mapping/mappings/code/:code
+
+path parameters:
+
+    :code - agent code
+
+responses:
+
+    200 OK
+    [ "JARN1234567", "JARN7654321", "JARN1111111" ]
+
+    200 OK
+    []
+
+    401 UNAUTHORIZED    if user is not authenticated
+
+
 ### License
 
 This code is open source software licensed under the [Apache 2.0 License]("http://www.apache.org/licenses/LICENSE-2.0.html")

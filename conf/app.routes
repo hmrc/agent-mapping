@@ -1,14 +1,17 @@
 # microservice specific routes
 
-PUT           /mappings/arn/:arn                          @uk.gov.hmrc.agentmapping.controller.MappingController.createMapping(arn: uk.gov.hmrc.agentmapping.model.Arn)
-PUT           /mappings/auto-map/arn/:arn                 uk.gov.hmrc.agentmapping.controller.MappingController.autoMapEnrolments(arn: uk.gov.hmrc.agentmapping.model.Arn)
+PUT        /mappings/arn/:arn                   @uk.gov.hmrc.agentmapping.controller.MappingController.createMapping(arn: uk.gov.hmrc.agentmapping.model.Arn)
+PUT        /mappings/auto-map/arn/:arn          uk.gov.hmrc.agentmapping.controller.MappingController.autoMapEnrolments(arn: uk.gov.hmrc.agentmapping.model.Arn)
 
-GET           /mappings/eligibility                       @uk.gov.hmrc.agentmapping.controller.MappingController.hasEligibleEnrolments()
+GET        /mappings/eligibility                @uk.gov.hmrc.agentmapping.controller.MappingController.hasEligibleEnrolments()
 
-GET           /client-count                               @uk.gov.hmrc.agentmapping.controller.MappingController.getClientCount
+GET        /client-count                        @uk.gov.hmrc.agentmapping.controller.MappingController.getClientCount
 
-GET           /mappings/sa/:arn                           @uk.gov.hmrc.agentmapping.controller.MappingController.findSaMappings(arn: uk.gov.hmrc.agentmapping.model.Arn)
-GET           /mappings/agentcode/:arn                    @uk.gov.hmrc.agentmapping.controller.MappingController.findAgentCodeMappings(arn: uk.gov.hmrc.agentmapping.model.Arn)
+GET        /mappings/sa/:arn                    @uk.gov.hmrc.agentmapping.controller.MappingController.findSaMappings(arn: uk.gov.hmrc.agentmapping.model.Arn)
+GET        /mappings/agentcode/:arn             @uk.gov.hmrc.agentmapping.controller.MappingController.findAgentCodeMappings(arn: uk.gov.hmrc.agentmapping.model.Arn)
+GET        /mappings/arn/:arn                   @uk.gov.hmrc.agentmapping.controller.MappingLookupController.mappingsByArn(arn: uk.gov.hmrc.agentmapping.model.Arn)
+GET        /mappings/key/:key/code/:code        @uk.gov.hmrc.agentmapping.controller.MappingLookupController.mappingsByKeyAndAgentCode(key: String, code: String)
+GET        /mappings/code/:code                 @uk.gov.hmrc.agentmapping.controller.MappingLookupController.mappingsByAgentCode(code: String)
 
 # supported keys: char,gts,mgd,novrn,ct,paye,sdlt
-GET           /mappings/key/:key/arn/:arn                 @uk.gov.hmrc.agentmapping.controller.MappingController.findMappings(key: String, arn: uk.gov.hmrc.agentmapping.model.Arn)
+GET        /mappings/key/:key/arn/:arn          @uk.gov.hmrc.agentmapping.controller.MappingController.findMappings(key: String, arn: uk.gov.hmrc.agentmapping.model.Arn)
