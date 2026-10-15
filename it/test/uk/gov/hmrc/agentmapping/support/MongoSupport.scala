@@ -16,19 +16,23 @@
 
 package uk.gov.hmrc.agentmapping.support
 
+import org.mongodb.scala.SingleObservableFuture
+import org.mongodb.scala.bson.BsonDocument
 import org.scalatest.BeforeAndAfterEach
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
 import uk.gov.hmrc.agentmapping.repository.MappingRepositories
+import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
 /** Provides a way to create mappings for test. This will clear the mapping repositories before each test and includes method to populate the mapping
   * repositories with test data.
   */
-trait MappingSupport
+trait MongoSupport
 extends BeforeAndAfterEach:
   self: ServerBaseISpec =>
 
-  private val mappingRepositories = app.injector.instanceOf[MappingRepositories]
+  val mappingRepositories: MappingRepositories = app.injector.instanceOf[MappingRepositories]
+  val lockRepository: MongoLockRepository = app.injector.instanceOf[MongoLockRepository]
 
   def populateMappings(testData: (LegacyAgentEnrolmentType, Seq[AgentReferenceMapping])*): Unit =
     for
@@ -40,3 +44,4 @@ extends BeforeAndAfterEach:
   override def beforeEach(): Unit =
     super.beforeEach()
     mappingRepositories.map(_.deleteAll().futureValue)
+    lockRepository.collection.deleteMany(BsonDocument()).toFuture().futureValue

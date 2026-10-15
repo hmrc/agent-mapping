@@ -32,7 +32,6 @@ import uk.gov.hmrc.http.HttpReads
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 import uk.gov.hmrc.http.HttpReads.Implicits._
 
 import java.net.URL
@@ -50,8 +49,7 @@ case class EnrolmentResponse(enrolments: Seq[ModelEnrolment])
 @Singleton
 class EnrolmentStoreProxyConnector @Inject() (
   appConfig: AppConfig,
-  http: HttpClientV2,
-  val metrics: Metrics
+  http: HttpClientV2
 )(
   implicit val ec: ExecutionContext
 ):

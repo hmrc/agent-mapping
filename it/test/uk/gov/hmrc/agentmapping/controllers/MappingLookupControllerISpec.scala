@@ -25,13 +25,13 @@ import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
 import uk.gov.hmrc.agentmapping.stubs.AuthStubs
-import uk.gov.hmrc.agentmapping.support.MappingSupport
+import uk.gov.hmrc.agentmapping.support.MongoSupport
 import uk.gov.hmrc.agentmapping.support.ServerBaseISpec
 import MappingLookupControllerISpec.mappingsByEnrolmentType
 
 class MappingLookupControllerISpec
 extends ServerBaseISpec
-with MappingSupport
+with MongoSupport
 with AuthStubs
 with ScalaFutures:
 
@@ -46,13 +46,13 @@ with ScalaFutures:
         response.status shouldBe 200 withClue response.json
         response.json shouldBe Json.parse(
           """{
-            |  "sdlt": [ "AAA0008" ],
-            |  "mgd": [ "737B.89" ],
-            |  "sa": [ "A1111A", "A1111B" ],
-            |  "ct": [ "B2121C" ],
-            |  "vat": [ "101747696" ],
-            |  "char": [ "FGH7996KUJ" ],
-            |  "paye": [ "F9876J" ]
+            |"IR-SA-AGENT":["A1111A","A1111B"],
+            |"HMCE-VAT-AGNT":["101747696"],
+            |"IR-CT-AGENT":["B2121C"],
+            |"IR-SDLT-AGENT":["AAA0008"],
+            |"HMRC-MGD-AGNT":["737B.89"],
+            |"HMRC-CHAR-AGENT":["FGH7996KUJ"],
+            |"IR-PAYE-AGENT":["F9876J"]
             |}""".stripMargin
         )
 
@@ -94,24 +94,25 @@ with ScalaFutures:
           (enrolmentType, agentRefMappings) <- mappingsByEnrolmentType
           mapping <- agentRefMappings
         do
-          val response = callGet(s"/mappings/key/${enrolmentType.enrolmentKey}/code/${mapping.identifier}")
+          val response = callGet(s"/mappings/key/${enrolmentType.dbKey}/code/${mapping.identifier}")
           response.status shouldBe 200 withClue response.json
 
           // Build expected ARNs for this identifier and enrolment type from test data
-          val expectedArns = agentRefMappings
-            .filter(_.identifier == mapping.identifier)
-            .map(_.arn.value)
-            .distinct
-            .sorted
+          val expectedArns =
+            agentRefMappings
+              .filter(_.identifier == mapping.identifier)
+              .map(_.arn.value)
+              .distinct
+              .sorted
 
           // Parse response and verify it matches expected ARNs
           val actualArns = response.json.as[Seq[String]].sorted
-          actualArns shouldBe expectedArns withClue s"For ${enrolmentType.enrolmentKey}/${mapping.identifier}"
+          actualArns shouldBe expectedArns withClue s"For ${enrolmentType.dbKey}/${mapping.identifier}"
 
       "returns an empty list when the mapping does not exist" in:
         isLoggedIn
 
-        val enrolmentKeys = LegacyAgentEnrolmentType.values.map(_.enrolmentKey).toSeq
+        val enrolmentKeys = LegacyAgentEnrolmentType.values.map(_.dbKey).toSeq
 
         for enrolmentKey <- enrolmentKeys
         do
@@ -126,7 +127,7 @@ with ScalaFutures:
           (enrolmentType, agentRefMappings) <- mappingsByEnrolmentType
           mapping <- agentRefMappings
         do
-          val response = callGet(s"/mappings/key/${enrolmentType.enrolmentKey}/code/${mapping.identifier}")
+          val response = callGet(s"/mappings/key/${enrolmentType.dbKey}/code/${mapping.identifier}")
           response.status shouldBe 401
 
   "looking up a ARN for the agent code" should:
@@ -164,43 +165,131 @@ object MappingLookupControllerISpec:
 
   private val mappingsByEnrolmentType: Map[LegacyAgentEnrolmentType, Seq[AgentReferenceMapping]] = Map(
     LegacyAgentEnrolmentType.SdltStorn -> Seq(
-      AgentReferenceMapping(id = None, Arn("JARN1234567"), "AAA0008"),
-      AgentReferenceMapping(id = None, Arn("JARN7654321"), "BBB0015"),
-      AgentReferenceMapping(id = None, Arn("JARN1111111"), "CCC0022")
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN1234567"),
+        "AAA0008"
+      ),
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN7654321"),
+        "BBB0015"
+      ),
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN1111111"),
+        "CCC0022"
+      )
     ),
     LegacyAgentEnrolmentType.HmrcMgdAgentRef -> Seq(
-      AgentReferenceMapping(id = None, Arn("JARN1234567"), "737B.89"),
-      AgentReferenceMapping(id = None, Arn("JARN7654321"), "842C.90")
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN1234567"),
+        "737B.89"
+      ),
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN7654321"),
+        "842C.90"
+      )
     ),
     LegacyAgentEnrolmentType.IRAgentReference -> Seq(
-      AgentReferenceMapping(id = None, Arn("JARN1234567"), "A1111A"),
-      AgentReferenceMapping(id = None, Arn("JARN1234567"), "A1111B"),
-      AgentReferenceMapping(id = None, Arn("JARN1111111"), "A2222C")
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN1234567"),
+        "A1111A"
+      ),
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN1234567"),
+        "A1111B"
+      ),
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN1111111"),
+        "A2222C"
+      )
     ),
     LegacyAgentEnrolmentType.HmrcGtsAgentRef -> Seq(
-      AgentReferenceMapping(id = None, Arn("JARN7654321"), "AB8964622K"),
-      AgentReferenceMapping(id = None, Arn("JARN1111111"), "CD1234567L")
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN7654321"),
+        "AB8964622K"
+      ),
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN1111111"),
+        "CD1234567L"
+      )
     ),
     LegacyAgentEnrolmentType.IRAgentReferenceCt -> Seq(
-      AgentReferenceMapping(id = None, Arn("JARN1234567"), "B2121C"),
-      AgentReferenceMapping(id = None, Arn("JARN7654321"), "B3232D"),
-      AgentReferenceMapping(id = None, Arn("JARN1111111"), "B4343E")
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN1234567"),
+        "B2121C"
+      ),
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN7654321"),
+        "B3232D"
+      ),
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN1111111"),
+        "B4343E"
+      )
     ),
     LegacyAgentEnrolmentType.AgentRefNo -> Seq(
-      AgentReferenceMapping(id = None, Arn("JARN1234567"), "101747696"),
-      AgentReferenceMapping(id = None, Arn("JARN7654321"), "101747641")
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN1234567"),
+        "101747696"
+      ),
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN7654321"),
+        "101747641"
+      )
     ),
     LegacyAgentEnrolmentType.VATAgentRefNo -> Seq(
-      AgentReferenceMapping(id = None, Arn("JARN1111111"), "FGH7996KUJ"),
-      AgentReferenceMapping(id = None, Arn("JARN1111111"), "JKL8097MNO")
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN1111111"),
+        "FGH7996KUJ"
+      ),
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN1111111"),
+        "JKL8097MNO"
+      )
     ),
     LegacyAgentEnrolmentType.AgentCharId -> Seq(
-      AgentReferenceMapping(id = None, Arn("JARN1234567"), "FGH7996KUJ"),
-      AgentReferenceMapping(id = None, Arn("JARN7654321"), "PQR8198STU")
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN1234567"),
+        "FGH7996KUJ"
+      ),
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN7654321"),
+        "PQR8198STU"
+      )
     ),
     LegacyAgentEnrolmentType.IRAgentReferencePaye -> Seq(
-      AgentReferenceMapping(id = None, Arn("JARN1234567"), "F9876J"),
-      AgentReferenceMapping(id = None, Arn("JARN7654321"), "G8765K"),
-      AgentReferenceMapping(id = None, Arn("JARN1111111"), "H7654L")
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN1234567"),
+        "F9876J"
+      ),
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN7654321"),
+        "G8765K"
+      ),
+      AgentReferenceMapping(
+        id = None,
+        Arn("JARN1111111"),
+        "H7654L"
+      )
     )
   )

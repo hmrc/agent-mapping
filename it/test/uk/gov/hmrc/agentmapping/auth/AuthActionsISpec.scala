@@ -128,21 +128,6 @@ with ScalaFutures:
     }
   }
 
-  "AuthorisedAsAgent" should {
-    def response = mockAuthActions.authorisedAsSubscribedAgent(authorisedAsAgentAction).apply(fakeRequestAny)
-
-    "return 200 and arn if the user has HMRC-AS-AGENT enrolment" in {
-      authStub[Enrolments](Future.successful(Enrolments(agentEnrolment)))
-      status(response) shouldBe 200
-      contentAsString(response) shouldBe "AARN001"
-    }
-
-    "return 403 if the user does not have HMRC-AS-AGENT enrolment" in {
-      authStub[Enrolments](Future.successful(Enrolments(saEnrolment)))
-      status(response) shouldBe 403
-    }
-  }
-
   "AuthorisedWithAgentCode" should {
     def response = mockAuthActions.authorisedWithAgentCode(authorisedWithAgentCodeAction).apply(fakeRequestAny)
 

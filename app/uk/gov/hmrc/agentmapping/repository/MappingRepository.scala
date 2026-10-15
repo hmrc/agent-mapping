@@ -88,7 +88,7 @@ with RequestAwareLogging:
   def findBy(arn: Arn): Future[Seq[AgentReferenceMapping]] =
     collection.find(equal("arn", arn.value)).toFuture()
 
-  def findIdentifierBy(arn: Arn): Future[Seq[String]] =
+  def findIdentifiersBy(arn: Arn): Future[Seq[String]] =
     collection.find(equal("arn", arn.value))
       .map(_.identifier)
       .toFuture()

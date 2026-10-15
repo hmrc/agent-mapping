@@ -61,7 +61,7 @@ with RequestAwareLogging:
   def mappingsByAgentCode(code: String): Action[AnyContent] = Action.async:
     case given Request[?] =>
       authActions.authorised():
-        for results <- repositories.getAllArnsBy(code)
+        for results <- repositories.getAllArnsByIdentifier(code)
         yield Ok(Json.toJson(enrolmentKeyToIdentifiers(results)))
 
   private def enrolmentKeyToIdentifiers[A](results: Map[LegacyAgentEnrolmentType, Seq[A]]) =
@@ -70,4 +70,4 @@ with RequestAwareLogging:
     for
       (enrolmentType, identifiers) <- withoutNewAgentCodes
       if identifiers.nonEmpty
-    yield enrolmentType.enrolmentKey -> identifiers
+    yield enrolmentType.key -> identifiers

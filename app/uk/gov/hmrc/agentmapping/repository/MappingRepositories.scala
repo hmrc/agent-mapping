@@ -57,16 +57,21 @@ class MappingRepositories @Inject() (
   def getAllIdentifiersBy(arn: Arn): Future[Map[LegacyAgentEnrolmentType, Seq[String]]] =
     val results =
       for (enrolmentType, repository) <- repositories.toSeq
-      yield repository.findIdentifierBy(arn).map(enrolmentType -> _)
+      yield repository.findIdentifiersBy(arn).map(enrolmentType -> _)
 
     Future.sequence(results).map(_.toMap)
 
-  def getAllArnsBy(identifier: String): Future[Map[LegacyAgentEnrolmentType, Seq[Arn]]] =
+  def getAllArnsByIdentifier(identifier: String): Future[Map[LegacyAgentEnrolmentType, Seq[Arn]]] =
     val results =
       for (enrolmentType, repository) <- repositories.toSeq
       yield repository.findArnBy(identifier).map(enrolmentType -> _)
 
     Future.sequence(results).map(_.toMap)
+
+  def getAllArnsByIdentifier(identifier: Identifier): Future[Seq[Arn]] =
+    repositories.get(identifier.enrolmentType) match
+      case Some(repository) => repository.findArnBy(identifier.value)
+      case None => Future.successful(Seq.empty)
 
   def map[T](f: MappingRepository => T): Seq[T] =
     repositories.values.map(f).toSeq

@@ -62,6 +62,30 @@ with RequestAwareLogging:
   }
   end authorisedWithEnrolments
 
+  def authorisedWithIdentifiers(
+    body: Request[AnyContent] => (
+      Set[Identifier],
+      String,
+      String
+    ) => Future[Result]
+  )(
+    implicit ec: ExecutionContext
+  ): Action[AnyContent] = Action.async { implicit request =>
+    authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
+      .retrieve(allEnrolments and groupIdentifier and credentials):
+        case enrolments ~ Some(groupIdentifier) ~ Some(Credentials(credId, _)) =>
+          body(request)(
+            captureIdentifiersFrom(enrolments),
+            groupIdentifier,
+            credId
+          )
+        case _ => Future.successful(Forbidden)
+      .recover:
+        case _: NoActiveSession => Unauthorized
+        case _: AuthorisationException => Forbidden
+  }
+  end authorisedWithIdentifiers
+
   def authorisedWithAgentCode(
     body: Request[AnyContent] => Set[Identifier] => ProviderId => Future[Result]
   )(
@@ -99,32 +123,6 @@ with RequestAwareLogging:
         case _: AuthorisationException => Forbidden
   }
   end authorisedWithProviderId
-
-  def authorisedAsSubscribedAgent(
-    body: Request[AnyContent] => Arn => Future[Result]
-  )(
-    implicit ec: ExecutionContext
-  ): Action[AnyContent] = Action.async { implicit request =>
-    authorised(
-      Enrolment("HMRC-AS-AGENT")
-        and AuthProviders(GovernmentGateway)
-    ).retrieve(authorisedEnrolments) { enrolments =>
-      val arnOpt = getEnrolmentInfo(
-        enrolments.enrolments,
-        "HMRC-AS-AGENT",
-        "AgentReferenceNumber"
-      )
-
-      arnOpt match
-        case Some(arn) => body(request)(Arn(arn))
-        case None => Future.successful(Forbidden)
-      end match
-
-    }.recover:
-      case _: NoActiveSession => Unauthorized
-      case _: AuthorisationException => Forbidden
-  }
-  end authorisedAsSubscribedAgent
 
   def authorisedAsSubscribedAgentWithGroup(
     body: Request[AnyContent] => Arn => String => String => Future[Result]

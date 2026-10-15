@@ -27,8 +27,11 @@ import play.api.libs.ws.WSResponse
 import play.api.libs.ws.*
 import uk.gov.hmrc.agentmapping.support.BaseISpec
 import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
+import uk.gov.hmrc.agentmapping.util.TimeMachine
+import uk.gov.hmrc.http.SessionKeys
 
 import java.nio.charset.StandardCharsets.UTF_8
+import java.time.LocalDate
 import java.util.Base64
 
 abstract class ServerBaseISpec
@@ -63,6 +66,11 @@ with ScalaFutures:
 
   end TestGuiceModule
 
+  class FakeTimeMachine(var date: LocalDate)
+  extends TimeMachine:
+    override def today: LocalDate = date
+  end FakeTimeMachine
+
   val url = s"http://localhost:$port/agent-mapping"
   val wsClient: WSClient = app.injector.instanceOf[WSClient]
 
@@ -76,10 +84,16 @@ with ScalaFutures:
       .post(body)
       .futureValue
 
-  def callGet(path: String): WSResponse =
+  def callGet(
+    path: String,
+    sessionId: Option[String] = None
+  ): WSResponse =
     wsClient
       .url(s"$url$path")
-      .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
+      .withHttpHeaders(Seq(
+        "Content-Type" -> "application/json",
+        "Authorization" -> "Bearer XYZ"
+      ) ++ sessionId.map(id => SessionKeys.sessionId -> id).toSeq: _*)
       .get()
       .futureValue
 

@@ -1,0 +1,108 @@
+openapi: 3.0.3
+info:
+  title: Agent Mapping API
+  version: 1.0.0
+  description: OpenAPI specification for the agent mapping status endpoint.
+paths:
+  /mappings-status/enrolment/{enrolment}/value/{value}:
+    get:
+      summary: Check mapping status for an agent code
+      parameters:
+        - name: enrolment
+          in: path
+          required: true
+          description: Enrolment key to check.
+          schema:
+            type: string
+            enum:
+              - IR-SA-AGENT
+              - IR-CT-AGENT
+              - IR-PAYE-AGENT
+              - HMCE-VAT-AGNT
+              - HMRC-NOVRN-AGNT
+              - HMRC-CHAR-AGENT
+              - HMRC-GTS-AGNT
+              - HMRC-MGD-AGNT
+              - IR-SDLT-AGENT
+              - HMRC-AGENT-AGENT
+        - name: value
+          in: path
+          required: true
+          description: Agent code to check (the identifier value of the enrolment).
+          schema:
+            type: string
+      responses:
+        '200':
+          description: |
+            Agent code not mapped, but it is not yet mandatory.
+
+            'alreadyNotified' indicates if the user has already been notified about the mapping requirement (current session), this can be used by consuming frontends to decide whether to send the user to the continue URL.
+
+            Continue URL leads into the mapping journey.
+
+            Add a URL encoded 'origin' query parameter with a URL to the continue URL to redirect the user back to the original page after mapping (Note they will lose their original session when mapping).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotMappedResponse'
+              examples:
+                default:
+                  value:
+                    alreadyNotified: false
+                    continueUrl: https://www.example.com/continue
+        '204':
+          description: Agent code mapped.
+        '400':
+          description: Invalid agent enrolment key.
+        '403':
+          description: User does not have the agent enrolment being checked. Or user is not an agent.
+        '401':
+          description: Session missing.
+        '404':
+          description: |
+            Agent code not mapped after enforcement deadline. Actions on behalf of clients must be blocked.
+            
+            Continue URL leads into the mapping journey.
+            
+            Add a URL encoded 'origin' query parameter with a URL to the continue URL to redirect the user back to the original page after mapping (Note they will lose their original session when mapping).
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContinueUrlResponse'
+              examples:
+                default:
+                  value:
+                    continueUrl: https://www.example.com/continue
+        '423':
+          description: The ASA reference is suspended. Continue URL leads to the suspension information page.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ContinueUrlResponse'
+              examples:
+                default:
+                  value:
+                    continueUrl: https://www.example.com/continue
+components:
+  schemas:
+    ContinueUrlResponse:
+      type: object
+      required:
+        - continueUrl
+      properties:
+        continueUrl:
+          type: string
+          example: https://www.example.com/continue
+    NotMappedResponse:
+      type: object
+      required:
+        - alreadyNotified
+        - continueUrl
+      properties:
+        alreadyNotified:
+          type: boolean
+          example: false
+        continueUrl:
+          type: string
+          example: https://www.example.com/continue
+
