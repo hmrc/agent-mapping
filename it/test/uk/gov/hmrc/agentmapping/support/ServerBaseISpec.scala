@@ -27,11 +27,14 @@ import play.api.libs.ws.WSResponse
 import play.api.libs.ws.*
 import uk.gov.hmrc.agentmapping.support.BaseISpec
 import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
-import uk.gov.hmrc.agentmapping.util.TimeMachine
 import uk.gov.hmrc.http.SessionKeys
 
 import java.nio.charset.StandardCharsets.UTF_8
+import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.Base64
 
 abstract class ServerBaseISpec
@@ -66,10 +69,23 @@ with ScalaFutures:
 
   end TestGuiceModule
 
-  class FakeTimeMachine(var date: LocalDate)
-  extends TimeMachine:
-    override def today: LocalDate = date
-  end FakeTimeMachine
+  class MutableClock(
+    private var date: LocalDate,
+    private val zoneId: ZoneId = ZoneOffset.UTC
+  )
+  extends Clock:
+
+    override def getZone: ZoneId = zoneId
+
+    override def withZone(zone: ZoneId): Clock = new MutableClock(date, zone)
+
+    override def instant(): Instant = date.atStartOfDay(zoneId).toInstant
+
+    def setDate(nextDate: LocalDate): Unit =
+      date = nextDate
+    end setDate
+
+  end MutableClock
 
   val url = s"http://localhost:$port/agent-mapping"
   val wsClient: WSClient = app.injector.instanceOf[WSClient]

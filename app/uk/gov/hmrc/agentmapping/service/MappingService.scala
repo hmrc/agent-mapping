@@ -16,16 +16,16 @@
 
 package uk.gov.hmrc.agentmapping.service
 
-import com.mongodb.MongoWriteException
 import play.api.mvc.Request
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentmapping.model.Arn
-import uk.gov.hmrc.agentmapping.model.Identifier
+import uk.gov.hmrc.agentmapping.model.ServiceIdentifier
 import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
 import uk.gov.hmrc.agentmapping.repository.MappingRepositories
 import uk.gov.hmrc.agentmapping.util.RequestAwareLogging
+import uk.gov.hmrc.mongo.MongoUtils.DuplicateKey
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -42,21 +42,18 @@ extends RequestAwareLogging:
 
   def getGroupIdentifiers(groupId: String)(using
     rh: RequestHeader
-  ): Future[Seq[Identifier]] =
+  ): Future[Seq[ServiceIdentifier]] =
     enrolmentStoreProxyConnector.getPrincipalEnrolments(groupId).map: response =>
       response.enrolments
         .filter(_.state.equalsIgnoreCase("Activated"))
         .flatMap: enrolment =>
-          LegacyAgentEnrolmentType
-            .findByName(enrolment.service)
-            .fold(Seq.empty[Identifier]): service =>
-              enrolment.identifiers.map(id =>
-                Identifier(service, id.value)
-              ).toSet
+          // Only using head of identifiers because the services we are interested in only have one identifier
+          LegacyAgentEnrolmentType.findByName(enrolment.service)
+            .map(service => ServiceIdentifier(service, enrolment.identifiers.head.value))
 
   def createMappingInRepository(
     arn: Arn,
-    identifier: Identifier,
+    identifier: ServiceIdentifier,
     ggCredId: String,
     isAutomapping: Boolean = false
   )(implicit
@@ -73,8 +70,8 @@ extends RequestAwareLogging:
       )
       false
     }.recover:
-      case e: MongoWriteException if e.getMessage.contains("E11000") && isAutomapping => true
-      case e: MongoWriteException if e.getMessage.contains("E11000") =>
+      case DuplicateKey(_) if isAutomapping => true
+      case DuplicateKey(_) =>
         auditService.sendCreateMappingAuditEvent(
           arn,
           identifier,

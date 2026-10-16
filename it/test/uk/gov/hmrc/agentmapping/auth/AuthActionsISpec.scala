@@ -30,7 +30,7 @@ import play.api.test.Helpers.contentAsString
 import play.api.test.Helpers.defaultAwaitTimeout
 import play.api.test.Helpers.status
 import uk.gov.hmrc.agentmapping.model.Arn
-import uk.gov.hmrc.agentmapping.model.Identifier
+import uk.gov.hmrc.agentmapping.model.ServiceIdentifier
 import uk.gov.hmrc.agentmapping.support.BaseISpec
 import uk.gov.hmrc.agentmapping.auth.AuthActions
 import uk.gov.hmrc.auth.core._
@@ -295,7 +295,7 @@ with ScalaFutures:
   private val authorisedAsAgentAction: Request[AnyContent] => Arn => Future[Result] = { _ => arn =>
     Future.successful(Ok(arn.value))
   }
-  private val authorisedWithAgentCodeAction: Request[AnyContent] => Set[Identifier] => String => Future[Result] = {
+  private val authorisedWithAgentCodeAction: Request[AnyContent] => Set[ServiceIdentifier] => String => Future[Result] = {
     _ => _ => _ => Future.successful(Ok)
   }
 

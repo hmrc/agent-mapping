@@ -14,12 +14,19 @@
  * limitations under the License.
  */
 
-package uk.gov.hmrc.agentmapping.util
+package uk.gov.hmrc.agentmapping.module
 
-import java.time.LocalDate
-import javax.inject.Singleton
+import com.google.inject.AbstractModule
 
-@Singleton
-class TimeMachine:
-  def today: LocalDate = LocalDate.now
-end TimeMachine
+import java.time.Clock
+import java.time.ZoneId
+
+class ClockModule
+extends AbstractModule {
+
+  override def configure(): Unit = {
+    bind(classOf[Clock]).toInstance(Clock.system(ZoneId.systemDefault()))
+  }
+}
+
+end ClockModule

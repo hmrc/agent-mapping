@@ -39,7 +39,7 @@ class AppConfig @Inject() (
   val agentServicesAccountBaseUrl: String = servicesConfig.baseUrl("agent-services-account")
   val enrolmentStoreProxyBaseUrl: String = servicesConfig.baseUrl("enrolment-store-proxy")
 
-  lazy val mandationDates: Map[LegacyAgentEnrolmentType, LocalDate] =
+  private val mandationDates: Map[LegacyAgentEnrolmentType, LocalDate] =
     configuration
       .get[Map[String, String]]("mandationDates")
       .map { case (enrolmentKey, date) =>

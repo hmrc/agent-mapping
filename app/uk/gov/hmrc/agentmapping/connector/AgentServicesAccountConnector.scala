@@ -42,7 +42,7 @@ class AgentServicesAccountConnector @Inject() (
 
   private val agentServicesAccountBaseUrl = appConfig.agentServicesAccountBaseUrl
 
-  def isSuspended(arn: Arn)(implicit rh: RequestHeader): Future[Boolean] = http
+  def isSuspended(arn: Arn)(using RequestHeader): Future[Boolean] = http
     .get(url"$agentServicesAccountBaseUrl/agent-services-account/agent-record-with-checks/arn/${arn.value}")
     .execute[HttpResponse]
     .map: response =>

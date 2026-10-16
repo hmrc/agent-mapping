@@ -19,12 +19,12 @@ package uk.gov.hmrc.agentmapping.model
 import play.api.libs.json.Json.format
 import play.api.libs.json._
 
-case class Identifier(
+case class ServiceIdentifier(
   enrolmentType: LegacyAgentEnrolmentType,
   value: String
 )
 
-object Identifier:
+object ServiceIdentifier:
 
   implicit val enrolmentTypeFormat: Format[LegacyAgentEnrolmentType] = Format(
     Reads {
@@ -33,6 +33,6 @@ object Identifier:
     },
     Writes(legacyAgentEnrolmentType => JsString(legacyAgentEnrolmentType.toString))
   )
-  implicit val formats: Format[Identifier] = format[Identifier]
+  implicit val formats: Format[ServiceIdentifier] = format[ServiceIdentifier]
 
-end Identifier
+end ServiceIdentifier

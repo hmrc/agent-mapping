@@ -68,7 +68,7 @@ class MappingRepositories @Inject() (
 
     Future.sequence(results).map(_.toMap)
 
-  def getAllArnsByIdentifier(identifier: Identifier): Future[Seq[Arn]] =
+  def getAllArnsByServiceIdentifier(identifier: ServiceIdentifier): Future[Seq[Arn]] =
     repositories.get(identifier.enrolmentType) match
       case Some(repository) => repository.findArnBy(identifier.value)
       case None => Future.successful(Seq.empty)

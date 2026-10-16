@@ -20,7 +20,7 @@ import uk.gov.hmrc.agentmapping.util.RequestAwareLogging
 import play.api.mvc.*
 import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.agentmapping.model.BasicAuthentication
-import uk.gov.hmrc.agentmapping.model.Identifier
+import uk.gov.hmrc.agentmapping.model.ServiceIdentifier
 import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
 import uk.gov.hmrc.auth.core.*
 import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
@@ -62,32 +62,39 @@ with RequestAwareLogging:
   }
   end authorisedWithEnrolments
 
-  def authorisedWithIdentifiers(
-    body: Request[AnyContent] => (
-      Set[Identifier],
-      String,
-      String
-    ) => Future[Result]
+  case class AuthorisedAgentRequest[A](
+    groupId: String,
+    credId: String,
+    request: Request[A]
+  )
+  extends WrappedRequest[A](request)
+
+  def authorisedAgentFor(identifier: ServiceIdentifier)(
+    body: AuthorisedAgentRequest[AnyContent] => Future[Result]
   )(
     implicit ec: ExecutionContext
   ): Action[AnyContent] = Action.async { implicit request =>
     authorised(AuthProviders(GovernmentGateway) and AffinityGroup.Agent)
       .retrieve(allEnrolments and groupIdentifier and credentials):
         case enrolments ~ Some(groupIdentifier) ~ Some(Credentials(credId, _)) =>
-          body(request)(
-            captureIdentifiersFrom(enrolments),
-            groupIdentifier,
-            credId
-          )
+          if captureIdentifiersFrom(enrolments).contains(identifier) then
+            body(AuthorisedAgentRequest(
+              groupIdentifier,
+              credId,
+              request
+            ))
+          else
+            logger.warn(s"error - agent does not have enrolment for ${identifier.enrolmentType} with value ${identifier.value}")
+            Future.successful(Forbidden)
         case _ => Future.successful(Forbidden)
       .recover:
         case _: NoActiveSession => Unauthorized
         case _: AuthorisationException => Forbidden
   }
-  end authorisedWithIdentifiers
+  end authorisedAgentFor
 
   def authorisedWithAgentCode(
-    body: Request[AnyContent] => Set[Identifier] => ProviderId => Future[Result]
+    body: Request[AnyContent] => Set[ServiceIdentifier] => ProviderId => Future[Result]
   )(
     implicit ec: ExecutionContext
   ): Action[AnyContent] = Action.async { implicit request =>
@@ -243,7 +250,7 @@ with RequestAwareLogging:
   private def captureIdentifiersAndAgentCodeFrom(
     enrolments: Enrolments,
     agentCodeOpt: Option[String]
-  ): Option[Set[Identifier]] =
+  ): Option[Set[ServiceIdentifier]] =
     val identifiers = captureIdentifiersFrom(enrolments)
     if identifiers.isEmpty then
       None
@@ -251,13 +258,13 @@ with RequestAwareLogging:
       Some(
         agentCodeOpt match {
           case None => identifiers
-          case Some(ac) => identifiers + Identifier(LegacyAgentEnrolmentType.AgentCode, ac)
+          case Some(ac) => identifiers + ServiceIdentifier(LegacyAgentEnrolmentType.AgentCode, ac)
         }
       )
     end if
   end captureIdentifiersAndAgentCodeFrom
 
-  private def captureIdentifiersFrom(enrolments: Enrolments): Set[Identifier] =
+  private def captureIdentifiersFrom(enrolments: Enrolments): Set[ServiceIdentifier] =
 
     case class AgentEnrolment(
       legacyAgentEnrolmentType: LegacyAgentEnrolmentType,
@@ -272,7 +279,7 @@ with RequestAwareLogging:
       )
       .collect:
         // We only use the FIRST value; since all the enrolments we care about are single valued
-        case Some(AgentEnrolment(enrolmentType, Seq(enrolmentIdentifierValue))) => Identifier(enrolmentType, enrolmentIdentifierValue)
+        case Some(AgentEnrolment(enrolmentType, Seq(enrolmentIdentifierValue))) => ServiceIdentifier(enrolmentType, enrolmentIdentifierValue)
 
   end captureIdentifiersFrom
 

@@ -30,8 +30,10 @@ import uk.gov.hmrc.agentmapping.stubs.AuthStubs
 import uk.gov.hmrc.agentmapping.stubs.EnrolmentStoreStubs
 import uk.gov.hmrc.agentmapping.support.MongoSupport
 import uk.gov.hmrc.agentmapping.support.ServerBaseISpec
-import uk.gov.hmrc.agentmapping.util.TimeMachine
 import play.api.inject.bind
+
+import java.time.Clock
+import java.time.LocalDate
 
 class MappingStatusControllerISpec
 extends ServerBaseISpec
@@ -52,24 +54,24 @@ with ScalaFutures:
   private val arn = Arn("JARN1234567")
   private val arn2 = Arn("FARN1234567")
 
-  private lazy val mandationDate = appConfig.mandationDateFor(enrolmentType).value
+  private lazy val mandationDate = LocalDate.parse("2026-01-01")
   private lazy val afterMandationDate = mandationDate.plusDays(1)
   private lazy val beforeMandationDate = mandationDate.minusDays(1)
   private lazy val testGroupId = "testGroupId"
   private lazy val testCredId = "testCredId"
 
-  private val testTimeMachine = new FakeTimeMachine(afterMandationDate)
+  private lazy val testClock = new MutableClock(afterMandationDate)
 
   override protected def appBuilder: GuiceApplicationBuilder =
-    super.appBuilder.overrides(bind[TimeMachine].to(testTimeMachine))
+    super.appBuilder.overrides(bind[Clock].toInstance(testClock))
 
   override def beforeEach(): Unit =
     super.beforeEach()
-    testTimeMachine.date = afterMandationDate
+    testClock.setDate(afterMandationDate)
   end beforeEach
 
   override def afterEach(): Unit =
-    testTimeMachine.date = afterMandationDate
+    testClock.setDate(afterMandationDate)
     super.afterEach()
   end afterEach
 
@@ -172,7 +174,7 @@ with ScalaFutures:
 
     "the identifier is not mapped" should:
       "return not found after the mandation date if the agent's group has no other mappings" in:
-        testTimeMachine.date = afterMandationDate
+        testClock.setDate(afterMandationDate)
         givenUserIsAuthorisedFor(
           enrolmentType.key,
           enrolmentType.toString,
@@ -210,7 +212,7 @@ with ScalaFutures:
         )
 
       "return no content and automap when another identifier for the agent is mapped to an ARN" in:
-        testTimeMachine.date = afterMandationDate
+        testClock.setDate(afterMandationDate)
         givenUserIsAuthorisedFor(
           enrolmentType.key,
           enrolmentType.toString,
@@ -290,7 +292,7 @@ with ScalaFutures:
         mappingRepositories.get(enrolmentType).findArnBy(identifierValue).futureValue shouldBe Seq(arn)
 
       "return not found when another identifier for the agent is mapped to multiple ARNs" in:
-        testTimeMachine.date = afterMandationDate
+        testClock.setDate(afterMandationDate)
         givenUserIsAuthorisedFor(
           enrolmentType.key,
           enrolmentType.toString,
@@ -363,7 +365,7 @@ with ScalaFutures:
 
     "the identifier is not mapped before the mandation date" should:
       "return ok with alreadyNotified as false on the first call and true on the second call" in:
-        testTimeMachine.date = beforeMandationDate
+        testClock.setDate(beforeMandationDate)
         givenUserIsAuthorisedFor(
           enrolmentType.key,
           enrolmentType.toString,
