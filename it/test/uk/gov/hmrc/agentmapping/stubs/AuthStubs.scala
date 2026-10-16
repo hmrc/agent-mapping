@@ -40,6 +40,7 @@ trait AuthStubs:
     identifierValue: String,
     ggCredId: String,
     affinityGroup: AffinityGroup = AffinityGroup.Agent,
+    groupIdOpt: Option[String] = None,
     agentCodeOpt: Option[String],
     expectedRetrievals: Seq[String] = Seq(
       "optionalCredentials",
@@ -74,8 +75,9 @@ trait AuthStubs:
                          |{ "optionalCredentials": {
                          |    "providerId": "$ggCredId",
                          |    "providerType": "GovernmmentGateway"
-                         |  }
-                         |  ${agentCodeOpt.map(ac => s""", "agentCode": "$ac" """).getOrElse("")},
+                         |  },
+                         |  ${groupIdOpt.map(id => s""""groupIdentifier": "$id", """).getOrElse("")}
+                         |  ${agentCodeOpt.map(ac => s""""agentCode": "$ac", """).getOrElse("")}
                          |  "allEnrolments": [
                          |    { "key":"$enrolmentKey", "identifiers": [
                          |      {"key":"$identifierName", "value": "$identifierValue"}

@@ -93,7 +93,7 @@ with RequestAwareLogging:
     */
   private def createMappingInRepository(
     arn: Arn,
-    identifier: Identifier,
+    identifier: ServiceIdentifier,
     ggCredId: String
   )(implicit
     request: Request[Any]
@@ -171,7 +171,7 @@ with RequestAwareLogging:
 
   private def createMapping(
     arn: Arn,
-    identifiers: Set[Identifier]
+    identifiers: Set[ServiceIdentifier]
   )(implicit
     ec: ExecutionContext,
     request: Request[AnyContent],
@@ -199,15 +199,15 @@ with RequestAwareLogging:
 
   private def extractActiveIdentifiers(
     enrolments: Seq[Enrolment]
-  ): Set[Identifier] =
+  ): Set[ServiceIdentifier] =
     enrolments
       .filter(_.state.equalsIgnoreCase("Activated"))
       .flatMap { enrolment =>
         LegacyAgentEnrolmentType
           .findByName(enrolment.service)
-          .fold(Seq.empty[Identifier]) { service =>
+          .fold(Seq.empty[ServiceIdentifier]) { service =>
             enrolment.identifiers.map(id =>
-              Identifier(service, id.value)
+              ServiceIdentifier(service, id.value)
             )
           }
       }.toSet
@@ -215,7 +215,7 @@ with RequestAwareLogging:
 
   private def createAutoMappings(
     arn: Arn,
-    identifiers: Set[Identifier]
+    identifiers: Set[ServiceIdentifier]
   )(
     implicit
     ec: ExecutionContext,
@@ -245,7 +245,7 @@ with RequestAwareLogging:
 
   private def createAutoMappingInRepository(
     arn: Arn,
-    identifier: Identifier,
+    identifier: ServiceIdentifier,
     ggCredId: String
   )(
     implicit request: Request[Any]

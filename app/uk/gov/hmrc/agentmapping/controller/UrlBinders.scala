@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentmapping.controller
 
 import play.api.mvc.PathBindable
 import uk.gov.hmrc.agentmapping.model.Arn
+import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
 
 object UrlBinders:
 
@@ -41,5 +42,22 @@ object UrlBinders:
         key: String,
         arn: Arn
       ): String = arn.value
+
+  given PathBindable[LegacyAgentEnrolmentType] =
+    new PathBindable[LegacyAgentEnrolmentType]:
+      override def bind(
+        key: String,
+        value: String
+      ): Either[String, LegacyAgentEnrolmentType] =
+        (LegacyAgentEnrolmentType.findByDataBaseKey(value), LegacyAgentEnrolmentType.findByName(value)) match
+          case (Some(legacyEnrolment), _) => Right(legacyEnrolment)
+          case (_, Some(legacyEnrolment)) => Right(legacyEnrolment)
+          case _ => Left(s"Cannot parse parameter '$key' with value '$value' as LegacyAgentEnrolmentType")
+
+      override def unbind(
+        key: String,
+        enrolmentType: LegacyAgentEnrolmentType
+      ): String =
+        enrolmentType.dbKey // This is technically not the reverse of the binder, but we don't care about reverse route generation
 
 end UrlBinders

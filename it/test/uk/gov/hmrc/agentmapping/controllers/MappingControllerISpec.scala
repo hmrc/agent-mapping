@@ -545,6 +545,7 @@ with ScalaFutures:
           "2000000000",
           "testCredId",
           AffinityGroup.Individual,
+          None,
           Some(agentCode)
         )
         callPut(createMappingRequest, None).status shouldBe 403

@@ -16,17 +16,11 @@
 
 package uk.gov.hmrc.agentmapping.support
 
-import org.apache.pekko.stream.Materializer
 import org.scalatest.OptionValues
 import org.scalatest.concurrent.ScalaFutures
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
-import play.api.Application
-import play.api.i18n.Lang
-import play.api.i18n.Messages
-import play.api.i18n.MessagesApi
 import play.api.inject.guice.GuiceApplicationBuilder
-import play.twirl.api.HtmlFormat
 import uk.gov.hmrc.agentmapping.stubs.DataStreamStub
 import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
 
@@ -38,13 +32,12 @@ with WireMockSupport
 with DataStreamStub
 with ScalaFutures:
 
-  def app: Application
-
   protected def appBuilder: GuiceApplicationBuilder =
     new GuiceApplicationBuilder()
       .disable[DuplicateArnScanModule]
       .configure(
         "microservice.services.auth.port" -> wireMockPort,
+        "microservice.services.agent-services-account.port" -> wireMockPort,
         "microservice.services.enrolment-store-proxy.port" -> wireMockPort,
         "metrics.enabled" -> false,
         "auditing.enabled" -> false,
@@ -61,12 +54,5 @@ with ScalaFutures:
     givenAuditConnector
     ()
   end commonStubs
-
-  protected implicit val materializer: Materializer = app.materializer
-
-  private val messagesApi = app.injector.instanceOf[MessagesApi]
-  private implicit val messages: Messages = messagesApi.preferred(Seq.empty[Lang])
-
-  protected def htmlEscapedMessage(key: String): String = HtmlFormat.escape(Messages(key)).toString
 
 end BaseISpec

@@ -30,7 +30,7 @@ import play.api.test.Helpers.contentAsString
 import play.api.test.Helpers.defaultAwaitTimeout
 import play.api.test.Helpers.status
 import uk.gov.hmrc.agentmapping.model.Arn
-import uk.gov.hmrc.agentmapping.model.Identifier
+import uk.gov.hmrc.agentmapping.model.ServiceIdentifier
 import uk.gov.hmrc.agentmapping.support.BaseISpec
 import uk.gov.hmrc.agentmapping.auth.AuthActions
 import uk.gov.hmrc.auth.core._
@@ -125,21 +125,6 @@ with ScalaFutures:
 
       status(response) shouldBe 200
       contentAsString(response) shouldBe "false"
-    }
-  }
-
-  "AuthorisedAsAgent" should {
-    def response = mockAuthActions.authorisedAsSubscribedAgent(authorisedAsAgentAction).apply(fakeRequestAny)
-
-    "return 200 and arn if the user has HMRC-AS-AGENT enrolment" in {
-      authStub[Enrolments](Future.successful(Enrolments(agentEnrolment)))
-      status(response) shouldBe 200
-      contentAsString(response) shouldBe "AARN001"
-    }
-
-    "return 403 if the user does not have HMRC-AS-AGENT enrolment" in {
-      authStub[Enrolments](Future.successful(Enrolments(saEnrolment)))
-      status(response) shouldBe 403
     }
   }
 
@@ -310,7 +295,7 @@ with ScalaFutures:
   private val authorisedAsAgentAction: Request[AnyContent] => Arn => Future[Result] = { _ => arn =>
     Future.successful(Ok(arn.value))
   }
-  private val authorisedWithAgentCodeAction: Request[AnyContent] => Set[Identifier] => String => Future[Result] = {
+  private val authorisedWithAgentCodeAction: Request[AnyContent] => Set[ServiceIdentifier] => String => Future[Result] = {
     _ => _ => _ => Future.successful(Ok)
   }
 

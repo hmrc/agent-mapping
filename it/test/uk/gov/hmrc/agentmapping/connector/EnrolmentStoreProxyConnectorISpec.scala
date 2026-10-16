@@ -30,32 +30,21 @@ import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentmapping.model.EnrolmentIdentifier
 import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
 import uk.gov.hmrc.agentmapping.model.Enrolment as ModelEnrolment
-import uk.gov.hmrc.http.client.HttpClientV2
-import uk.gov.hmrc.play.bootstrap.metrics.Metrics
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
 class EnrolmentStoreProxyConnectorISpec
 extends BaseISpec
 with WireMockSupport
-with GuiceOneAppPerSuite
-with EnrolmentStoreStubs:
+with EnrolmentStoreStubs
+with GuiceOneAppPerSuite:
+
+  override lazy val app: Application = appBuilder.build()
 
   implicit val request: FakeRequest[AnyContentAsEmpty.type] = FakeRequest()
 
-  private implicit lazy val metrics: Metrics = app.injector.instanceOf[Metrics]
-  private lazy val http = app.injector.instanceOf[HttpClientV2]
-
-  override implicit lazy val app: Application = appBuilder.build()
-
   val appConfig: AppConfig = app.injector.instanceOf[AppConfig]
-
-  private lazy val connector: EnrolmentStoreProxyConnector =
-    new EnrolmentStoreProxyConnector(
-      appConfig,
-      http,
-      metrics
-    )
+  private lazy val connector: EnrolmentStoreProxyConnector = app.injector.instanceOf[EnrolmentStoreProxyConnector]
 
   private val maxRecordsToDisplay = appConfig.clientCountMaxResults
   private val clientCountBatchSize = appConfig.clientCountBatchSize

@@ -25,7 +25,7 @@ import play.api.libs.json.JsValue
 
 enum LegacyAgentEnrolmentType(
   val key: String,
-  val enrolmentKey: String
+  val dbKey: String
 ):
 
   case IRAgentReference
@@ -66,7 +66,7 @@ object LegacyAgentEnrolmentType:
     LegacyAgentEnrolmentType.values.find(_.key == name)
 
   def findByDataBaseKey(dbKey: String): Option[LegacyAgentEnrolmentType] =
-    LegacyAgentEnrolmentType.values.find(_.enrolmentKey == dbKey)
+    LegacyAgentEnrolmentType.values.find(_.dbKey == dbKey)
 
   end findByDataBaseKey
 

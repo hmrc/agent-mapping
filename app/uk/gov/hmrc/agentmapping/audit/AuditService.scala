@@ -20,7 +20,7 @@ import com.google.inject.Singleton
 import play.api.mvc.Request
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.CreateMapping
 import uk.gov.hmrc.agentmapping.model.Arn
-import uk.gov.hmrc.agentmapping.model.Identifier
+import uk.gov.hmrc.agentmapping.model.ServiceIdentifier
 import uk.gov.hmrc.agentmapping.util.RequestSupport
 import uk.gov.hmrc.play.audit.AuditExtensions.auditHeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
@@ -36,7 +36,7 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
 
   def sendCreateMappingAuditEvent(
     arn: Arn,
-    identifier: Identifier,
+    identifier: ServiceIdentifier,
     authProviderId: String,
     duplicate: Boolean = false,
     automapped: Boolean = false

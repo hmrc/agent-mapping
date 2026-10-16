@@ -27,8 +27,14 @@ import play.api.libs.ws.WSResponse
 import play.api.libs.ws.*
 import uk.gov.hmrc.agentmapping.support.BaseISpec
 import uk.gov.hmrc.agentmapping.module.DuplicateArnScanModule
+import uk.gov.hmrc.http.SessionKeys
 
 import java.nio.charset.StandardCharsets.UTF_8
+import java.time.Clock
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZoneOffset
 import java.util.Base64
 
 abstract class ServerBaseISpec
@@ -63,6 +69,24 @@ with ScalaFutures:
 
   end TestGuiceModule
 
+  class MutableClock(
+    private var date: LocalDate,
+    private val zoneId: ZoneId = ZoneOffset.UTC
+  )
+  extends Clock:
+
+    override def getZone: ZoneId = zoneId
+
+    override def withZone(zone: ZoneId): Clock = new MutableClock(date, zone)
+
+    override def instant(): Instant = date.atStartOfDay(zoneId).toInstant
+
+    def setDate(nextDate: LocalDate): Unit =
+      date = nextDate
+    end setDate
+
+  end MutableClock
+
   val url = s"http://localhost:$port/agent-mapping"
   val wsClient: WSClient = app.injector.instanceOf[WSClient]
 
@@ -76,10 +100,16 @@ with ScalaFutures:
       .post(body)
       .futureValue
 
-  def callGet(path: String): WSResponse =
+  def callGet(
+    path: String,
+    sessionId: Option[String] = None
+  ): WSResponse =
     wsClient
       .url(s"$url$path")
-      .withHttpHeaders("Content-Type" -> "application/json", "Authorization" -> "Bearer XYZ")
+      .withHttpHeaders(Seq(
+        "Content-Type" -> "application/json",
+        "Authorization" -> "Bearer XYZ"
+      ) ++ sessionId.map(id => SessionKeys.sessionId -> id).toSeq: _*)
       .get()
       .futureValue
 

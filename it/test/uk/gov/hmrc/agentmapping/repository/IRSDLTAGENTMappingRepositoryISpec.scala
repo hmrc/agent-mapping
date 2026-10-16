@@ -134,7 +134,7 @@ with DefaultPlayMongoRepositorySupport[AgentReferenceMapping]:
       repository.store(arn1, reference2).futureValue
       repository.store(arn2, reference2).futureValue
 
-      val result: Seq[String] = repository.findIdentifierBy(arn1).futureValue
+      val result: Seq[String] = repository.findIdentifiersBy(arn1).futureValue
 
       result should contain theSameElementsAs Seq(reference1, reference2)
     }
