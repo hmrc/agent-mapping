@@ -42,7 +42,6 @@ import uk.gov.hmrc.mongo.lock.LockService
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
 import scala.jdk.CollectionConverters.*
-import scala.util.Random
 
 @Singleton
 class DuplicateArnScanService @Inject() (
@@ -117,16 +116,8 @@ extends Logging:
               identifier,
               arns,
               arnCount
-            ) if arnCount > 3 =>
+            ) if arnCount > 1 =>
           logger.warn(s"[DuplicateArnScanService] Identifier '$identifier' has $arnCount ARNs: ${arns.mkString(", ")}")
-        case ArnCount(
-              identifier,
-              arns,
-              arnCount
-            ) =>
-          Random.between(0, 250) match // log a small random sample of identifiers with 2 or 3 ARNs to avoid log spam
-            case 0 => logger.warn(s"[DuplicateArnScanService] Identifier '$identifier' has $arnCount ARNs: ${arns.mkString(", ")}")
-            case _ =>
     }
   end runDuplicateArnScan
 
