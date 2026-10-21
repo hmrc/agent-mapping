@@ -21,13 +21,15 @@ import org.scalatest.concurrent.ScalaFutures
 import play.api.libs.json.JsArray
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
+import uk.gov.hmrc.agentmapping.controllers.MappingLookupControllerISpec.mappingsByEnrolmentType
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
 import uk.gov.hmrc.agentmapping.stubs.AuthStubs
 import uk.gov.hmrc.agentmapping.support.MongoSupport
 import uk.gov.hmrc.agentmapping.support.ServerBaseISpec
-import MappingLookupControllerISpec.mappingsByEnrolmentType
+
+import java.time.Instant
 
 class MappingLookupControllerISpec
 extends ServerBaseISpec
@@ -61,7 +63,7 @@ with ScalaFutures:
 
         populateMappings(
           LegacyAgentEnrolmentType.AgentCode -> Seq(AgentReferenceMapping(
-            id = None,
+            created = Instant.now(),
             arn = Arn("JARN1234567"),
             identifier = "AGENT123"
           ))
@@ -86,7 +88,7 @@ with ScalaFutures:
         response.status shouldBe 401
 
     "looking up a ARN for the agent code and enrolment key" should:
-      "return a matching ARNs for the agent code and enrolment key if they exist" in:
+      "return a matching ARN for the agent code and enrolment key if they exist" in:
         isLoggedIn
         populateMappings(mappingsByEnrolmentType.toSeq*)
 
@@ -166,128 +168,128 @@ object MappingLookupControllerISpec:
   private val mappingsByEnrolmentType: Map[LegacyAgentEnrolmentType, Seq[AgentReferenceMapping]] = Map(
     LegacyAgentEnrolmentType.SdltStorn -> Seq(
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN1234567"),
         "AAA0008"
       ),
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN7654321"),
         "BBB0015"
       ),
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN1111111"),
         "CCC0022"
       )
     ),
     LegacyAgentEnrolmentType.HmrcMgdAgentRef -> Seq(
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN1234567"),
         "737B.89"
       ),
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN7654321"),
         "842C.90"
       )
     ),
     LegacyAgentEnrolmentType.IRAgentReference -> Seq(
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN1234567"),
         "A1111A"
       ),
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN1234567"),
         "A1111B"
       ),
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN1111111"),
         "A2222C"
       )
     ),
     LegacyAgentEnrolmentType.HmrcGtsAgentRef -> Seq(
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN7654321"),
         "AB8964622K"
       ),
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN1111111"),
         "CD1234567L"
       )
     ),
     LegacyAgentEnrolmentType.IRAgentReferenceCt -> Seq(
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN1234567"),
         "B2121C"
       ),
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN7654321"),
         "B3232D"
       ),
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN1111111"),
         "B4343E"
       )
     ),
     LegacyAgentEnrolmentType.AgentRefNo -> Seq(
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN1234567"),
         "101747696"
       ),
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN7654321"),
         "101747641"
       )
     ),
     LegacyAgentEnrolmentType.VATAgentRefNo -> Seq(
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN1111111"),
         "FGH7996KUJ"
       ),
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN1111111"),
         "JKL8097MNO"
       )
     ),
     LegacyAgentEnrolmentType.AgentCharId -> Seq(
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN1234567"),
         "FGH7996KUJ"
       ),
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN7654321"),
         "PQR8198STU"
       )
     ),
     LegacyAgentEnrolmentType.IRAgentReferencePaye -> Seq(
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN1234567"),
         "F9876J"
       ),
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN7654321"),
         "G8765K"
       ),
       AgentReferenceMapping(
-        id = None,
+        created = Instant.now(),
         Arn("JARN1111111"),
         "H7654L"
       )

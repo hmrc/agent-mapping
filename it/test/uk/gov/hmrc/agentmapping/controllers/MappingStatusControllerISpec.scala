@@ -33,6 +33,7 @@ import uk.gov.hmrc.agentmapping.support.ServerBaseISpec
 import play.api.inject.bind
 
 import java.time.Clock
+import java.time.Instant
 import java.time.LocalDate
 
 class MappingStatusControllerISpec
@@ -120,7 +121,7 @@ with ScalaFutures:
           )
         )
         populateMappings(enrolmentType -> Seq(AgentReferenceMapping(
-          None,
+          created = Instant.now(),
           arn,
           identifierValue
         )))
@@ -152,7 +153,7 @@ with ScalaFutures:
           )
         )
         populateMappings(enrolmentType -> Seq(AgentReferenceMapping(
-          None,
+          created = Instant.now(),
           arn,
           identifierValue
         )))
@@ -264,12 +265,12 @@ with ScalaFutures:
 
         populateMappings(
           otherEnrolmentType -> Seq(AgentReferenceMapping(
-            None,
+            created = Instant.now(),
             arn,
             otherIdentifierValue
           )),
           otherEnrolmentType2 -> Seq(AgentReferenceMapping(
-            None,
+            created = Instant.now(),
             arn,
             otherIdentifierValue2
           ))
@@ -344,12 +345,12 @@ with ScalaFutures:
 
         populateMappings(
           otherEnrolmentType -> Seq(AgentReferenceMapping(
-            None,
+            created = Instant.now(),
             arn,
             otherIdentifierValue
           )),
           otherEnrolmentType2 -> Seq(AgentReferenceMapping(
-            None,
+            created = Instant.now(),
             arn2,
             otherIdentifierValue2
           ))

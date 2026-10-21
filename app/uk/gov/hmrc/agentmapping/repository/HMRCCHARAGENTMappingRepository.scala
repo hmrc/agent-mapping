@@ -26,8 +26,13 @@ import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class HMRCCHARAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
+class HMRCCHARAGENTMappingRepository @Inject() (
+  val mongoComponent: MongoComponent
+)(implicit
   ec: ExecutionContext,
   @Named("aes") crypto: Encrypter & Decrypter
 )
-extends MappingRepository("HMRC-CHAR-AGENT", mongo = mongoComponent)
+extends MappingRepository(
+  "HMRC-CHAR-AGENT",
+  mongo = mongoComponent
+)
