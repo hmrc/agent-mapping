@@ -18,5 +18,6 @@ package uk.gov.hmrc.agentmapping.model
 
 case class ArnCount(
   identifier: String,
+  arns: Seq[String],
   arnCount: Int
 )
