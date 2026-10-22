@@ -17,6 +17,7 @@
 package uk.gov.hmrc.agentmapping.service
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import uk.gov.hmrc.agentmapping.repository.IRSAAGENTMappingRepository
 import uk.gov.hmrc.agentmapping.repository.NewAgentCodeMappingRepository
 import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.agentmapping.model.ArnCount
@@ -33,7 +34,7 @@ with ScalaFutures
 with BeforeAndAfterEach
 with GuiceOneAppPerSuite:
 
-  lazy val repository: NewAgentCodeMappingRepository = app.injector.instanceOf[NewAgentCodeMappingRepository]
+  lazy val repository: IRSAAGENTMappingRepository = app.injector.instanceOf[IRSAAGENTMappingRepository]
 
   lazy val service: DuplicateArnScanService = app.injector.instanceOf[DuplicateArnScanService]
 
@@ -47,13 +48,20 @@ with GuiceOneAppPerSuite:
       repository.store(Arn("ARN0001"), "X").futureValue
       repository.store(Arn("ARN0002"), "X").futureValue
       repository.store(Arn("ARN0003"), "Y").futureValue
+      repository.store(Arn("ARN0001"), "Y").futureValue
+      repository.store(Arn("ARN0002"), "Y").futureValue
+      repository.store(Arn("ARN0003"), "Z").futureValue
+      repository.store(Arn("ARN0001"), "Z").futureValue
+      repository.store(Arn("ARN0002"), "A").futureValue
+      repository.store(Arn("ARN0003"), "B").futureValue
 
       val results: Seq[ArnCount] =
         service
           .findIdentifierArnCounts(repository.collection)
           .futureValue
 
-      results.map(_.arnCount) should contain only 2
+      println(results)
+      results.map(_.arnCount) shouldBe Seq(2, 3, 2)
     }
   }
 

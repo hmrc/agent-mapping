@@ -26,21 +26,28 @@ import org.mongodb.scala.ObservableFuture
 import org.mongodb.scala.documentToUntypedDocument
 
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
-import scala.concurrent.duration._
+import scala.concurrent.duration.*
 import play.api.Logging
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmapping.model.ArnCount
-import uk.gov.hmrc.agentmapping.repository.MappingRepositories
+import uk.gov.hmrc.agentmapping.repository.IRSAAGENTMappingRepository
+import uk.gov.hmrc.crypto.Crypted
+import uk.gov.hmrc.crypto.Decrypter
+import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.mongo.lock.LockService
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
+import scala.jdk.CollectionConverters.*
+
 @Singleton
 class DuplicateArnScanService @Inject() (
-  mappingRepositories: MappingRepositories,
-  mongoLockRepository: MongoLockRepository
+  saMappingRepo: IRSAAGENTMappingRepository,
+  mongoLockRepository: MongoLockRepository,
+  @Named("aes") crypto: Encrypter & Decrypter
 )(implicit ec: ExecutionContext)
 extends Logging:
 
@@ -69,6 +76,7 @@ extends Logging:
       Aggregates.project(
         Projections.fields(
           Projections.computed("identifier", "$_id"),
+          Projections.computed("arns", "$arns"),
           Projections.computed("arnCount", Document("""{ "$size": "$arns" }"""))
         )
       ),
@@ -80,33 +88,37 @@ extends Logging:
       .toFuture()
       .map(_.map { doc =>
         ArnCount(
-          identifier = doc.getString("identifier"),
+          identifier = crypto.decrypt(Crypted(doc.getString("identifier"))).value,
+          arns = doc.getList("arns", classOf[String]).asScala.toSeq,
           arnCount = doc.getInteger("arnCount")
         )
       })
   end findIdentifierArnCounts
 
   private def runDuplicateArnScan(): Future[Unit] =
-    val tasks = mappingRepositories.map { repo =>
-      findIdentifierArnCounts(repo.collection).map { results =>
-        val distribution: Map[Int, Int] =
-          results
-            .groupBy(_.arnCount)
-            .view
-            .mapValues(_.size)
-            .toMap
+    findIdentifierArnCounts(saMappingRepo.collection).map { results =>
+      val distribution: Map[Int, Int] =
+        results
+          .groupBy(_.arnCount)
+          .view
+          .mapValues(_.size)
+          .toMap
 
-        logger.warn(
-          s"Duplicate ARN distribution in '${repo.collectionName}': " +
-            (if distribution.isEmpty then
-               "no duplicates found"
-             else
-               distribution.map { case (arnCount, count) => s"$count identifiers have $arnCount ARNs" }.mkString(", "))
-        )
-      }
+      logger.warn(
+        s"[DuplicateArnScanService] Duplicate ARN distribution in '${saMappingRepo.collectionName}': " +
+          (if distribution.isEmpty then
+             "no duplicates found"
+           else
+             distribution.map { case (arnCount, count) => s"$count identifiers have $arnCount ARNs" }.mkString(", "))
+      )
+      results.foreach:
+        case ArnCount(
+              identifier,
+              arns,
+              arnCount
+            ) if arnCount > 1 =>
+          logger.warn(s"[DuplicateArnScanService] Identifier '$identifier' has $arnCount ARNs: ${arns.mkString(", ")}")
     }
-
-    Future.sequence(tasks).map(_ => ())
   end runDuplicateArnScan
 
   runDuplicateArnScanLocked()
