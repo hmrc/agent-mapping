@@ -32,6 +32,7 @@ import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration.*
 import play.api.Logging
+import uk.gov.hmrc.agentmapping.config.AppConfig
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmapping.model.ArnCount
 import uk.gov.hmrc.agentmapping.repository.IRSAAGENTMappingRepository
@@ -47,7 +48,8 @@ import scala.jdk.CollectionConverters.*
 class DuplicateArnScanService @Inject() (
   saMappingRepo: IRSAAGENTMappingRepository,
   mongoLockRepository: MongoLockRepository,
-  @Named("aes") crypto: Encrypter & Decrypter
+  @Named("aes") crypto: Encrypter & Decrypter,
+  appConfig: AppConfig
 )(implicit ec: ExecutionContext)
 extends Logging:
 
@@ -121,6 +123,7 @@ extends Logging:
     }
   end runDuplicateArnScan
 
-  runDuplicateArnScanLocked()
+  if (appConfig.runDuplicateArnScan)
+    runDuplicateArnScanLocked()
 
 end DuplicateArnScanService

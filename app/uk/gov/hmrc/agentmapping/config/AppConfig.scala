@@ -39,6 +39,8 @@ class AppConfig @Inject() (
   val agentServicesAccountBaseUrl: String = servicesConfig.baseUrl("agent-services-account")
   val enrolmentStoreProxyBaseUrl: String = servicesConfig.baseUrl("enrolment-store-proxy")
 
+  val runDuplicateArnScan: Boolean = servicesConfig.getBoolean("duplicateArnScan.run")
+
   private val mandationDates: Map[LegacyAgentEnrolmentType, LocalDate] =
     configuration
       .get[Map[String, String]]("mandationDates")
