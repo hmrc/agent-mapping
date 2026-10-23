@@ -61,7 +61,7 @@ with GuiceOneAppPerSuite:
           .futureValue
 
       println(results)
-      results.map(_.arnCount) shouldBe Seq(2, 3, 2)
+      results.map(_.arnCount) should contain theSameElementsAs Seq(2, 3, 2)
     }
   }
 

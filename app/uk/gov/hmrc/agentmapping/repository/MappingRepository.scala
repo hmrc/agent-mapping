@@ -18,22 +18,23 @@ package uk.gov.hmrc.agentmapping.repository
 
 import org.mongodb.scala.bson.BsonDocument
 import org.mongodb.scala.model.Filters.equal
-import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.model.IndexModel
 import org.mongodb.scala.model.IndexOptions
+import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.result.DeleteResult
 import org.mongodb.scala.result.InsertOneResult
-import uk.gov.hmrc.agentmapping.util.RequestAwareLogging
 import play.api.libs.json.Format
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmapping.model.Arn
+import uk.gov.hmrc.agentmapping.util.PlayMongoMigrations
+import uk.gov.hmrc.agentmapping.util.RequestAwareLogging
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
-import uk.gov.hmrc.crypto.PlainText
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.Codecs
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
+import java.time.Instant
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
 import scala.concurrent.ExecutionContext
@@ -42,7 +43,7 @@ import scala.concurrent.Future
 //DO NOT DELETE (even if this microservice gets decommissioned)
 abstract class MappingRepository(
   collectionName: String,
-  mongo: MongoComponent
+  val mongo: MongoComponent
 )(
   implicit
   ec: ExecutionContext,
@@ -81,7 +82,8 @@ extends PlayMongoRepository[AgentReferenceMapping](
     Codecs.playFormatCodec(Format(Arn.arnReads, Arn.arnWrites))
   )
 )
-with RequestAwareLogging:
+with RequestAwareLogging
+with PlayMongoMigrations:
 
   override lazy val requiresTtlIndex = false // keep data
 
@@ -94,7 +96,7 @@ with RequestAwareLogging:
       .toFuture()
 
   def findArnBy(identifier: String): Future[Seq[Arn]] =
-    collection.find(equal("identifier", crypto.encrypt(PlainText(identifier)).value))
+    collection.find(equal("identifier", identifier))
       .map(_.arn)
       .toFuture()
 
@@ -108,7 +110,7 @@ with RequestAwareLogging:
   ): Future[InsertOneResult] =
     collection
       .insertOne(AgentReferenceMapping(
-        None,
+        created = Instant.now(),
         arn,
         identifierValue,
         automapped
