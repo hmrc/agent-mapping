@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentmapping.repository
 
 import org.mongodb.scala.bson.BsonDocument
-import org.mongodb.scala.model.Filters.and
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.IndexModel
 import org.mongodb.scala.model.IndexOptions
@@ -26,11 +25,7 @@ import org.mongodb.scala.result.DeleteResult
 import play.api.libs.json.Format
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmapping.model.Arn
-import uk.gov.hmrc.agentmapping.util.PlayMongoMigrations
 import uk.gov.hmrc.agentmapping.util.RequestAwareLogging
-import uk.gov.hmrc.crypto.Decrypter
-import uk.gov.hmrc.crypto.Encrypter
-import uk.gov.hmrc.crypto.PlainText
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.MongoUtils.DuplicateKey
 import uk.gov.hmrc.mongo.play.json.Codecs
@@ -38,7 +33,6 @@ import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
-import javax.inject.Named
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -47,9 +41,7 @@ abstract class MappingRepository(
   collectionName: String,
   val mongo: MongoComponent
 )(
-  implicit
-  ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter & Decrypter
+  implicit ec: ExecutionContext
 )
 extends PlayMongoRepository[AgentReferenceMapping](
   mongoComponent = mongo,
@@ -84,8 +76,7 @@ extends PlayMongoRepository[AgentReferenceMapping](
     Codecs.playFormatCodec(Format(Arn.arnReads, Arn.arnWrites))
   )
 )
-with RequestAwareLogging
-with PlayMongoMigrations:
+with RequestAwareLogging:
 
   override lazy val requiresTtlIndex = false // keep data
 
@@ -121,22 +112,15 @@ with PlayMongoMigrations:
     identifierValue: String,
     automapped: Boolean = false
   ): Future[Boolean] =
-    val preExisting = collection
-      .find(and(equal("arn", arn.value), equal("identifier", crypto.encrypt(PlainText(identifierValue)).value)))
-      .headOption()
-
-    preExisting.flatMap:
-      case Some(_) => Future.successful(true)
-      case None =>
-        collection.insertOne(AgentReferenceMapping(
-          created = Instant.now(),
-          arn,
-          identifierValue,
-          automapped
-        )).toFuture()
-          .map(_ => false)
-          .recover:
-            case DuplicateKey(_) => true
+    collection.insertOne(AgentReferenceMapping(
+      created = Instant.now(),
+      arn,
+      identifierValue,
+      automapped
+    )).toFuture()
+      .map(_ => false)
+      .recover:
+        case DuplicateKey(_) => true
 
   def deleteByArn(arn: Arn): Future[DeleteResult] =
     collection.deleteOne(equal("arn", arn.value)).toFuture()

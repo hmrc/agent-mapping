@@ -19,9 +19,6 @@ package uk.gov.hmrc.agentmapping.model
 import org.bson.types.ObjectId
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
 import play.api.libs.json.*
-import uk.gov.hmrc.crypto.Crypted
-import uk.gov.hmrc.crypto.Decrypter
-import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.mongo.play.json.formats.MongoFormats
 import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
@@ -63,18 +60,12 @@ object AgentReferenceMapping:
     )
   end apiWrites
 
-  def databaseFormat(implicit
-    crypto: Encrypter & Decrypter
-  ): Format[AgentReferenceMapping] =
+  val databaseFormat: Format[AgentReferenceMapping] =
     val timestampFromObjectId = (__ \ "_id").read[ObjectId](using MongoFormats.objectIdFormat)
       .map(objectId => Instant.ofEpochSecond(objectId.getTimestamp))
 
     val createdOrObjectIdTimestamp = (__ \ "created").read[Instant](using MongoJavatimeFormats.instantReads)
       .orElse(timestampFromObjectId)
-
-    val encryptedOrElsePlainText = Reads.of[String].map: value =>
-      try crypto.decrypt(Crypted(value)).value
-      catch case _: SecurityException => value
 
     val databaseWrites: Writes[AgentReferenceMapping] =
       (
@@ -90,7 +81,7 @@ object AgentReferenceMapping:
       (
         createdOrObjectIdTimestamp and
           (__ \ "arn").read[Arn] and
-          (__ \ "identifier").read[String](using encryptedOrElsePlainText) and
+          (__ \ "identifier").read[String] and
           (__ \ "automapped").readNullable[Boolean].map(_.getOrElse(false))
       )(AgentReferenceMapping.apply)
 
