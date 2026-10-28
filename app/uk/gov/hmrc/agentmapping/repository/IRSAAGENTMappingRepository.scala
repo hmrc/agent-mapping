@@ -26,8 +26,13 @@ import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 
 @Singleton
-class IRSAAGENTMappingRepository @Inject() (mongoComponent: MongoComponent)(implicit
+class IRSAAGENTMappingRepository @Inject() (
+  val mongoComponent: MongoComponent
+)(implicit
   ec: ExecutionContext,
   @Named("aes") crypto: Encrypter & Decrypter
 )
-extends MappingRepository(collectionName = "IR-SA-AGENT", mongo = mongoComponent)
+extends MappingRepository(
+  collectionName = "IR-SA-AGENT",
+  mongo = mongoComponent
+)

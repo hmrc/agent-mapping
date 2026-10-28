@@ -19,20 +19,20 @@ package uk.gov.hmrc.agentmapping.model
 import org.bson.types.ObjectId
 import play.api.libs.functional.syntax.toFunctionalBuilderOps
 import play.api.libs.json.*
-import uk.gov.hmrc.crypto.json.JsonEncryption.stringEncrypterDecrypter
+import uk.gov.hmrc.crypto.Crypted
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.mongo.play.json.formats.MongoFormats
+import uk.gov.hmrc.mongo.play.json.formats.MongoJavatimeFormats
 
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import scala.language.implicitConversions
 
 /** Correlates an ARN with an enrolment identifier (either a legacy or newly assigned agent code, depending on the originating repository).
   *
-  * @param id
-  *   the unique identifier assigned by MongoDB to this mapping
+  * @param created
+  *   when the mapping was created (either by a user or automatically by the system)
   * @param arn
   *   the agent reference number
   * @param identifier
@@ -41,7 +41,7 @@ import scala.language.implicitConversions
   *   whether the system automatically created this mapping (true) or it was manually created by a user (false)
   */
 case class AgentReferenceMapping(
-  id: Option[ObjectId],
+  created: Instant,
   arn: Arn,
   identifier: String,
   automapped: Boolean = false
@@ -49,16 +49,16 @@ case class AgentReferenceMapping(
 
 object AgentReferenceMapping:
 
-  implicit def apiWrites(identifierKey: String = "identifier"): Writes[AgentReferenceMapping] =
+  def apiWrites(identifierKey: String = "identifier"): Writes[AgentReferenceMapping] =
     (
       (__ \ "arn").write[Arn] and
         (__ \ identifierKey).write[String] and
-        (__ \ "created").writeNullable[LocalDate]
+        (__ \ "created").write[LocalDate]
     )(mapping =>
       (
         mapping.arn,
         mapping.identifier,
-        mapping.id.map(mongoId => Instant.ofEpochSecond(mongoId.getTimestamp).atZone(ZoneId.of("Europe/London")).toLocalDate)
+        mapping.created.atZone(ZoneId.of("Europe/London")).toLocalDate
       )
     )
   end apiWrites
@@ -66,20 +66,31 @@ object AgentReferenceMapping:
   def databaseFormat(implicit
     crypto: Encrypter & Decrypter
   ): Format[AgentReferenceMapping] =
+    val timestampFromObjectId = (__ \ "_id").read[ObjectId](using MongoFormats.objectIdFormat)
+      .map(objectId => Instant.ofEpochSecond(objectId.getTimestamp))
+
+    val createdOrObjectIdTimestamp = (__ \ "created").read[Instant](using MongoJavatimeFormats.instantReads)
+      .orElse(timestampFromObjectId)
+
+    val encryptedOrElsePlainText = Reads.of[String].map: value =>
+      try crypto.decrypt(Crypted(value)).value
+      catch case _: SecurityException => value
+
     val databaseWrites: Writes[AgentReferenceMapping] =
-      ( // Not writing _id as MongoDB creates this automatically
-        (__ \ "arn").write[Arn] and
-          (__ \ "identifier").write[String](using stringEncrypterDecrypter) and
+      (
+        (__ \ "created").write[Instant](using MongoJavatimeFormats.instantWrites) and
+          (__ \ "arn").write[Arn] and
+          (__ \ "identifier").write[String] and
           (__ \ "automapped").write[Boolean]
       )(mapping =>
-        (mapping.arn, mapping.identifier, mapping.automapped)
+        (mapping.created, mapping.arn, mapping.identifier, mapping.automapped)
       )
 
     val databaseReads: Reads[AgentReferenceMapping] =
-      ( // defaulting _id to None if it is missing or invalid because database is old (unknown if this can happen in practice)
-        (__ \ "_id").readNullable[ObjectId](using MongoFormats.objectIdFormat).orElse(Reads.pure(None)) and
+      (
+        createdOrObjectIdTimestamp and
           (__ \ "arn").read[Arn] and
-          (__ \ "identifier").read[String](using stringEncrypterDecrypter) and
+          (__ \ "identifier").read[String](using encryptedOrElsePlainText) and
           (__ \ "automapped").readNullable[Boolean].map(_.getOrElse(false))
       )(AgentReferenceMapping.apply)
 

@@ -17,16 +17,24 @@
 package model
 
 import org.bson.types.ObjectId
+import org.mongodb.scala.bson.BsonDateTime
+import org.mongodb.scala.bson.BsonObjectId
+import org.mongodb.scala.bson.Document
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
+import play.api.libs.json.Format
 import play.api.libs.json.JsObject
 import play.api.libs.json.Json
+import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping.databaseFormat
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmapping.model.Arn
-import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping.databaseFormat
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.SymmetricCryptoFactory
+import uk.gov.hmrc.mongo.play.json.Codecs.JsonOps
+import uk.gov.hmrc.mongo.play.json.Codecs.*
+
+import java.time.Instant
 
 class AgentReferenceMappingSpec
 extends AnyWordSpecLike
@@ -38,56 +46,63 @@ with Matchers:
     "read from JSON" when:
       "the database reads is used (encrypted)" in:
         val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
-          Some(new ObjectId("69038f00be7a033d7d28132f")),
+          created = Instant.parse("2025-10-30T00:00:00Z"),
           Arn("XARN1234567"),
           "ABC123"
         )
-        val json: JsObject = Json.obj(
-          "_id" -> Json.obj("$oid" -> "69038f00be7a033d7d28132f"),
+        val bson = Document(
+          "_id" -> BsonObjectId("69038f00be7a033d7d28132f"),
           "arn" -> "XARN1234567",
-          "identifier" -> "xBz9KLLVGclaDNLxWSY/YA=="
+          "identifier" -> "ABC123",
+          "created" -> BsonDateTime(1761782400000L)
         )
-        json.as[AgentReferenceMapping](using databaseFormat) shouldBe expectedModel
-      "the database reads is used (encrypted) but ObjectId is invalid" in:
+        bson.fromBson[AgentReferenceMapping](using databaseFormat) shouldBe expectedModel
+
+      "fallback to the ObjectID when the created field is undefined" in:
+        val objectId = new ObjectId()
         val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
-          None,
+          created = Instant.ofEpochSecond(objectId.getTimestamp),
           Arn("XARN1234567"),
           "ABC123"
         )
-        val json: JsObject = Json.obj(
-          "_id" -> Json.obj("$oid" -> "invalidObjectId"),
+        val bson = Document(
+          "_id" -> objectId,
           "arn" -> "XARN1234567",
-          "identifier" -> "xBz9KLLVGclaDNLxWSY/YA=="
+          "identifier" -> "ABC123"
         )
-        json.as[AgentReferenceMapping](using databaseFormat) shouldBe expectedModel
-      "the database reads is used (encrypted) but ObjectId is missing" in:
+        bson.fromBson[AgentReferenceMapping](using databaseFormat) shouldBe expectedModel
+
+      "fallback to the encrypted identifier when service identifier is missing" in:
         val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
-          None,
+          created = Instant.parse("2025-10-30T00:00:00Z"),
           Arn("XARN1234567"),
           "ABC123"
         )
-        val json: JsObject = Json.obj(
+        val bson = Document(
+          "_id" -> new ObjectId("69038f00be7a033d7d28132f"),
           "arn" -> "XARN1234567",
-          "identifier" -> "xBz9KLLVGclaDNLxWSY/YA=="
+          "identifier" -> "xBz9KLLVGclaDNLxWSY/YA==",
+          "created" -> BsonDateTime(1761782400000L)
         )
-        json.as[AgentReferenceMapping](using databaseFormat) shouldBe expectedModel
+        bson.fromBson[AgentReferenceMapping](using databaseFormat) shouldBe expectedModel
 
     "write to JSON" when:
       "the api writes is used (not timestamped)" in:
         val model: AgentReferenceMapping = AgentReferenceMapping(
-          None,
+          created = Instant.parse("2025-10-30T00:00:00Z"),
           Arn("XARN1234567"),
           "ABC123"
         )
         val expectedJson: JsObject = Json.obj(
           "arn" -> "XARN1234567",
-          "identifier" -> "ABC123"
+          "identifier" -> "ABC123",
+          "created" -> "2025-10-30"
         )
         Json.toJson(model)(using AgentReferenceMapping.apiWrites()) shouldBe expectedJson
 
       "the api writes is used (timestamped)" in:
         val model: AgentReferenceMapping = AgentReferenceMapping(
-          Some(new ObjectId("69038f00be7a033d7d28132f")),
+          created = Instant.parse("2025-10-30T00:00:00Z"),
           Arn("XARN1234567"),
           "ABC123"
         )
@@ -100,7 +115,7 @@ with Matchers:
 
       "the api writes is used with identifier key override (timestamped)" in:
         val model: AgentReferenceMapping = AgentReferenceMapping(
-          Some(new ObjectId("69038f00be7a033d7d28132f")),
+          created = Instant.parse("2025-10-30T00:00:00Z"),
           Arn("XARN1234567"),
           "ABC123"
         )
@@ -111,17 +126,20 @@ with Matchers:
         )
         Json.toJson(model)(using AgentReferenceMapping.apiWrites("agentCode")) shouldBe expectedJson
 
-      "the database writes is used (encrypted)" in:
+      "the database writes is used" in:
         val model: AgentReferenceMapping = AgentReferenceMapping(
-          None,
+          created = Instant.parse("2025-10-30T00:00:00Z"),
           Arn("XARN1234567"),
           "ABC123"
         )
-        val expectedJson: JsObject = Json.obj(
+        val expectedBson = Document(
           "arn" -> "XARN1234567",
           "identifier" -> "xBz9KLLVGclaDNLxWSY/YA==",
-          "automapped" -> false
-        )
-        Json.toJson(model)(using databaseFormat) shouldBe expectedJson
+          "identifier" -> "ABC123",
+          "automapped" -> false,
+          "created" -> BsonDateTime(1761782400000L)
+        ).toBsonDocument()
+        given Format[AgentReferenceMapping] = databaseFormat(using crypto)
+        model.toBson shouldBe expectedBson
 
 end AgentReferenceMappingSpec

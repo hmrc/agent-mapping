@@ -16,39 +16,33 @@
 
 package uk.gov.hmrc.agentmapping.service
 
-import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.bson.collection.immutable.Document
+import org.mongodb.scala.MongoCollection
+import org.mongodb.scala.ObservableFuture
+import org.mongodb.scala.documentToUntypedDocument
 import org.mongodb.scala.model.Accumulators
 import org.mongodb.scala.model.Aggregates
 import org.mongodb.scala.model.Filters
 import org.mongodb.scala.model.Projections
-import org.mongodb.scala.ObservableFuture
-import org.mongodb.scala.documentToUntypedDocument
-
-import javax.inject.Inject
-import javax.inject.Named
-import javax.inject.Singleton
-import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.duration.*
 import play.api.Logging
 import uk.gov.hmrc.agentmapping.config.AppConfig
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmapping.model.ArnCount
 import uk.gov.hmrc.agentmapping.repository.IRSAAGENTMappingRepository
-import uk.gov.hmrc.crypto.Crypted
-import uk.gov.hmrc.crypto.Decrypter
-import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.mongo.lock.LockService
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
+import javax.inject.Inject
+import javax.inject.Singleton
+import scala.concurrent.ExecutionContext
+import scala.concurrent.Future
+import scala.concurrent.duration.*
 import scala.jdk.CollectionConverters.*
 
 @Singleton
 class DuplicateArnScanService @Inject() (
   saMappingRepo: IRSAAGENTMappingRepository,
   mongoLockRepository: MongoLockRepository,
-  @Named("aes") crypto: Encrypter & Decrypter,
   appConfig: AppConfig
 )(implicit ec: ExecutionContext)
 extends Logging:
@@ -90,7 +84,7 @@ extends Logging:
       .toFuture()
       .map(_.map { doc =>
         ArnCount(
-          identifier = crypto.decrypt(Crypted(doc.getString("identifier"))).value,
+          identifier = doc.getString("identifier"),
           arns = doc.getList("arns", classOf[String]).asScala.toSeq,
           arnCount = doc.getInteger("arnCount")
         )

@@ -64,4 +64,6 @@ class AppConfig @Inject() (
 
   end expectedAuth
 
+  val keyRotation: KeyRotationConfig = configuration.get[KeyRotationConfig]("keyRotation")
+
 end AppConfig
