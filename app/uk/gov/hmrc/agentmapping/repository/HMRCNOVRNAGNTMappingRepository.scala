@@ -16,22 +16,16 @@
 
 package uk.gov.hmrc.agentmapping.repository
 
-import uk.gov.hmrc.crypto.Decrypter
-import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.mongo.MongoComponent
 
 import javax.inject.Inject
-import javax.inject.Named
 import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 
 @Singleton
 class HMRCNOVRNAGNTMappingRepository @Inject() (
   val mongoComponent: MongoComponent
-)(implicit
-  ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter & Decrypter
-)
+)(using ExecutionContext)
 extends MappingRepository(
   "HMRC-NOVRN-AGNT",
   mongo = mongoComponent

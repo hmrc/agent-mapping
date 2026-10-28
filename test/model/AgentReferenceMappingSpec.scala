@@ -16,7 +16,6 @@
 
 package model
 
-import org.bson.types.ObjectId
 import org.mongodb.scala.bson.BsonDateTime
 import org.mongodb.scala.bson.BsonObjectId
 import org.mongodb.scala.bson.Document
@@ -28,10 +27,6 @@ import play.api.libs.json.Json
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping.databaseFormat
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmapping.model.Arn
-import uk.gov.hmrc.crypto.Decrypter
-import uk.gov.hmrc.crypto.Encrypter
-import uk.gov.hmrc.crypto.SymmetricCryptoFactory
-import uk.gov.hmrc.mongo.play.json.Codecs.JsonOps
 import uk.gov.hmrc.mongo.play.json.Codecs.*
 
 import java.time.Instant
@@ -39,8 +34,6 @@ import java.time.Instant
 class AgentReferenceMappingSpec
 extends AnyWordSpecLike
 with Matchers:
-
-  implicit val crypto: Encrypter & Decrypter = SymmetricCryptoFactory.aesCrypto(secretKey = "GTfz3GZy0+gN0p/5wSqRBpWlbWVDMezXWtX+G9ENwCc=")
 
   "AgentReferenceMapping model" should:
     "read from JSON" when:
@@ -54,34 +47,6 @@ with Matchers:
           "_id" -> BsonObjectId("69038f00be7a033d7d28132f"),
           "arn" -> "XARN1234567",
           "identifier" -> "ABC123",
-          "created" -> BsonDateTime(1761782400000L)
-        )
-        bson.fromBson[AgentReferenceMapping](using databaseFormat) shouldBe expectedModel
-
-      "fallback to the ObjectID when the created field is undefined" in:
-        val objectId = new ObjectId()
-        val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
-          created = Instant.ofEpochSecond(objectId.getTimestamp),
-          Arn("XARN1234567"),
-          "ABC123"
-        )
-        val bson = Document(
-          "_id" -> objectId,
-          "arn" -> "XARN1234567",
-          "identifier" -> "ABC123"
-        )
-        bson.fromBson[AgentReferenceMapping](using databaseFormat) shouldBe expectedModel
-
-      "fallback to the encrypted identifier when service identifier is missing" in:
-        val expectedModel: AgentReferenceMapping = AgentReferenceMapping(
-          created = Instant.parse("2025-10-30T00:00:00Z"),
-          Arn("XARN1234567"),
-          "ABC123"
-        )
-        val bson = Document(
-          "_id" -> new ObjectId("69038f00be7a033d7d28132f"),
-          "arn" -> "XARN1234567",
-          "identifier" -> "xBz9KLLVGclaDNLxWSY/YA==",
           "created" -> BsonDateTime(1761782400000L)
         )
         bson.fromBson[AgentReferenceMapping](using databaseFormat) shouldBe expectedModel
@@ -139,7 +104,7 @@ with Matchers:
           "automapped" -> false,
           "created" -> BsonDateTime(1761782400000L)
         ).toBsonDocument()
-        given Format[AgentReferenceMapping] = databaseFormat(using crypto)
+        given Format[AgentReferenceMapping] = databaseFormat
         model.toBson shouldBe expectedBson
 
 end AgentReferenceMappingSpec

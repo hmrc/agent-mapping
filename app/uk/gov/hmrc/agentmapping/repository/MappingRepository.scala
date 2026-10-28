@@ -28,15 +28,12 @@ import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.agentmapping.util.PlayMongoMigrations
 import uk.gov.hmrc.agentmapping.util.RequestAwareLogging
-import uk.gov.hmrc.crypto.Decrypter
-import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.mongo.MongoComponent
 import uk.gov.hmrc.mongo.play.json.Codecs
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
 import java.time.Instant
 import java.util.concurrent.TimeUnit
-import javax.inject.Named
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 
@@ -45,9 +42,7 @@ abstract class MappingRepository(
   collectionName: String,
   val mongo: MongoComponent
 )(
-  implicit
-  ec: ExecutionContext,
-  @Named("aes") crypto: Encrypter & Decrypter
+  implicit ec: ExecutionContext
 )
 extends PlayMongoRepository[AgentReferenceMapping](
   mongoComponent = mongo,
