@@ -21,11 +21,10 @@ import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentmapping.model.Arn
-import uk.gov.hmrc.agentmapping.model.ServiceIdentifier
 import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
+import uk.gov.hmrc.agentmapping.model.ServiceIdentifier
 import uk.gov.hmrc.agentmapping.repository.MappingRepositories
 import uk.gov.hmrc.agentmapping.util.RequestAwareLogging
-import uk.gov.hmrc.mongo.MongoUtils.DuplicateKey
 
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -61,17 +60,16 @@ extends RequestAwareLogging:
   ): Future[Boolean] = repositories
     .get(identifier.enrolmentType)
     .store(arn, identifier.value)
-    .map { _ =>
-      auditService.sendCreateMappingAuditEvent(
-        arn,
-        identifier,
-        ggCredId,
-        automapped = isAutomapping
-      )
-      false
-    }.recover:
-      case DuplicateKey(_) if isAutomapping => true
-      case DuplicateKey(_) =>
+    .map: isDuplicate =>
+      if !isDuplicate then
+        auditService.sendCreateMappingAuditEvent(
+          arn,
+          identifier,
+          ggCredId,
+          automapped = isAutomapping
+        )
+
+      if isDuplicate && !isAutomapping then
         auditService.sendCreateMappingAuditEvent(
           arn,
           identifier,
@@ -79,6 +77,7 @@ extends RequestAwareLogging:
           duplicate = true
         )
         logger.warn(s"Duplicated mapping attempt for ${identifier.enrolmentType}")
-        true
+
+      isDuplicate
 
 end MappingService

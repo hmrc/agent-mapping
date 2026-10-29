@@ -17,7 +17,6 @@
 package uk.gov.hmrc.agentmapping.repository
 
 import org.mongodb.scala.Document
-import org.mongodb.scala.MongoWriteException
 import org.mongodb.scala.model.Filters
 import org.mongodb.scala.result.DeleteResult
 import org.scalatest.OptionValues
@@ -32,7 +31,6 @@ import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
 import uk.gov.hmrc.crypto.PlainText
 import uk.gov.hmrc.crypto.SymmetricCryptoFactory
-import uk.gov.hmrc.mongo.MongoUtils.DuplicateKey
 import uk.gov.hmrc.mongo.play.json.Codecs.JsonOps
 import uk.gov.hmrc.mongo.test.DefaultPlayMongoRepositorySupport
 
@@ -78,15 +76,11 @@ with DefaultPlayMongoRepositorySupport[AgentReferenceMapping]:
       result.size shouldBe 1
       result.head.arn.value shouldBe arn1.value
       result.head.identifier shouldBe reference1
-    
+
     s"not allow duplicate mappings to be created for the same Arn and identifier" in:
-      repository.store(arn1, reference1).futureValue
+      repository.store(arn1, reference1).futureValue shouldBe false
+      repository.store(arn1, reference1).futureValue shouldBe true
 
-      val e = repository.store(arn1, reference1).failed.futureValue
-
-      e shouldBe a[MongoWriteException]
-      e.getMessage should include("E11000")
-    
     s"allow more than one identifier to be mapped to the same Arn" in:
       repository.store(arn1, reference1).futureValue
       repository.store(arn1, reference2).futureValue
@@ -98,7 +92,7 @@ with DefaultPlayMongoRepositorySupport[AgentReferenceMapping]:
       result.head.identifier shouldBe reference1
       result(1).arn.value shouldBe arn1.value
       result(1).identifier shouldBe reference2
-    
+
     "find all mappings for Arn" in:
       repository.store(arn1, reference1).futureValue
       repository.store(arn1, reference2).futureValue
@@ -107,7 +101,7 @@ with DefaultPlayMongoRepositorySupport[AgentReferenceMapping]:
       val result: Seq[AgentReferenceMapping] = repository.findBy(arn1).futureValue
 
       result.size shouldBe 2
-    
+
     "return an empty list when no match is found for Arn" in:
       repository.store(arn1, reference1).futureValue
       val result = repository.findBy(arn2).futureValue
@@ -199,18 +193,17 @@ with DefaultPlayMongoRepositorySupport[AgentReferenceMapping]:
         val legacyArn = Arn("ARN00099")
         val legacyIdentifier = "Ref0009"
 
-        repository.store(legacyArn, legacyIdentifier).futureValue
+        repository.store(legacyArn, legacyIdentifier).futureValue shouldBe false
 
         repository.collection
           .updateOne(
             Document("arn" -> legacyArn.toBson),
             Document(
               "$set" -> Document("identifier" -> crypto.encrypt(PlainText(legacyIdentifier)).value),
-              "$unset" -> Document("identifier" -> "")
+              "$unset" -> Document("created" -> "")
             )
           )
           .headOption()
+          .futureValue
 
-        repository.store(legacyArn, legacyIdentifier).failed.futureValue match
-          case DuplicateKey(_) => succeed
-          case _ => fail("Expected a duplicate key error")
+        repository.store(legacyArn, legacyIdentifier).futureValue shouldBe true
