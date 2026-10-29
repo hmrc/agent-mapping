@@ -17,12 +17,12 @@
 package uk.gov.hmrc.agentmapping.repository
 
 import org.mongodb.scala.bson.BsonDocument
+import org.mongodb.scala.model.Filters.and
 import org.mongodb.scala.model.Filters.equal
 import org.mongodb.scala.model.IndexModel
 import org.mongodb.scala.model.IndexOptions
 import org.mongodb.scala.model.Indexes.ascending
 import org.mongodb.scala.result.DeleteResult
-import org.mongodb.scala.result.InsertOneResult
 import play.api.libs.json.Format
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
 import uk.gov.hmrc.agentmapping.model.Arn
@@ -30,7 +30,9 @@ import uk.gov.hmrc.agentmapping.util.PlayMongoMigrations
 import uk.gov.hmrc.agentmapping.util.RequestAwareLogging
 import uk.gov.hmrc.crypto.Decrypter
 import uk.gov.hmrc.crypto.Encrypter
+import uk.gov.hmrc.crypto.PlainText
 import uk.gov.hmrc.mongo.MongoComponent
+import uk.gov.hmrc.mongo.MongoUtils.DuplicateKey
 import uk.gov.hmrc.mongo.play.json.Codecs
 import uk.gov.hmrc.mongo.play.json.PlayMongoRepository
 
@@ -103,19 +105,38 @@ with PlayMongoMigrations:
   def findAll(): Future[Seq[AgentReferenceMapping]] =
     collection.find().toFuture()
 
+  /** Stores an agent-reference mapping unless one already exists for the ARN and identifier.
+    *
+    * @param arn
+    *   the agent reference number associated with the mapping
+    * @param identifierValue
+    *   the identifier to associate with the ARN
+    * @param automapped
+    *   whether the mapping was created automatically
+    * @return
+    *   a future containing true if the mapping already existed, or false if stored successfully
+    */
   def store(
     arn: Arn,
     identifierValue: String,
     automapped: Boolean = false
-  ): Future[InsertOneResult] =
-    collection
-      .insertOne(AgentReferenceMapping(
-        created = Instant.now(),
-        arn,
-        identifierValue,
-        automapped
-      ))
-      .toFuture()
+  ): Future[Boolean] =
+    val preExisting = collection
+      .find(and(equal("arn", arn.value), equal("identifier", crypto.encrypt(PlainText(identifierValue)).value)))
+      .headOption()
+
+    preExisting.flatMap:
+      case Some(_) => Future.successful(true)
+      case None =>
+        collection.insertOne(AgentReferenceMapping(
+          created = Instant.now(),
+          arn,
+          identifierValue,
+          automapped
+        )).toFuture()
+          .map(_ => false)
+          .recover:
+            case DuplicateKey(_) => true
 
   def deleteByArn(arn: Arn): Future[DeleteResult] =
     collection.deleteOne(equal("arn", arn.value)).toFuture()

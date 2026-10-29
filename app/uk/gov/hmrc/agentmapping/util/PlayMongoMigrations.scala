@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentmapping.util
 
+import com.mongodb.client.model.BulkWriteOptions
 import org.mongodb.scala.Document
 import org.mongodb.scala.bson.conversions.Bson
 import org.mongodb.scala.model.Filters.*
@@ -88,9 +89,15 @@ with Transactions:
             .toFuture()
 
           updates = documents.flatMap(asUpdate)
+          continueOnError = BulkWriteOptions().ordered(false)
 
           resultsOrNone <-
-            if updates.nonEmpty then collection.bulkWrite(session, updates).toFutureOption()
+            if updates.nonEmpty then
+              collection.bulkWrite(
+                session,
+                updates,
+                continueOnError
+              ).toFutureOption()
             else Future.successful(None)
         yield resultsOrNone.map: results =>
           documents.last("_id") -> results.getModifiedCount

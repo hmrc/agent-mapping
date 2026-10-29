@@ -16,16 +16,15 @@
 
 package uk.gov.hmrc.agentmapping.controller
 
-import com.mongodb.MongoWriteException
+import play.api.libs.json.*
 import play.api.libs.json.Json.toJson
-import play.api.libs.json._
-import play.api.mvc._
+import play.api.mvc.*
 import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.auth.AuthActions
-import uk.gov.hmrc.agentmapping.util.RequestAwareLogging
 import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector
-import uk.gov.hmrc.agentmapping.model._
-import uk.gov.hmrc.agentmapping.repository._
+import uk.gov.hmrc.agentmapping.model.*
+import uk.gov.hmrc.agentmapping.repository.*
+import uk.gov.hmrc.agentmapping.util.RequestAwareLogging
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
 import javax.inject.Inject
@@ -100,23 +99,19 @@ with RequestAwareLogging:
   ): Future[Boolean] = repositories
     .get(identifier.enrolmentType)
     .store(arn, identifier.value)
-    .map { _ =>
+    .map: isDuplicate =>
       auditService.sendCreateMappingAuditEvent(
         arn,
         identifier,
-        ggCredId
+        ggCredId,
+        isDuplicate
       )
-      false
-    }.recover:
-      case e: MongoWriteException if e.getMessage.contains("E11000") =>
-        auditService.sendCreateMappingAuditEvent(
-          arn,
-          identifier,
-          ggCredId,
-          duplicate = true
-        )
+
+      if isDuplicate then
         logger.warn(s"Duplicated mapping attempt for ${identifier.enrolmentType}")
-        true
+
+      isDuplicate
+
   end createMappingInRepository
 
   def findSaMappings(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
@@ -258,17 +253,17 @@ with RequestAwareLogging:
         identifier.value,
         automapped = true
       )
-      .map { _ =>
-        auditService.sendCreateMappingAuditEvent(
-          arn,
-          identifier,
-          ggCredId,
-          automapped = true
-        )
-        false
-      }
-      .recover:
-        case e: MongoWriteException if e.getMessage.contains("E11000") => true // duplicate — silently ignore
+      .map: isDuplicate =>
+        if !isDuplicate then
+          auditService.sendCreateMappingAuditEvent(
+            arn,
+            identifier,
+            ggCredId,
+            automapped = true
+          )
+
+        isDuplicate
+
   end createAutoMappingInRepository
 
 end MappingController
