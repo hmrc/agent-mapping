@@ -131,7 +131,7 @@ extends Logging:
     }
   end runDuplicateArnScan
 
-  private def groupIdLookup(arnCounts: Seq[ArnCount]): Future[Map[String, Map[String, Boolean]]] =
+  private def groupIdLookup(arnCounts: Seq[ArnCount]): Future[Seq[(String, Seq[(String, Boolean)])]] =
     Source(arnCounts)
       .mapAsync(1) {
         case ArnCount(
@@ -149,10 +149,9 @@ extends Logging:
                 }
             }
             .runWith(Sink.seq)
-            .map(arnMapping => (identifier, arnMapping.toMap))
+            .map(arnMapping => (identifier, arnMapping))
       }
       .runWith(Sink.seq)
-      .map(_.toMap)
 
   if (appConfig.runDuplicateArnScan)
     runDuplicateArnScanLocked()
