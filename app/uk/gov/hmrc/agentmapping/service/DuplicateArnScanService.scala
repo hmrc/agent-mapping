@@ -43,6 +43,7 @@ import scala.concurrent.Future
 import scala.concurrent.duration.*
 import org.apache.pekko.stream.scaladsl.Sink
 import org.apache.pekko.stream.scaladsl.Source
+import uk.gov.hmrc.http.UpstreamErrorResponse
 
 import scala.jdk.CollectionConverters.*
 
@@ -143,6 +144,9 @@ extends Logging:
             .mapAsync(1) { arn =>
               enrolmentStoreProxyConnector.getGroupIdFor(Arn(arn))(using NoRequest)
                 .map(groupIds => (arn, groupIds.nonEmpty))
+                .recover {
+                  case _: UpstreamErrorResponse => (arn, true) // Default to true if we can't get a response from ESP, to avoid false positives in the scan
+                }
             }
             .runWith(Sink.seq)
             .map(arnMapping => (identifier, arnMapping.toMap))
