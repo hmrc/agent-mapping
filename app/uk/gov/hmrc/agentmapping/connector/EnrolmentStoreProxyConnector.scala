@@ -24,15 +24,16 @@ import play.api.libs.json.Writes
 import play.api.mvc.RequestHeader
 import uk.gov.hmrc.agentmapping.config.AppConfig
 import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector.responseHandler
-import uk.gov.hmrc.agentmapping.model.{Enrolment => ModelEnrolment}
+import uk.gov.hmrc.agentmapping.model.Arn
+import uk.gov.hmrc.agentmapping.model.Enrolment as ModelEnrolment
 import uk.gov.hmrc.agentmapping.util.RequestSupport.hc
-import uk.gov.hmrc.agentmapping.util._
+import uk.gov.hmrc.agentmapping.util.*
 import uk.gov.hmrc.http.client.HttpClientV2
 import uk.gov.hmrc.http.HttpReads
 import uk.gov.hmrc.http.HttpResponse
 import uk.gov.hmrc.http.StringContextOps
 import uk.gov.hmrc.http.UpstreamErrorResponse
-import uk.gov.hmrc.http.HttpReads.Implicits._
+import uk.gov.hmrc.http.HttpReads.Implicits.*
 
 import java.net.URL
 import javax.inject.Inject
@@ -140,6 +141,23 @@ class EnrolmentStoreProxyConnector @Inject() (
   }
 
   end getDelegatedEnrolmentsCountFor
+
+  // ES1 - delegated
+  def getGroupIdFor(arn: Arn)(using request: RequestHeader): Future[Seq[String]] = http
+    .get(url"$espBaseUrl/enrolment-store-proxy/enrolment-store/enrolments/HMRC-AS-AGENT~AgentReferenceNumber~${arn.value}/groups?type=principal")
+    .execute[HttpResponse]
+    .map { response =>
+      response.status match {
+        case Status.OK => (response.json \ "principalGroupIds").as[Seq[String]]
+        case Status.NO_CONTENT => Nil
+        case other =>
+          throw UpstreamErrorResponse(
+            response.body,
+            other,
+            other
+          )
+      }
+    }
 
 end EnrolmentStoreProxyConnector
 
