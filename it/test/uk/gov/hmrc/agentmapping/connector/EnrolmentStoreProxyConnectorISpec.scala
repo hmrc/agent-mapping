@@ -21,6 +21,8 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentmapping.stubs.EnrolmentStoreStubs
 import uk.gov.hmrc.agentmapping.support.BaseISpec
 import uk.gov.hmrc.agentmapping.support.WireMockSupport
@@ -29,7 +31,9 @@ import uk.gov.hmrc.agentmapping.connector.EnrolmentResponse
 import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentmapping.model.EnrolmentIdentifier
 import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
+import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.agentmapping.model.Enrolment as ModelEnrolment
+import uk.gov.hmrc.http.UpstreamErrorResponse
 
 import scala.concurrent.ExecutionContext.Implicits.global
 
@@ -254,6 +258,52 @@ with GuiceOneAppPerSuite:
         recoverToExceptionIf[uk.gov.hmrc.http.UpstreamErrorResponse] {
           connector.getPrincipalEnrolments(groupId)
         }.futureValue
+
+      exception.statusCode shouldBe 502
+    }
+
+  }
+
+  "getGroupIdFor" should {
+
+    "return group ids when ESP responds with 200 OK" in {
+
+      val arn = Arn("AARN0000002")
+      val groupIds = Seq("group-123", "group-456")
+
+      givenPrincipalGroupIdsForArn(arn.value, groupIds)
+
+      val result = connector.getGroupIdFor(arn).futureValue
+
+      result shouldBe groupIds
+    }
+
+    "return empty sequence when ESP responds with 204 NO_CONTENT" in {
+
+      val arn = Arn("AARN0000002")
+
+      givenPrincipalGroupIdsForArn(
+        arn.value,
+        Seq.empty,
+        status = 204
+      )
+
+      val result = connector.getGroupIdFor(arn).futureValue
+
+      result shouldBe Seq.empty
+    }
+
+    "throw UpstreamErrorResponse when ESP responds with non-200/204 status" in {
+
+      val arn = Arn("AARN0000002")
+
+      givenPrincipalGroupIdsForArn(
+        arn.value,
+        Seq.empty,
+        status = 502
+      )
+
+      val exception = intercept[UpstreamErrorResponse](await(connector.getGroupIdFor(arn)))
 
       exception.statusCode shouldBe 502
     }

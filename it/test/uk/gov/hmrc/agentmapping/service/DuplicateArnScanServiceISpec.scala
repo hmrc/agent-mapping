@@ -60,7 +60,6 @@ with GuiceOneAppPerSuite:
           .findIdentifierArnCounts(repository.collection)
           .futureValue
 
-      println(results)
       results.map(_.arnCount) should contain theSameElementsAs Seq(2, 3, 2)
     }
   }

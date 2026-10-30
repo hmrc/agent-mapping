@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentmapping.service
 
+import org.apache.pekko.stream.Materializer
 import org.mongodb.scala.bson.collection.immutable.Document
 import org.mongodb.scala.MongoCollection
 import org.mongodb.scala.ObservableFuture
@@ -26,9 +27,12 @@ import org.mongodb.scala.model.Filters
 import org.mongodb.scala.model.Projections
 import play.api.Logging
 import uk.gov.hmrc.agentmapping.config.AppConfig
+import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentmapping.model.AgentReferenceMapping
+import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.agentmapping.model.ArnCount
 import uk.gov.hmrc.agentmapping.repository.IRSAAGENTMappingRepository
+import uk.gov.hmrc.agentmapping.util.NoRequest
 import uk.gov.hmrc.mongo.lock.LockService
 import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
@@ -37,14 +41,22 @@ import javax.inject.Singleton
 import scala.concurrent.ExecutionContext
 import scala.concurrent.Future
 import scala.concurrent.duration.*
+import org.apache.pekko.stream.scaladsl.Sink
+import org.apache.pekko.stream.scaladsl.Source
+import uk.gov.hmrc.http.UpstreamErrorResponse
+
 import scala.jdk.CollectionConverters.*
 
 @Singleton
 class DuplicateArnScanService @Inject() (
   saMappingRepo: IRSAAGENTMappingRepository,
   mongoLockRepository: MongoLockRepository,
+  enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector,
   appConfig: AppConfig
-)(implicit ec: ExecutionContext)
+)(using
+  ExecutionContext,
+  Materializer
+)
 extends Logging:
 
   private val lockService = LockService(
@@ -107,15 +119,39 @@ extends Logging:
            else
              distribution.map { case (arnCount, count) => s"$count identifiers have $arnCount ARNs" }.mkString(", "))
       )
-      results.foreach:
+      groupIdLookup(results).map { groupIdMapping =>
+        groupIdMapping.foreach:
+          case (identifier, arnMapping) =>
+            logger.warn(
+              s"[DuplicateArnScanService] Identifier '$identifier' has these ARNs: ${arnMapping.map { case (arn, hasGroupId) =>
+                  s"$arn, has groupId: $hasGroupId"
+                }.mkString(", ")}"
+            )
+      }
+    }
+  end runDuplicateArnScan
+
+  private def groupIdLookup(arnCounts: Seq[ArnCount]): Future[Seq[(String, Seq[(String, Boolean)])]] =
+    Source(arnCounts)
+      .mapAsync(1) {
         case ArnCount(
               identifier,
               arns,
-              arnCount
-            ) if arnCount > 1 =>
-          logger.warn(s"[DuplicateArnScanService] Identifier '$identifier' has $arnCount ARNs: ${arns.mkString(", ")}")
-    }
-  end runDuplicateArnScan
+              _
+            ) =>
+          Source(arns)
+            .throttle(5, 1.second)
+            .mapAsync(1) { arn =>
+              enrolmentStoreProxyConnector.getGroupIdFor(Arn(arn))(using NoRequest)
+                .map(groupIds => (arn, groupIds.nonEmpty))
+                .recover {
+                  case _: UpstreamErrorResponse => (arn, true) // Default to true if we can't get a response from ESP, to avoid false positives in the scan
+                }
+            }
+            .runWith(Sink.seq)
+            .map(arnMapping => (identifier, arnMapping))
+      }
+      .runWith(Sink.seq)
 
   if (appConfig.runDuplicateArnScan)
     runDuplicateArnScanLocked()

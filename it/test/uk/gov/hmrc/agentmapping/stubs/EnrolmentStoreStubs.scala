@@ -75,4 +75,29 @@ trait EnrolmentStoreStubs:
     )
   end givenPrincipalEnrolmentsExist
 
+  def givenPrincipalGroupIdsForArn(
+    arn: String,
+    groupIds: Seq[String],
+    status: Int = 200
+  ): StubMapping =
+
+    stubFor(
+      get(urlPathEqualTo(s"/enrolment-store-proxy/enrolment-store/enrolments/HMRC-AS-AGENT~AgentReferenceNumber~$arn/groups"))
+        .withQueryParam("type", equalTo("principal"))
+        .willReturn(
+          aResponse()
+            .withStatus(status)
+            .withHeader("Content-Type", "application/json")
+            .withBody(
+              if (status == 204)
+                ""
+              else
+                Json.stringify(Json.obj(
+                  "principalGroupIds" -> groupIds
+                ))
+            )
+        )
+    )
+  end givenPrincipalGroupIdsForArn
+
 end EnrolmentStoreStubs
