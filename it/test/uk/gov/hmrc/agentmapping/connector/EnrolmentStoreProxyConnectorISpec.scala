@@ -21,6 +21,8 @@ import org.scalatestplus.play.guice.GuiceOneAppPerSuite
 import play.api.Application
 import play.api.mvc.AnyContentAsEmpty
 import play.api.test.FakeRequest
+import play.api.test.Helpers.await
+import play.api.test.Helpers.defaultAwaitTimeout
 import uk.gov.hmrc.agentmapping.stubs.EnrolmentStoreStubs
 import uk.gov.hmrc.agentmapping.support.BaseISpec
 import uk.gov.hmrc.agentmapping.support.WireMockSupport
@@ -301,10 +303,7 @@ with GuiceOneAppPerSuite:
         status = 502
       )
 
-      val exception =
-        intercept[UpstreamErrorResponse] {
-          connector.getGroupIdFor(arn)
-        }
+      val exception = intercept[UpstreamErrorResponse](await(connector.getGroupIdFor(arn)))
 
       exception.statusCode shouldBe 502
     }
