@@ -269,13 +269,13 @@ with GuiceOneAppPerSuite:
     "return group ids when ESP responds with 200 OK" in {
 
       val arn = Arn("AARN0000002")
-      val groupIds = Seq("group-123", "group-456")
+      val groupId = "group-123"
 
-      givenPrincipalGroupIdsForArn(arn.value, groupIds)
+      givenPrincipalGroupIdsForArn(arn.value, Seq(groupId))
 
       val result = connector.getGroupIdFor(arn).futureValue
 
-      result shouldBe groupIds
+      result shouldBe Some(groupId)
     }
 
     "return empty sequence when ESP responds with 204 NO_CONTENT" in {
@@ -290,7 +290,7 @@ with GuiceOneAppPerSuite:
 
       val result = connector.getGroupIdFor(arn).futureValue
 
-      result shouldBe Seq.empty
+      result shouldBe None
     }
 
     "throw UpstreamErrorResponse when ESP responds with non-200/204 status" in {

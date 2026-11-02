@@ -22,11 +22,15 @@ import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import play.api.Logger
 import play.api.http.HeaderNames
-import play.api.mvc.{Request, RequestHeader}
+import play.api.mvc.Request
+import play.api.mvc.RequestHeader
 import play.api.test.FakeRequest
 import uk.gov.hmrc.play.bootstrap.tools.LogCapturing
 
-class RequestAwareLoggerSpec extends AnyWordSpecLike with Matchers with LogCapturing:
+class RequestAwareLoggerSpec
+extends AnyWordSpecLike
+with Matchers
+with LogCapturing:
 
   private val requestAwareLogger = new RequestAwareLogger(Logger("request.aware.logging.spec"))
 
@@ -84,14 +88,14 @@ class RequestAwareLoggerSpec extends AnyWordSpecLike with Matchers with LogCaptu
         testLoggerWithNoRequest(Level.DEBUG, requestAwareLogger.debug)
 
   private inline def testLoggerDefault(
-                                        level: Level,
-                                        doLog: RequestHeader ?=> String => Unit
-                                      ): Unit =
+    level: Level,
+    doLog: RequestHeader ?=> String => Unit
+  ): Unit =
     withCaptureOfLoggingFrom(requestAwareLogger): events =>
       given Request[?] = FakeRequest("GET", "/agent-overseas-application/test")
         .withHeaders(
           HeaderNames.USER_AGENT -> "test-agent",
-          HeaderNames.REFERER    -> "https://example.com/ref"
+          HeaderNames.REFERER -> "https://example.com/ref"
         )
 
       doLog("lookup complete")
@@ -110,9 +114,9 @@ class RequestAwareLoggerSpec extends AnyWordSpecLike with Matchers with LogCaptu
       msg should include("[DeviceId: ]")
 
   private inline def testLoggerNoHeaders(
-                                          level: Level,
-                                          doLog: RequestHeader ?=> String => Unit
-                                        ): Unit =
+    level: Level,
+    doLog: RequestHeader ?=> String => Unit
+  ): Unit =
     withCaptureOfLoggingFrom(requestAwareLogger): events =>
       given Request[?] = FakeRequest("GET", "/agent-overseas-application/test")
 
@@ -132,12 +136,12 @@ class RequestAwareLoggerSpec extends AnyWordSpecLike with Matchers with LogCaptu
       msg should include("[DeviceId: ]")
 
   private inline def testLoggerWithException(
-                                              level: Level,
-                                              doLog: RequestHeader ?=> (
-                                                String,
-                                                  Throwable
-                                                ) => Unit
-                                            ): Unit =
+    level: Level,
+    doLog: RequestHeader ?=> (
+      String,
+      Throwable
+    ) => Unit
+  ): Unit =
     withCaptureOfLoggingFrom(requestAwareLogger): events =>
       given Request[?] = FakeRequest("GET", "/agent-overseas-application/test")
       val ex = new RuntimeException("boom")
@@ -158,9 +162,9 @@ class RequestAwareLoggerSpec extends AnyWordSpecLike with Matchers with LogCaptu
       throwable.getMessage shouldBe "boom"
 
   private inline def testLoggerWithNoRequest(
-                                              level: Level,
-                                              doLog: RequestHeader ?=> String => Unit
-                                            ): Unit =
+    level: Level,
+    doLog: RequestHeader ?=> String => Unit
+  ): Unit =
     withCaptureOfLoggingFrom(requestAwareLogger): events =>
       given Request[?] = NoRequest
 
