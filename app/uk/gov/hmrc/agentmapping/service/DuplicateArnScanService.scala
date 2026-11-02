@@ -16,6 +16,7 @@
 
 package uk.gov.hmrc.agentmapping.service
 
+import org.apache.pekko.Done
 import org.apache.pekko.stream.Materializer
 import org.mongodb.scala.bson.collection.immutable.Document
 import org.mongodb.scala.MongoCollection
@@ -103,8 +104,8 @@ extends Logging:
       })
   end findIdentifierArnCounts
 
-  private def runDuplicateArnScan(): Future[Unit] =
-    findIdentifierArnCounts(saMappingRepo.collection).map { results =>
+  private def runDuplicateArnScan(): Future[Done] =
+    findIdentifierArnCounts(saMappingRepo.collection).flatMap { results =>
       val distribution: Map[Int, Int] =
         results
           .groupBy(_.arnCount)
@@ -119,19 +120,19 @@ extends Logging:
            else
              distribution.map { case (arnCount, count) => s"$count identifiers have $arnCount ARNs" }.mkString(", "))
       )
-      groupIdLookup(results).map { groupIdMapping =>
-        groupIdMapping.foreach:
+      groupIdAndClientLookup(results).map { groupIdMapping =>
+        groupIdMapping.map:
           case (identifier, arnMapping) =>
             logger.warn(
-              s"[DuplicateArnScanService] Identifier '$identifier' has these ARNs: ${arnMapping.map { case (arn, hasGroupId) =>
-                  s"$arn, has groupId: $hasGroupId"
-                }.mkString(", ")}"
+              s"[DuplicateArnScanService] Identifier '$identifier' has ${arnMapping.size} ARNs: \n ${arnMapping.map { case (arn, hasGroupId, count) =>
+                  s"$arn, has groupId: $hasGroupId, ITSA count: $count"
+                }.mkString(",\n ")}"
             )
-      }
+      }.map(_ => Done)
     }
   end runDuplicateArnScan
 
-  private def groupIdLookup(arnCounts: Seq[ArnCount]): Future[Seq[(String, Seq[(String, Boolean)])]] =
+  private def groupIdAndClientLookup(arnCounts: Seq[ArnCount]): Future[Seq[(String, Seq[(String, Boolean, Int)])]] =
     Source(arnCounts)
       .mapAsync(1) {
         case ArnCount(
@@ -143,9 +144,16 @@ extends Logging:
             .throttle(5, 1.second)
             .mapAsync(1) { arn =>
               enrolmentStoreProxyConnector.getGroupIdFor(Arn(arn))(using NoRequest)
-                .map(groupIds => (arn, groupIds.nonEmpty))
+                .flatMap {
+                  case Some(groupId) =>
+                    enrolmentStoreProxyConnector.countEnrolmentsForGroupId(
+                      groupId,
+                      "HMRC-MTD-IT"
+                    )(using NoRequest).map(count => (arn, true, count))
+                  case None => Future.successful((arn, false, 0))
+                }
                 .recover {
-                  case _: UpstreamErrorResponse => (arn, true) // Default to true if we can't get a response from ESP, to avoid false positives in the scan
+                  case _: UpstreamErrorResponse => (arn, true, 0) // Default to true if we can't get a response from ESP, to avoid false positives in the scan
                 }
             }
             .runWith(Sink.seq)

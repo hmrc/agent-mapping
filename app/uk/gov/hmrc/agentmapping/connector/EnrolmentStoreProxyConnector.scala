@@ -53,7 +53,8 @@ class EnrolmentStoreProxyConnector @Inject() (
   http: HttpClientV2
 )(
   implicit val ec: ExecutionContext
-):
+)
+extends RequestAwareLogging:
 
   private val batchSize = appConfig.clientCountBatchSize
   private val maxClientRelationships = appConfig.clientCountMaxResults
@@ -142,14 +143,14 @@ class EnrolmentStoreProxyConnector @Inject() (
 
   end getDelegatedEnrolmentsCountFor
 
-  // ES1 - delegated
-  def getGroupIdFor(arn: Arn)(using request: RequestHeader): Future[Seq[String]] = http
+  // ES1 - principal
+  def getGroupIdFor(arn: Arn)(using request: RequestHeader): Future[Option[String]] = http
     .get(url"$espBaseUrl/enrolment-store-proxy/enrolment-store/enrolments/HMRC-AS-AGENT~AgentReferenceNumber~${arn.value}/groups?type=principal")
     .execute[HttpResponse]
     .map { response =>
       response.status match {
-        case Status.OK => (response.json \ "principalGroupIds").as[Seq[String]]
-        case Status.NO_CONTENT => Nil
+        case Status.OK => (response.json \ "principalGroupIds").as[Seq[String]].headOption
+        case Status.NO_CONTENT => None
         case other =>
           throw UpstreamErrorResponse(
             response.body,
@@ -158,6 +159,31 @@ class EnrolmentStoreProxyConnector @Inject() (
           )
       }
     }
+
+  // ES3 - delegated
+  def countEnrolmentsForGroupId(
+    groupId: String,
+    service: String
+  )(using
+    rh: RequestHeader,
+    ec: ExecutionContext
+  ): Future[Int] = {
+    val url =
+      url"$espBaseUrl/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments?type=delegated&service=$service"
+    http
+      .get(url)
+      .execute[HttpResponse]
+      .map { response =>
+        response.status match {
+          case Status.OK => (response.json \ "totalRecords").as[Int]
+          case Status.NO_CONTENT => 0
+          case other =>
+            logger.error(s"Unexpected status on ES3 request: $other, ${response.body}")
+            0
+        }
+      }
+
+  }
 
 end EnrolmentStoreProxyConnector
 
