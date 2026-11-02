@@ -16,10 +16,12 @@
 
 package uk.gov.hmrc.agentmapping.util
 
+import org.slf4j
+import play.api.Logger
+import play.api.LoggerLike
 import play.api.http.HeaderNames
 import play.api.mvc.RequestHeader
-import play.api.Logger
-import RequestSupport.given
+import uk.gov.hmrc.agentmapping.util.RequestSupport.given
 
 /** A logger which is aware of the request. It will append to the message extra information such as session ID, request ID, user agent, referer, and device ID
   * etc.
@@ -29,7 +31,10 @@ import RequestSupport.given
 @SuppressWarnings(Array("org.wartremover.warts.Any"))
 class RequestAwareLogger(
   delegateLogger: Logger
-):
+)
+extends LoggerLike:
+
+  override val logger: slf4j.Logger = delegateLogger.logger
 
   def debug(message: => String)(using request: RequestHeader): Unit = logMessage(message, Debug)
 
@@ -94,7 +99,8 @@ class RequestAwareLogger(
 
   private def makeRichMessage(message: String)(using request: RequestHeader): String =
     request match
-      case _ => s"$message $context "
+      case NoRequest => message
+      case _ => s"$message $context"
 
   private sealed trait LogLevel
 
