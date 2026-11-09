@@ -41,6 +41,8 @@ class AppConfig @Inject() (
 
   val runDuplicateArnScan: Boolean = servicesConfig.getBoolean("duplicateArnScan.run")
 
+  val strideConfig: StrideConfig = configuration.get("stride")
+
   private val mandationDates: Map[LegacyAgentEnrolmentType, LocalDate] =
     configuration
       .get[Map[String, String]]("mandationDates")

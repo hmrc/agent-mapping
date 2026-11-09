@@ -21,6 +21,7 @@ import play.api.libs.json.Json.toJson
 import play.api.mvc.*
 import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.auth.AuthActions
+import uk.gov.hmrc.agentmapping.config.AppConfig
 import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentmapping.model.*
 import uk.gov.hmrc.agentmapping.repository.*
@@ -37,6 +38,7 @@ class MappingController @Inject() (
   repositories: MappingRepositories,
   auditService: AuditService,
   espConnector: EnrolmentStoreProxyConnector,
+  appConfig: AppConfig,
   cc: ControllerComponents,
   val authActions: AuthActions
 )(
@@ -163,6 +165,29 @@ with RequestAwareLogging:
 
   }
   end findMappings
+
+  /** Allows a Stride user (with the appropriate role) to delete a mapping for a given enrolment type and value.
+    *
+    * @todo
+    *   does not currently audit deletion events
+    *
+    * @param enrolment
+    *   the enrolment service type (see [[LegacyAgentEnrolmentType]])
+    * @param value
+    *   the agent code (identifier)
+    * @param arn
+    *   agent reference number
+    * @return
+    *   204 if the mapping was deleted, 404 if it was not found
+    */
+  def deleteMapping(
+    enrolment: LegacyAgentEnrolmentType,
+    value: String,
+    arn: Arn
+  ): Action[AnyContent] =
+    authActions.onlyStride(appConfig.strideConfig.unmappingRole): _ =>
+      repositories.get(enrolment).deleteMapping(arn, value).map: deleted =>
+        if deleted then NoContent else NotFound
 
   private def createMapping(
     arn: Arn,

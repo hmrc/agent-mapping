@@ -125,6 +125,26 @@ with RequestAwareLogging:
   def deleteByArn(arn: Arn): Future[DeleteResult] =
     collection.deleteOne(equal("arn", arn.value)).toFuture()
 
+  /** Deletes a mapping for the given ARN and agent code (identifier).
+    *
+    * @param arn
+    *   target ARN
+    * @param identifierValue
+    *   target agent code
+    * @return
+    *   if the call deleted an entry (true) or not (false)
+    */
+  def deleteMapping(
+    arn: Arn,
+    identifierValue: String
+  ): Future[Boolean] =
+    collection.deleteOne(
+      BsonDocument(
+        "arn" -> arn.value,
+        "identifier" -> identifierValue
+      )
+    ).toFuture().map(_.getDeletedCount > 0)
+
   // This is for testing purposes only
   def deleteAll(): Future[DeleteResult] =
     collection.deleteMany(BsonDocument()).toFuture()

@@ -131,3 +131,21 @@ with DefaultPlayMongoRepositorySupport[AgentReferenceMapping]:
 
       val result: DeleteResult = repository.deleteByArn(arn1).futureValue
       result.getDeletedCount shouldBe 0L
+
+    "delete a pre-existing mapping for Arn and identifier" in:
+      repository.store(arn1, reference1).futureValue
+      repository.deleteMapping(arn1, reference1).futureValue shouldBe true
+
+    "delete a non-existing mapping for Arn and identifier" in:
+      repository.deleteMapping(arn1, reference1).futureValue shouldBe false
+
+    "no other mappings should be deleted" in:
+      repository.store(arn1, reference1).futureValue
+      repository.store(arn1, reference2).futureValue
+      repository.store(arn2, reference2).futureValue
+
+      repository.deleteMapping(arn1, reference1).futureValue shouldBe true
+
+      val result = repository.findAll().futureValue
+      result.size shouldBe 2
+      result.map(_.identifier) should contain theSameElementsAs Seq(reference2, reference2)

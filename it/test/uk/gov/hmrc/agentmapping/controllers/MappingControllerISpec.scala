@@ -18,6 +18,7 @@ package uk.gov.hmrc.agentmapping.controllers
 
 import com.github.tomakehurst.wiremock.stubbing.StubMapping
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatestplus.play.WsScalaTestClient
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import play.api.libs.ws.DefaultBodyWritables.writeableOf_String
@@ -26,6 +27,7 @@ import play.api.libs.ws.WSClient
 import play.api.libs.ws.WSResponse
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.CreateMapping
 import uk.gov.hmrc.agentmapping.config.AppConfig
+import uk.gov.hmrc.agentmapping.controller.routes
 import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
 import uk.gov.hmrc.agentmapping.model.{Enrolment as ModelEnrolment, EnrolmentIdentifier as ModelEnrolmentIdentifier, *}
 import uk.gov.hmrc.auth.core.AffinityGroup
@@ -38,6 +40,7 @@ import java.util.Base64
 
 class MappingControllerISpec
 extends MappingControllerISpecSetup
+with WsScalaTestClient
 with ScalaFutures:
 
   val registeredArn: Arn = Arn("AARN0000002")
@@ -49,7 +52,7 @@ with ScalaFutures:
   val authProviderId = AuthProviderId("testCredId")
 
   val url = s"http://localhost:$port"
-  val wsClient: WSClient = app.injector.instanceOf[WSClient]
+  given wsClient: WSClient = app.injector.instanceOf[WSClient]
 
   def callPost(
     path: String,
@@ -112,7 +115,7 @@ with ScalaFutures:
 
   def findMappingsRequestByKey(key: String): String = s"/agent-mapping/mappings/key/$key/arn/${registeredArn.value}"
 
-  val deleteMappingsRequest: String = s"/agent-mapping/test-only/mappings/${registeredArn.value}"
+  val testOnlyDeleteMappingsRequest: String = s"/agent-mapping/test-only/mappings/${registeredArn.value}"
 
   def terminateAgentsMapping(arn: Arn): String = s"/agent-mapping/agent/${arn.value}/terminate"
 
@@ -653,13 +656,13 @@ with ScalaFutures:
     }
   }
 
-  "delete" should {
+  "test-only delete" should {
     "return no content when a record is deleted" in {
       saRepo.store(registeredArn, "foo").futureValue
       vatRepo.store(registeredArn, "foo").futureValue
       agentCodeRepo.store(registeredArn, "foo").futureValue
 
-      val deleteResponse = callDelete(deleteMappingsRequest)
+      val deleteResponse = callDelete(testOnlyDeleteMappingsRequest)
       deleteResponse.status shouldBe 204
 
       isLoggedIn
@@ -668,7 +671,7 @@ with ScalaFutures:
     }
 
     "return no content when no record is deleted" in {
-      val deleteResponse = callDelete(deleteMappingsRequest)
+      val deleteResponse = callDelete(testOnlyDeleteMappingsRequest)
       deleteResponse.status shouldBe 204
     }
   }
@@ -719,6 +722,67 @@ with ScalaFutures:
       }
     }
   }
+
+  "delete mapping" should:
+    "return 204 when mapping exists and is deleted" in:
+      val repository = repositories.get(LegacyAgentEnrolmentType.IRAgentReference)
+      repository.store(registeredArn, "foo").futureValue
+      givenOnlyStrideStub("asa_mapping_unmap", "abc")
+
+      val call = routes.MappingController.deleteMapping(
+        LegacyAgentEnrolmentType.IRAgentReference,
+        "foo",
+        registeredArn
+      )
+
+      val deleteResponse =
+        wsCall(call)
+          .withHttpHeaders("Authorization" -> "Bearer XYZ")
+          .delete().futureValue
+
+      deleteResponse.status shouldBe 204
+
+    "return 404 when mapping does not exist" in:
+      givenOnlyStrideStub("asa_mapping_unmap", "abc")
+
+      val call = routes.MappingController.deleteMapping(
+        LegacyAgentEnrolmentType.IRAgentReference,
+        "non-existent-agent-code",
+        registeredArn
+      )
+      val deleteResponse =
+        wsCall(call)
+          .withHttpHeaders("Authorization" -> "Bearer XYZ")
+          .delete().futureValue
+
+      deleteResponse.status shouldBe 404
+
+    "return 403 when user is not authorised" in:
+      val call = routes.MappingController.deleteMapping(
+        LegacyAgentEnrolmentType.IRAgentReference,
+        "agent-code",
+        registeredArn
+      )
+      val deleteResponse =
+        wsCall(call)
+          .withHttpHeaders("Authorization" -> "Bearer XYZ")
+          .delete().futureValue
+      deleteResponse.status shouldBe 403
+
+    "return 403 when the user is not authorised with the correct stride role" in:
+      givenOnlyStrideStub("unrelated-role", "abc")
+
+      val call = routes.MappingController.deleteMapping(
+        LegacyAgentEnrolmentType.IRAgentReference,
+        "agent-code",
+        registeredArn
+      )
+      val deleteResponse =
+        wsCall(call)
+          .withHttpHeaders("Authorization" -> "Bearer XYZ")
+          .delete().futureValue
+
+      deleteResponse.status shouldBe 401
 
   trait TestSetup {
 
