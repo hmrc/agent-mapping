@@ -1,5 +1,5 @@
 /*
- * Copyright 2023 HM Revenue & Customs
+ * Copyright 2026 HM Revenue & Customs
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,15 +16,13 @@
 
 package uk.gov.hmrc.agentmapping.model
 
-import play.api.libs.json.Format
-import play.api.libs.functional.syntax._
+import org.scalatest.matchers.should.Matchers
+import org.scalatest.wordspec.AnyWordSpecLike
 
-/** A value associated with an enrolment key
-  */
-final case class IdentifierValue(value: String)
+class EnrolmentIdentifierSpec
+extends AnyWordSpecLike
+with Matchers:
 
-object IdentifierValue:
-
-  implicit val format: Format[IdentifierValue] = implicitly[Format[String]].inmap(IdentifierValue(_), _.value)
-
-end IdentifierValue
+  "EnrolmentIdentifier.toString" should:
+    "uppercase the key and remove spaces from the value" in:
+      EnrolmentIdentifier("agentCode", "12 34 56").toString shouldBe "AGENTCODE~123456"

@@ -73,10 +73,11 @@ with RequestAwareLogging:
           missedDeadline = appConfig.mandationDateFor(enrolment).exists(!LocalDate.now(clock).isBefore(_))
           userAlreadyNotified <- mappingService.isUserAlreadyNotified
         yield
-          if arns.nonEmpty then NoContent
-          else
+          if arns.nonEmpty then
             if mappedArnIsSuspended then Locked(Json.toJson(MappingStatusResponse("suspension page url")))
-            else if missedDeadline then NotFound(Json.toJson(MappingStatusResponse("mapping journey url")))
+            else NoContent
+          else
+            if missedDeadline then NotFound(Json.toJson(MappingStatusResponse("mapping journey url")))
             else Ok(Json.toJson(MappingStatusResponse("mapping journey/notification url", Some(userAlreadyNotified))))
 
   end mappingStatus

@@ -310,4 +310,52 @@ with GuiceOneAppPerSuite:
 
   }
 
+  "countEnrolmentsForGroupId" should {
+
+    "return totalRecords when ESP responds with 200 OK" in {
+
+      val groupId = "group-123"
+      val service = "HMRC-MTD-IT"
+
+      givenEnrolmentsCountForGroupId(
+        groupId,
+        service,
+        totalRecords = 12
+      )
+
+      connector.countEnrolmentsForGroupId(groupId, service).futureValue shouldBe 12
+    }
+
+    "return 0 when ESP responds with 204 NO_CONTENT" in {
+
+      val groupId = "group-123"
+      val service = "HMRC-MTD-IT"
+
+      givenEnrolmentsCountForGroupId(
+        groupId,
+        service,
+        totalRecords = 0,
+        status = 204
+      )
+
+      connector.countEnrolmentsForGroupId(groupId, service).futureValue shouldBe 0
+    }
+
+    "return 0 when ESP responds with another status" in {
+
+      val groupId = "group-123"
+      val service = "HMRC-MTD-IT"
+
+      givenEnrolmentsCountForGroupId(
+        groupId,
+        service,
+        totalRecords = 0,
+        status = 502
+      )
+
+      connector.countEnrolmentsForGroupId(groupId, service).futureValue shouldBe 0
+    }
+
+  }
+
 end EnrolmentStoreProxyConnectorISpec

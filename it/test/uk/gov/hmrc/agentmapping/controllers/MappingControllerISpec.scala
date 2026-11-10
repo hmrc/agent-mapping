@@ -179,77 +179,6 @@ with ScalaFutures:
     "AAA0008"
   )
 
-  val AgentCodeUserMapping = UserMapping(
-    authProviderId,
-    Some(uk.gov.hmrc.domain.AgentCode("agent-code")),
-    Seq.empty,
-    0,
-    ""
-  )
-  val IRSAAGENTUserMapping = UserMapping(
-    authProviderId,
-    None,
-    Seq(AgentEnrolment(LegacyAgentEnrolmentType.IRAgentReference, IdentifierValue("A1111A"))),
-    0,
-    ""
-  )
-  val HMCEVATAGNTUserMapping = UserMapping(
-    authProviderId,
-    None,
-    Seq(AgentEnrolment(LegacyAgentEnrolmentType.AgentRefNo, IdentifierValue("101747696"))),
-    0,
-    ""
-  )
-  val IRCTAGENTUserMapping = UserMapping(
-    authProviderId,
-    None,
-    Seq(AgentEnrolment(LegacyAgentEnrolmentType.IRAgentReferenceCt, IdentifierValue("B2121C"))),
-    0,
-    ""
-  )
-  val HMRCGTSAGNTUserMapping = UserMapping(
-    authProviderId,
-    None,
-    Seq(AgentEnrolment(LegacyAgentEnrolmentType.HmrcGtsAgentRef, IdentifierValue("AB8964622K"))),
-    0,
-    ""
-  )
-  val HMRCNOVRNAGNTUserMapping = UserMapping(
-    authProviderId,
-    None,
-    Seq(AgentEnrolment(LegacyAgentEnrolmentType.VATAgentRefNo, IdentifierValue("FGH79/96KUJ"))),
-    0,
-    ""
-  )
-  val HMRCCHARAGENTUserMapping = UserMapping(
-    authProviderId,
-    None,
-    Seq(AgentEnrolment(LegacyAgentEnrolmentType.AgentCharId, IdentifierValue("FGH79/96KUJ"))),
-    0,
-    ""
-  )
-  val HMRCMGDAGNTUserMapping = UserMapping(
-    authProviderId,
-    None,
-    Seq(AgentEnrolment(LegacyAgentEnrolmentType.HmrcMgdAgentRef, IdentifierValue("737B.89"))),
-    0,
-    ""
-  )
-  val IRPAYEAGENTUserMapping = UserMapping(
-    authProviderId,
-    None,
-    Seq(AgentEnrolment(LegacyAgentEnrolmentType.IRAgentReferencePaye, IdentifierValue("F9876J"))),
-    0,
-    ""
-  )
-  val IRSDLTAGENTUserMapping = UserMapping(
-    authProviderId,
-    None,
-    Seq(AgentEnrolment(LegacyAgentEnrolmentType.SdltStorn, IdentifierValue("AAA0008"))),
-    0,
-    ""
-  )
-
   val fixtures: Seq[TestFixture] = Seq(
     IRSAAGENTTestFixture,
     HMCEVATAGNTTestFixture,
@@ -260,19 +189,6 @@ with ScalaFutures:
     HMRCMGDAGNTTestFixture,
     IRPAYEAGENTTestFixture,
     IRSDLTAGENTTestFixture
-  )
-
-  val userMappings: Seq[UserMapping] = Seq(
-    AgentCodeUserMapping,
-    IRSAAGENTUserMapping,
-    HMCEVATAGNTUserMapping,
-    IRCTAGENTUserMapping,
-    HMRCGTSAGNTUserMapping,
-    HMRCNOVRNAGNTUserMapping,
-    HMRCCHARAGENTUserMapping,
-    HMRCMGDAGNTUserMapping,
-    IRPAYEAGENTUserMapping,
-    IRSDLTAGENTUserMapping
   )
 
   "MappingController" should {

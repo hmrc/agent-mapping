@@ -27,6 +27,30 @@ trait EnrolmentStoreStubs:
 
   val appConfig: AppConfig
 
+  def givenEnrolmentsCountForGroupId(
+    groupId: String,
+    service: String,
+    totalRecords: Int,
+    status: Int = 200
+  ): StubMapping =
+    stubFor(
+      get(urlPathEqualTo(s"/enrolment-store-proxy/enrolment-store/groups/$groupId/enrolments"))
+        .withQueryParam("type", equalTo("delegated"))
+        .withQueryParam("service", equalTo(service))
+        .willReturn(
+          aResponse()
+            .withStatus(status)
+            .withHeader("Content-Type", "application/json")
+            .withBody(
+              if (status == 204)
+                ""
+              else
+                Json.stringify(Json.obj("totalRecords" -> totalRecords))
+            )
+        )
+    )
+  end givenEnrolmentsCountForGroupId
+
   def givenEs2ClientsFoundFor(
     userId: String,
     service: String,

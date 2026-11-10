@@ -17,13 +17,12 @@
 package uk.gov.hmrc.agentmapping.config
 
 import play.api.Configuration
-
-import java.time.LocalDate
-import javax.inject.Inject
-import javax.inject.Singleton
-import uk.gov.hmrc.agentmapping.model.BasicAuthentication
 import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
 import uk.gov.hmrc.play.bootstrap.config.ServicesConfig
+
+import java.time.LocalDate
+import javax.inject.Singleton
+import javax.inject.Inject
 
 @Singleton
 class AppConfig @Inject() (
@@ -57,13 +56,5 @@ class AppConfig @Inject() (
 
   def mandationDateFor(enrolment: LegacyAgentEnrolmentType): Option[LocalDate] =
     mandationDates.get(enrolment)
-
-  def expectedAuth: BasicAuthentication =
-    val username = servicesConfig.getString("agent-termination.username")
-    val password = servicesConfig.getString("agent-termination.password")
-
-    BasicAuthentication(username, password)
-
-  end expectedAuth
 
 end AppConfig
