@@ -18,42 +18,29 @@ package uk.gov.hmrc.agentmapping.controller
 
 import play.api.libs.json.Json
 import play.api.libs.json.OWrites
-import play.api.mvc.Action
-import play.api.mvc.AnyContent
-import play.api.mvc.ControllerComponents
 import play.api.mvc.Request
+import play.api.mvc.ControllerComponents
+import play.api.mvc.AnyContent
+import play.api.mvc.Action
 import uk.gov.hmrc.agentmapping.auth.AuthActions
-import uk.gov.hmrc.agentmapping.connector.AgentServicesAccountConnector
+import uk.gov.hmrc.agentmapping.config.AppConfig
 import uk.gov.hmrc.agentmapping.controller.MappingStatusController.*
-import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.agentmapping.model.ServiceIdentifier
 import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
-import uk.gov.hmrc.agentmapping.repository.MappingRepositories
+import uk.gov.hmrc.agentmapping.service.MappingService
 import uk.gov.hmrc.agentmapping.util.RequestAwareLogging
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
-import uk.gov.hmrc.agentmapping.config.AppConfig
-import uk.gov.hmrc.agentmapping.service.MappingService
-import uk.gov.hmrc.http.SessionKeys
-import uk.gov.hmrc.mongo.lock.MongoLockRepository
-import uk.gov.hmrc.mongo.lock.TimePeriodLockService
 
-import java.time.Clock
 import java.time.LocalDate
-import java.util.UUID
-import javax.inject.Inject
+import java.time.Clock
 import javax.inject.Singleton
-import scala.Seq
+import javax.inject.Inject
 import scala.concurrent.ExecutionContext
-import scala.concurrent.Future
-import scala.concurrent.duration.DurationInt
 
 @Singleton
 class MappingStatusController @Inject() (
   cc: ControllerComponents,
   val authActions: AuthActions,
-  mappingRepositories: MappingRepositories,
-  mongoLockRepository: MongoLockRepository,
-  agentServicesAccountConnector: AgentServicesAccountConnector,
   mappingService: MappingService,
   appConfig: AppConfig,
   clock: Clock
@@ -75,70 +62,24 @@ with RequestAwareLogging:
     // 6. If no mapping exists and in the process of automapping two ARNs were found for different identifiers of the agent group, return 404 if the deadline has passed and 200 otherwise.
 
     authActions.authorisedAgentFor(identifier):
-      implicit request =>
-        findMappedArnsAndAttemptAutomapping(
-          identifier,
-          request.groupId,
-          request.credId
-        ).flatMap:
-          case arns if arns.nonEmpty =>
-            // We cannot distinguish which ARN is correct, so we check if any of the ARNs are suspended in case there's multiple
-            // TODO make return of findMappedArns an Option[Arn] instead of Seq[Arn] once the mapping uniqueness is enforced
-            Future.traverse(arns)(arn => agentServicesAccountConnector.isSuspended(arn)).map:
-              case result if result.contains(true) =>
-                // Mapped ARN is suspended
-                Locked(Json.toJson(MappingStatusResponse("suspension page url")))
-              case _ =>
-                // Mapping is present and ARN is not suspended
-                NoContent
-          case Nil if appConfig.mandationDateFor(enrolment).exists(!LocalDate.now(clock).isBefore(_)) =>
-            // No mapping present after deadline
-            Future.successful(NotFound(Json.toJson(MappingStatusResponse("mapping journey url"))))
-          case _ =>
-            isUserAlreadyNotified.map: alreadyNotified =>
-              Ok(Json.toJson(MappingStatusResponse("mapping journey/notification url", Some(alreadyNotified))))
+      case request @ given Request[AnyContent] =>
+        for
+          arns <- mappingService.findMappedArnsAndAttemptAutomapping(
+            identifier,
+            request.groupId,
+            request.credId
+          )
+          mappedArnIsSuspended <- mappingService.checkSuspensions(arns)
+          missedDeadline = appConfig.mandationDateFor(enrolment).exists(!LocalDate.now(clock).isBefore(_))
+          userAlreadyNotified <- mappingService.isUserAlreadyNotified
+        yield
+          if arns.nonEmpty then NoContent
+          else
+            if mappedArnIsSuspended then Locked(Json.toJson(MappingStatusResponse("suspension page url")))
+            else if missedDeadline then NotFound(Json.toJson(MappingStatusResponse("mapping journey url")))
+            else Ok(Json.toJson(MappingStatusResponse("mapping journey/notification url", Some(userAlreadyNotified))))
+
   end mappingStatus
-
-  private def isUserAlreadyNotified(using request: Request[Any]): Future[Boolean] =
-    TimePeriodLockService(
-      mongoLockRepository,
-      request.headers.get(SessionKeys.sessionId).getOrElse(UUID.randomUUID().toString),
-      30.minutes
-    ).withRenewedLock(Future.unit).map:
-      case Some(_) => false
-      case None => true
-
-  private def findMappedArnsAndAttemptAutomapping(
-    identifier: ServiceIdentifier,
-    groupId: String,
-    credId: String
-  )(using request: Request[Any]): Future[Seq[Arn]] =
-    mappingRepositories.getAllArnsByServiceIdentifier(identifier).flatMap:
-      case arns if arns.nonEmpty =>
-        // no automapping here as this is the primary path for the status check and for performance reasons we don't want to trigger automapping on every status check
-        if arns.size > 1 then
-          logger.warn(s"Multiple ARNs found for ${identifier.toString}: ${arns.mkString(", ")}")
-        Future.successful(arns)
-      case Nil =>
-        mappingService.getGroupIdentifiers(groupId).flatMap: identifiers =>
-          Future.traverse(identifiers.filter(_ != identifier))(otherIdentifier =>
-            mappingRepositories.getAllArnsByServiceIdentifier(otherIdentifier)
-          ).map(_.flatten.distinct).flatMap:
-            case arn :: Nil =>
-              mappingService.createMappingInRepository(
-                arn,
-                identifier,
-                credId,
-                isAutomapping = true
-              ).map(_ => Seq(arn))
-            case arns if arns.size > 1 =>
-              logger.warn(s"Mapping check failure: agent has no direct mapping for identifier ${identifier.toString}" +
-                s" but they have other identifier mappings for different ARNs," +
-                s" this prevents us from automapping as we do not know which ARN is right ${arns.mkString(", ")}")
-              // TODO Audit?
-              Future.successful(Nil)
-            case Nil => Future.successful(Nil)
-  end findMappedArnsAndAttemptAutomapping
 
 end MappingStatusController
 

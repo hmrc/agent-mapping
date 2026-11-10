@@ -28,6 +28,7 @@ import play.api.libs.ws.WSResponse
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.CreateMapping
 import uk.gov.hmrc.agentmapping.config.AppConfig
 import uk.gov.hmrc.agentmapping.controller.routes
+import uk.gov.hmrc.agentmapping.connector.EnrolmentResponse
 import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
 import uk.gov.hmrc.agentmapping.model.{Enrolment as ModelEnrolment, EnrolmentIdentifier as ModelEnrolmentIdentifier, *}
 import uk.gov.hmrc.auth.core.AffinityGroup
@@ -784,6 +785,41 @@ with ScalaFutures:
 
       deleteResponse.status shouldBe 401
 
+  "getClientCount" should {
+    "return the number of active client enrolments as JSON" in {
+      givenUserIsAuthorisedForCreds(
+        serviceName = LegacyAgentEnrolmentType.IRAgentReference.key,
+        identifierName = "UTR",
+        identifierValue = "1234567890",
+        ggCredId = authProviderId.id,
+        agentCodeOpt = None
+      )
+      givenEs2ClientsFoundFor(
+        authProviderId.id,
+        "IR-SA",
+        1,
+        EnrolmentResponse(Seq(
+          ModelEnrolment(
+            "IR-SA",
+            "Activated",
+            Seq(ModelEnrolmentIdentifier("UTR", "1234567890"))
+          ),
+          ModelEnrolment(
+            "IR-SA",
+            "Pending",
+            Seq(ModelEnrolmentIdentifier("UTR", "9876543210"))
+          )
+        )),
+        200
+      )
+
+      val response = callGet("/agent-mapping/client-count")
+
+      response.status shouldBe 200
+      response.json shouldBe Json.obj("clientCount" -> 1)
+    }
+  }
+
   trait TestSetup {
 
     (Seq(AgentCodeTestFixture) ++ fixtures).foreach { f =>
@@ -802,7 +838,7 @@ with ScalaFutures:
   end givenUserIsAuthorisedFor
 
   private def givenUserIsSubscribedAgentWithGroup(
-    authArn: Arn = registeredArn,
+    authArn: Arn,
     groupId: String = "group-123",
     providerId: String = "testCredId"
   ): StubMapping =
