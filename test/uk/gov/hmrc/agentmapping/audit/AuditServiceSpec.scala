@@ -18,17 +18,21 @@ package uk.gov.hmrc.agentmapping.audit
 
 import org.mockito.ArgumentCaptor
 import org.mockito.ArgumentMatchers.any
+import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.Mockito.verify
 import org.scalatest.OptionValues
-import org.scalatest.concurrent.Eventually
 import org.scalatest.concurrent.ScalaFutures
+import org.scalatest.concurrent.Eventually
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpecLike
 import org.scalatestplus.mockito.MockitoSugar
 import play.api.test.FakeRequest
 import uk.gov.hmrc.agentmapping.audit.AgentMappingEvent.CreateMapping
-import uk.gov.hmrc.http.HeaderCarrier
+import uk.gov.hmrc.agentmapping.model.ServiceIdentifier
+import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
+import uk.gov.hmrc.agentmapping.model.Arn
 import uk.gov.hmrc.http.HeaderNames
+import uk.gov.hmrc.http.HeaderCarrier
 import uk.gov.hmrc.play.audit.http.connector.AuditConnector
 import uk.gov.hmrc.play.audit.model.DataEvent
 
@@ -42,6 +46,25 @@ with OptionValues
 with ScalaFutures
 with MockitoSugar
 with Eventually:
+
+  "sendCreateMappingAuditEvent" should:
+    "not send an event for an auto-mapped duplicate" in:
+      val mockConnector = mock[AuditConnector]
+      val service = new AuditService(mockConnector)
+      val arn = Arn("AARN0000247")
+      val identifier = ServiceIdentifier(LegacyAgentEnrolmentType.AgentCode, "agent-code")
+      given play.api.mvc.Request[Any] = FakeRequest("POST", "/mapping")
+
+      service.sendCreateMappingAuditEvent(
+        arn,
+        identifier,
+        "gg-cred-id",
+        duplicate = true,
+        automapped = true
+      )
+
+      verifyNoInteractions(mockConnector)
+
   "auditEvent" should:
     "send an event with the correct fields" in:
       val mockConnector = mock[AuditConnector]

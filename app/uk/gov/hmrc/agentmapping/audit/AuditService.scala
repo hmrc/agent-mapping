@@ -38,24 +38,24 @@ class AuditService @Inject() (val auditConnector: AuditConnector)(implicit ec: E
     arn: Arn,
     identifier: ServiceIdentifier,
     authProviderId: String,
-    duplicate: Boolean = false,
-    automapped: Boolean = false
+    duplicate: Boolean,
+    automapped: Boolean
   )(implicit
     request: Request[Any]
   ): Unit =
-    auditEvent(
-      CreateMapping,
-      "create-mapping",
-      Seq(
-        "authProviderId" -> authProviderId,
-        "identifierType" -> identifier.enrolmentType.key,
-        "identifier" -> identifier.value,
-        "agentReferenceNumber" -> arn.value,
-        "duplicate" -> duplicate.toString,
-        "automapped" -> automapped.toString
+    if !(duplicate && automapped) then
+      auditEvent(
+        CreateMapping,
+        "create-mapping",
+        Seq(
+          "authProviderId" -> authProviderId,
+          "identifierType" -> identifier.enrolmentType.key,
+          "identifier" -> identifier.value,
+          "agentReferenceNumber" -> arn.value,
+          "duplicate" -> duplicate.toString,
+          "automapped" -> automapped.toString
+        )
       )
-    )
-    ()
   end sendCreateMappingAuditEvent
 
   private[audit] def auditEvent(

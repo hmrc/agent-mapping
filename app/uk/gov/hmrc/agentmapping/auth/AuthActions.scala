@@ -16,28 +16,23 @@
 
 package uk.gov.hmrc.agentmapping.auth
 
-import uk.gov.hmrc.agentmapping.util.RequestAwareLogging
 import play.api.mvc.*
-import uk.gov.hmrc.agentmapping.model.Arn
-import uk.gov.hmrc.agentmapping.model.BasicAuthentication
 import uk.gov.hmrc.agentmapping.model.ServiceIdentifier
 import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
+import uk.gov.hmrc.agentmapping.model.Arn
+import uk.gov.hmrc.agentmapping.util.RequestAwareLogging
 import uk.gov.hmrc.auth.core.*
-import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core.AuthProvider.PrivilegedApplication
+import uk.gov.hmrc.auth.core.AuthProvider.GovernmentGateway
 import uk.gov.hmrc.auth.core.retrieve.v2.Retrievals.*
-import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.auth.core.retrieve.~
-import uk.gov.hmrc.http.HeaderNames
+import uk.gov.hmrc.auth.core.retrieve.Credentials
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import java.nio.charset.StandardCharsets.UTF_8
-import java.util.Base64
-import javax.inject.Inject
 import javax.inject.Singleton
-import scala.concurrent.ExecutionContext
+import javax.inject.Inject
 import scala.concurrent.Future
-import scala.util.matching.Regex
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class AuthActions @Inject() (
@@ -168,49 +163,6 @@ with RequestAwareLogging:
     } recover { case _: NoActiveSession => Unauthorized }
   }
   end basicAuth
-
-  private val basicAuthHeader: Regex = "Basic (.+)".r
-  private val decodedAuth: Regex = "(.+):(.+)".r
-
-  private def decodeFromBase64(encodedString: String): String =
-
-    try new String(Base64.getDecoder.decode(encodedString), UTF_8)
-    catch
-      case _: Throwable => ""
-    end try
-
-  end decodeFromBase64
-
-  def withBasicAuth(
-    expectedAuth: BasicAuthentication
-  )(
-    body: => Future[Result]
-  )(
-    implicit request: Request[?]
-  ): Future[Result] =
-    request.headers.get(HeaderNames.authorisation) match
-      case Some(basicAuthHeader(encodedAuthHeader)) =>
-        decodeFromBase64(encodedAuthHeader) match
-          case decodedAuth(username, password) =>
-
-            if BasicAuthentication(username, password) == expectedAuth then
-              body
-            else
-              logger.warn("Authorization header found in the request but invalid username or password")
-              Future successful Unauthorized
-            end if
-
-          case _ =>
-            logger.warn("Authorization header found in the request but its not in the expected format")
-            Future successful Unauthorized
-        end match
-
-      case _ =>
-        logger.warn("No Authorization header found in the request for agent termination")
-        Future successful Unauthorized
-    end match
-
-  end withBasicAuth
 
   def onlyStride(
     strideRole: String

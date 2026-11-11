@@ -19,26 +19,26 @@ package uk.gov.hmrc.agentmapping.controller
 import play.api.libs.json.*
 import play.api.libs.json.Json.toJson
 import play.api.mvc.*
-import uk.gov.hmrc.agentmapping.audit.AuditService
 import uk.gov.hmrc.agentmapping.auth.AuthActions
 import uk.gov.hmrc.agentmapping.config.AppConfig
 import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentmapping.model.*
 import uk.gov.hmrc.agentmapping.repository.*
+import uk.gov.hmrc.agentmapping.service.MappingService
 import uk.gov.hmrc.agentmapping.util.RequestAwareLogging
 import uk.gov.hmrc.play.bootstrap.backend.controller.BackendController
 
-import javax.inject.Inject
 import javax.inject.Singleton
-import scala.concurrent.ExecutionContext
+import javax.inject.Inject
 import scala.concurrent.Future
+import scala.concurrent.ExecutionContext
 
 @Singleton
 class MappingController @Inject() (
   repositories: MappingRepositories,
-  auditService: AuditService,
   espConnector: EnrolmentStoreProxyConnector,
   appConfig: AppConfig,
+  mappingService: MappingService,
   cc: ControllerComponents,
   val authActions: AuthActions
 )(
@@ -52,10 +52,15 @@ with RequestAwareLogging:
   }
   end hasEligibleEnrolments
 
-  def createMapping(arn: Arn): Action[AnyContent] = authActions.authorisedWithAgentCode { implicit request => identifiers => implicit providerId =>
-    createMapping(arn, identifiers)
+  def createMapping(arn: Arn): Action[AnyContent] = authActions.authorisedWithAgentCode { implicit request => identifiers => providerId =>
+    for alreadyMapped <- mappingService.createMappings(
+        arn,
+        identifiers,
+        isAutomapping = false,
+        providerId
+      )
+    yield if alreadyMapped then Conflict else Created
   }
-  end createMapping
 
   def autoMapEnrolments(arn: Arn): Action[AnyContent] = authActions.authorisedAsSubscribedAgentWithGroup:
     implicit request =>
@@ -66,21 +71,17 @@ with RequestAwareLogging:
               Future.successful(Forbidden)
             else
               for
-                es3Response <- espConnector.getPrincipalEnrolments(groupId)
-                identifiers = extractActiveIdentifiers(es3Response.enrolments)
-
-                result <-
-                  if identifiers.isEmpty then
-                    Future.successful(NoContent)
-                  else
-                    createAutoMappings(arn, identifiers)(
-                      using
-                      ec,
-                      request,
-                      providerId
-                    )
-              yield result
-  end autoMapEnrolments
+                identifiers <- mappingService.getActiveIdentifiers(groupId)
+                alreadyMapped <- mappingService.createMappings(
+                  arn,
+                  identifiers,
+                  isAutomapping = true,
+                  providerId
+                )
+              yield
+                if identifiers.isEmpty then NoContent
+                else if alreadyMapped then Conflict
+                else Created
 
   def getClientCount: Action[AnyContent] = authActions.authorisedWithProviderId { implicit request => providerId =>
     espConnector
@@ -88,33 +89,6 @@ with RequestAwareLogging:
       .map(clientCount => Ok(Json.obj("clientCount" -> clientCount)))
   }
   end getClientCount
-
-  /** Add mapping for the passed identifier against an ARN. The identifier key (enrolment type) determines which data store to use Returns true IF the mapping
-    * already exists, false otherwise
-    */
-  private def createMappingInRepository(
-    arn: Arn,
-    identifier: ServiceIdentifier,
-    ggCredId: String
-  )(implicit
-    request: Request[Any]
-  ): Future[Boolean] = repositories
-    .get(identifier.enrolmentType)
-    .store(arn, identifier.value)
-    .map: isDuplicate =>
-      auditService.sendCreateMappingAuditEvent(
-        arn,
-        identifier,
-        ggCredId,
-        isDuplicate
-      )
-
-      if isDuplicate then
-        logger.warn(s"Duplicated mapping attempt for ${identifier.enrolmentType}")
-
-      isDuplicate
-
-  end createMappingInRepository
 
   def findSaMappings(arn: Arn): Action[AnyContent] = Action.async { implicit request =>
     authActions.authorised():
@@ -188,107 +162,5 @@ with RequestAwareLogging:
     authActions.onlyStride(appConfig.strideConfig.unmappingRole): _ =>
       repositories.get(enrolment).deleteMapping(arn, value).map: deleted =>
         if deleted then NoContent else NotFound
-
-  private def createMapping(
-    arn: Arn,
-    identifiers: Set[ServiceIdentifier]
-  )(implicit
-    ec: ExecutionContext,
-    request: Request[AnyContent],
-    providerId: String
-  ): Future[Result] =
-
-    val mappingResults: Set[Future[Boolean]] = identifiers
-      .map(identifier =>
-        createMappingInRepository(
-          arn,
-          identifier,
-          providerId
-        )
-      )
-
-    Future
-      .sequence(mappingResults)
-      .map(resultSet =>
-        if resultSet.contains(false) then
-          Created
-        else
-          Conflict
-      )
-  end createMapping
-
-  private def extractActiveIdentifiers(
-    enrolments: Seq[Enrolment]
-  ): Set[ServiceIdentifier] =
-    enrolments
-      .filter(_.state.equalsIgnoreCase("Activated"))
-      .flatMap { enrolment =>
-        LegacyAgentEnrolmentType
-          .findByName(enrolment.service)
-          .fold(Seq.empty[ServiceIdentifier]) { service =>
-            enrolment.identifiers.map(id =>
-              ServiceIdentifier(service, id.value)
-            )
-          }
-      }.toSet
-  end extractActiveIdentifiers
-
-  private def createAutoMappings(
-    arn: Arn,
-    identifiers: Set[ServiceIdentifier]
-  )(
-    implicit
-    ec: ExecutionContext,
-    request: Request[AnyContent],
-    providerId: String
-  ): Future[Result] =
-
-    val mappingResults: Set[Future[Boolean]] = identifiers.map(identifier =>
-      createAutoMappingInRepository(
-        arn,
-        identifier,
-        providerId
-      )
-    )
-
-    Future
-      .sequence(mappingResults)
-      .map { resultSet =>
-        if resultSet.contains(false) then
-          Created
-        else
-          Conflict
-        end if
-
-      }
-  end createAutoMappings
-
-  private def createAutoMappingInRepository(
-    arn: Arn,
-    identifier: ServiceIdentifier,
-    ggCredId: String
-  )(
-    implicit request: Request[Any]
-  ): Future[Boolean] =
-
-    repositories
-      .get(identifier.enrolmentType)
-      .store(
-        arn,
-        identifier.value,
-        automapped = true
-      )
-      .map: isDuplicate =>
-        if !isDuplicate then
-          auditService.sendCreateMappingAuditEvent(
-            arn,
-            identifier,
-            ggCredId,
-            automapped = true
-          )
-
-        isDuplicate
-
-  end createAutoMappingInRepository
 
 end MappingController
