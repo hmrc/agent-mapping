@@ -26,24 +26,18 @@ import uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType
 import uk.gov.hmrc.agentmapping.model.ServiceIdentifier
 import uk.gov.hmrc.agentmapping.repository.MappingRepositories
 import uk.gov.hmrc.agentmapping.util.RequestAwareLogging
-import uk.gov.hmrc.http.SessionKeys
-import uk.gov.hmrc.mongo.lock.MongoLockRepository
-import uk.gov.hmrc.mongo.lock.TimePeriodLockService
 
-import java.util.UUID
 import javax.inject.Singleton
 import javax.inject.Inject
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext
-import scala.concurrent.duration.DurationInt
 
 @Singleton
 class MappingService @Inject() (
   auditService: AuditService,
   enrolmentStoreProxyConnector: EnrolmentStoreProxyConnector,
   agentServicesAccountConnector: AgentServicesAccountConnector,
-  repositories: MappingRepositories,
-  mongoLockRepository: MongoLockRepository
+  repositories: MappingRepositories
 )(using ExecutionContext)
 extends RequestAwareLogging:
 
@@ -134,15 +128,6 @@ extends RequestAwareLogging:
   // We cannot distinguish which ARN is correct, so we check if any of the ARNs are suspended in case there's multiple
   def checkSuspensions(arns: Set[Arn])(using request: Request[Any]): Future[Boolean] =
     Future.traverse(arns)(agentServicesAccountConnector.isSuspended).map(_.contains(true))
-
-  def isUserAlreadyNotified(using request: Request[Any]): Future[Boolean] =
-    TimePeriodLockService(
-      mongoLockRepository,
-      request.headers.get(SessionKeys.sessionId).getOrElse(UUID.randomUUID().toString),
-      30.minutes
-    ).withRenewedLock(Future.unit).map:
-      case Some(_) => false
-      case None => true
 
   // TODO make return of findMappedArns an Option[Arn] instead of Seq[Arn] once the mapping uniqueness is enforced
   def findMappedArnsAndAttemptAutomapping(

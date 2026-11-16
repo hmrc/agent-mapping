@@ -145,7 +145,7 @@ with RequestAwareLogging:
     * @todo
     *   does not currently audit deletion events
     *
-    * @param enrolment
+    * @param enrolmentService
     *   the enrolment service type (see [[LegacyAgentEnrolmentType]])
     * @param value
     *   the agent code (identifier)
@@ -155,12 +155,12 @@ with RequestAwareLogging:
     *   204 if the mapping was deleted, 404 if it was not found
     */
   def deleteMapping(
-    enrolment: LegacyAgentEnrolmentType,
+    enrolmentService: LegacyAgentEnrolmentType,
     value: String,
     arn: Arn
   ): Action[AnyContent] =
     authActions.onlyStride(appConfig.strideConfig.unmappingRole): _ =>
-      repositories.get(enrolment).deleteMapping(arn, value).map: deleted =>
+      repositories.get(enrolmentService).deleteMapping(arn, value).map: deleted =>
         if deleted then NoContent else NotFound
 
 end MappingController

@@ -16,9 +16,6 @@
 
 package uk.gov.hmrc.agentmapping.service
 
-import org.mockito.ArgumentMatchers
-import org.mockito.ArgumentMatchers.any
-import org.mockito.ArgumentMatchers.anyString
 import org.mockito.Mockito.reset
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoMoreInteractions
@@ -37,14 +34,9 @@ import uk.gov.hmrc.agentmapping.connector.EnrolmentStoreProxyConnector
 import uk.gov.hmrc.agentmapping.model.*
 import uk.gov.hmrc.agentmapping.repository.MappingRepository
 import uk.gov.hmrc.agentmapping.repository.MappingRepositories
-import uk.gov.hmrc.http.SessionKeys
-import uk.gov.hmrc.mongo.lock.Lock
-import uk.gov.hmrc.mongo.lock.MongoLockRepository
 
-import java.time.Instant
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.Future
-import scala.concurrent.duration.*
 
 class MappingServiceSpec
 extends AnyWordSpecLike
@@ -58,14 +50,12 @@ with MockitoSugar:
   private val agentServicesAccountConnector = mock[AgentServicesAccountConnector]
   private val repositories = mock[MappingRepositories]
   private val repository = mock[MappingRepository]
-  private val mongoLockRepository = mock[MongoLockRepository]
   private val service =
     new MappingService(
       auditService,
       enrolmentStoreProxyConnector,
       agentServicesAccountConnector,
-      repositories,
-      mongoLockRepository
+      repositories
     )
 
   override protected def beforeEach(): Unit =
@@ -75,8 +65,7 @@ with MockitoSugar:
       enrolmentStoreProxyConnector,
       agentServicesAccountConnector,
       repositories,
-      repository,
-      mongoLockRepository
+      repository
     )
 
   "getActiveIdentifiers" should:
@@ -336,57 +325,3 @@ with MockitoSugar:
       when(agentServicesAccountConnector.isSuspended(arn)).thenReturn(Future.successful(false))
 
       service.checkSuspensions(Set(arn)).futureValue shouldBe false
-
-  "isUserAlreadyNotified" should:
-    "return false when the existing lock is renewed" in:
-      val sessionId = "session-id"
-      given Request[Any] = FakeRequest("GET", "/mapping").withHeaders(SessionKeys.sessionId -> sessionId)
-
-      when(mongoLockRepository.refreshExpiry(
-        ArgumentMatchers.eq(sessionId),
-        anyString(),
-        any[Duration]
-      )).thenReturn(Future.successful(true))
-
-      service.isUserAlreadyNotified.futureValue shouldBe false
-
-    "return false when a new lock is acquired" in:
-      val sessionId = "session-id"
-      val now = Instant.now()
-      val lock = Lock(
-        sessionId,
-        "owner",
-        now,
-        now
-      )
-      given Request[Any] = FakeRequest("GET", "/mapping").withHeaders(SessionKeys.sessionId -> sessionId)
-
-      when(mongoLockRepository.refreshExpiry(
-        ArgumentMatchers.eq(sessionId),
-        anyString(),
-        any[Duration]
-      )).thenReturn(Future.successful(false))
-      when(mongoLockRepository.takeLock(
-        ArgumentMatchers.eq(sessionId),
-        anyString(),
-        any[Duration]
-      )).thenReturn(Future.successful(Some(lock)))
-
-      service.isUserAlreadyNotified.futureValue shouldBe false
-
-    "return true when a new lock cannot be acquired" in:
-      val sessionId = "session-id"
-      given Request[Any] = FakeRequest("GET", "/mapping").withHeaders(SessionKeys.sessionId -> sessionId)
-
-      when(mongoLockRepository.refreshExpiry(
-        ArgumentMatchers.eq(sessionId),
-        anyString(),
-        any[Duration]
-      )).thenReturn(Future.successful(false))
-      when(mongoLockRepository.takeLock(
-        ArgumentMatchers.eq(sessionId),
-        anyString(),
-        any[Duration]
-      )).thenReturn(Future.successful(None))
-
-      service.isUserAlreadyNotified.futureValue shouldBe true
