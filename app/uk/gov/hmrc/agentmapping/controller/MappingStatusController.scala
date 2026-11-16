@@ -89,7 +89,6 @@ object MappingStatusController:
 
   case class MappingStatusResponse(
     continueUrl: String,
-    alreadyNotified: Option[Boolean] = None
   )
   given OWrites[MappingStatusResponse] = Json.writes[MappingStatusResponse]
 
