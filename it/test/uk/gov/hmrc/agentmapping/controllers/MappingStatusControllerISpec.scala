@@ -81,7 +81,7 @@ with ScalaFutures:
       "return unauthorised" in:
         givenUserNotAuthorisedWithError("MissingBearerToken")
 
-        val response = callGet(s"/mappings-status/enrolment/${enrolmentType.dbKey}/value/$identifierValue")
+        val response = callGet(s"/mapping-status/service/${enrolmentType.dbKey}/value/$identifierValue")
 
         response.status shouldBe 401
 
@@ -101,7 +101,7 @@ with ScalaFutures:
           )
         )
 
-        val response = callGet(s"/mappings-status/enrolment/${enrolmentType.dbKey}/value/$identifierValue")
+        val response = callGet(s"/mapping-status/service/${enrolmentType.dbKey}/value/$identifierValue")
 
         response.status shouldBe 403
 
@@ -134,7 +134,7 @@ with ScalaFutures:
           )
         )
 
-        val response = callGet(s"/mappings-status/enrolment/${enrolmentType.dbKey}/value/$identifierValue")
+        val response = callGet(s"/mapping-status/service/${enrolmentType.dbKey}/value/$identifierValue")
 
         response.status shouldBe 204
 
@@ -166,7 +166,7 @@ with ScalaFutures:
           )
         )
 
-        val response = callGet(s"/mappings-status/enrolment/${enrolmentType.dbKey}/value/$identifierValue")
+        val response = callGet(s"/mapping-status/service/${enrolmentType.dbKey}/value/$identifierValue")
 
         response.status shouldBe 423
         response.json shouldBe Json.obj(
@@ -205,7 +205,7 @@ with ScalaFutures:
           )
         )
 
-        val response = callGet(s"/mappings-status/enrolment/${enrolmentType.dbKey}/value/$identifierValue")
+        val response = callGet(s"/mapping-status/service/${enrolmentType.dbKey}/value/$identifierValue")
 
         response.status shouldBe 404
         response.json shouldBe Json.obj(
@@ -286,7 +286,7 @@ with ScalaFutures:
 
         mappingRepositories.get(enrolmentType).findArnBy(identifierValue).futureValue shouldBe Nil
 
-        val response = callGet(s"/mappings-status/enrolment/${enrolmentType.dbKey}/value/$identifierValue")
+        val response = callGet(s"/mapping-status/service/${enrolmentType.dbKey}/value/$identifierValue")
 
         response.status shouldBe 204
 
@@ -356,7 +356,7 @@ with ScalaFutures:
           ))
         )
 
-        val response = callGet(s"/mappings-status/enrolment/${enrolmentType.dbKey}/value/$identifierValue")
+        val response = callGet(s"/mapping-status/service/${enrolmentType.dbKey}/value/$identifierValue")
 
         response.status shouldBe 404
         response.json shouldBe Json.obj(
@@ -398,18 +398,10 @@ with ScalaFutures:
 
         val testSessionId = "testSessionId"
 
-        lazy val firstResponse = callGet(s"/mappings-status/enrolment/${enrolmentType.dbKey}/value/$identifierValue", Some(testSessionId))
-        firstResponse.status shouldBe 200
-        firstResponse.json shouldBe Json.obj(
-          "continueUrl" -> "mapping journey/notification url",
-          "alreadyNotified" -> false
-        )
-
-        lazy val secondResponse = callGet(s"/mappings-status/enrolment/${enrolmentType.dbKey}/value/$identifierValue", Some(testSessionId))
-        secondResponse.status shouldBe 200
-        secondResponse.json shouldBe Json.obj(
-          "continueUrl" -> "mapping journey/notification url",
-          "alreadyNotified" -> true
+        lazy val response = callGet(s"/mapping-status/service/${enrolmentType.dbKey}/value/$identifierValue", Some(testSessionId))
+        response.status shouldBe 200
+        response.json shouldBe Json.obj(
+          "continueUrl" -> "mapping journey/notification url"
         )
 
 end MappingStatusControllerISpec

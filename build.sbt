@@ -11,7 +11,7 @@ val scalaCOptions = Seq(
   "-Wconf:msg=Flag.*repeatedly:s",
   "-feature",
   "-Wconf:src=target/.*:s", // silence warnings from compiled files
-  "-Wconf:src=routes/.*:s", // silence warnings from routes files
+  "-Wconf:src=routes/.*:s" // silence warnings from routes files
 )
 
 lazy val root = project
@@ -22,18 +22,22 @@ lazy val root = project
     PlayKeys.playDefaultPort := 9439,
     libraryDependencies ++= AppDependencies.compile ++ AppDependencies.test,
     resolvers ++= Seq(Resolver.typesafeRepo("releases")),
-    routesImport ++= Seq("uk.gov.hmrc.agentmapping.controller.UrlBinders._, uk.gov.hmrc.agentmapping.controller.UrlBinders.given"),
+    routesImport ++= Seq(
+      "uk.gov.hmrc.agentmapping.controller.UrlBinders._",
+      "uk.gov.hmrc.agentmapping.controller.UrlBinders.given",
+      "uk.gov.hmrc.agentmapping.model.LegacyAgentEnrolmentType",
+      "uk.gov.hmrc.agentmapping.model.Arn"
+    ),
     scalacOptions ++= scalaCOptions,
     Compile / scalafmtOnCompile := true,
     Test / scalafmtOnCompile := true,
     Compile / unmanagedResourceDirectories += baseDirectory.value / "resources",
     Test / parallelExecution := false,
     Test / logBuffered := false,
-    scoverageSettings,
+    scoverageSettings
   )
   .enablePlugins(PlayScala, SbtDistributablesPlugin)
   .disablePlugins(JUnitXmlReportPlugin)
-
 
 lazy val it = project
   .enablePlugins(PlayScala)
@@ -43,6 +47,5 @@ lazy val it = project
   .settings(
     Compile / scalafmtOnCompile := true,
     Test / scalafmtOnCompile := true,
-    Test / logBuffered := false,
+    Test / logBuffered := false
   )
-

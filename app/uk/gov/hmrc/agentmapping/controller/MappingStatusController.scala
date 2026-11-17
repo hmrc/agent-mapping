@@ -49,10 +49,10 @@ extends BackendController(cc)
 with RequestAwareLogging:
 
   def mappingStatus(
-    enrolment: LegacyAgentEnrolmentType,
+    enrolmentService: LegacyAgentEnrolmentType,
     value: String
   ): Action[AnyContent] =
-    val identifier = ServiceIdentifier(enrolment, value)
+    val identifier = ServiceIdentifier(enrolmentService, value)
     // Flow:
     // 1. Verify the authenticated user holds the requested enrolment key/code.
     // 2. Look up any mapped ARNs for that identifier, attempting automated mapping using other identifiers of the agent group when missing.
@@ -70,17 +70,18 @@ with RequestAwareLogging:
             request.credId
           )
           mappedArnIsSuspended <- mappingService.checkSuspensions(arns)
-          missedDeadline = appConfig.mandationDateFor(enrolment).exists(!LocalDate.now(clock).isBefore(_))
-          userAlreadyNotified <- mappingService.isUserAlreadyNotified
         yield
           if arns.nonEmpty then
             if mappedArnIsSuspended then Locked(Json.toJson(MappingStatusResponse("suspension page url")))
             else NoContent
           else
-            if missedDeadline then NotFound(Json.toJson(MappingStatusResponse("mapping journey url")))
-            else Ok(Json.toJson(MappingStatusResponse("mapping journey/notification url", Some(userAlreadyNotified))))
+            if isServiceMandated(enrolmentService) then NotFound(Json.toJson(MappingStatusResponse("mapping journey url")))
+            else Ok(Json.toJson(MappingStatusResponse("mapping journey/notification url")))
 
   end mappingStatus
+
+  private def isServiceMandated(service: LegacyAgentEnrolmentType): Boolean =
+    appConfig.mandationDateFor(service).exists(!LocalDate.now(clock).isBefore(_))
 
 end MappingStatusController
 
@@ -88,7 +89,6 @@ object MappingStatusController:
 
   case class MappingStatusResponse(
     continueUrl: String,
-    alreadyNotified: Option[Boolean] = None
   )
   given OWrites[MappingStatusResponse] = Json.writes[MappingStatusResponse]
 
